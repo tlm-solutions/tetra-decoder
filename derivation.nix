@@ -1,11 +1,11 @@
-{ stdenv
+{ clangStdenv
 , pkg-config
 , cmake
 , cxxopts
 , zlib
 , rapidjson
 }:
-stdenv.mkDerivation {
+clangStdenv.mkDerivation {
   name = "tetra-impl";
   version = "0.1.0";
 
