@@ -1,25 +1,30 @@
 #ifndef DECODER_HPP
 #define DECODER_HPP
 
-#include <filesystem>
 #include <optional>
+#include <string>
 
 class Decoder {
 public:
   Decoder(unsigned rxPort, unsigned txPort, bool keepFillBits, bool packed,
-          std::optional<std::filesystem::path> inFilePath,
-          std::optional<std::filesystem::path> outFilePath);
-  ~Decoder(){};
+          std::optional<std::string> inFile,
+          std::optional<std::string> outFile);
+  ~Decoder();
 
   void main_loop();
 
 private:
-  unsigned _rxPort;
-  unsigned _txPort;
   bool _keepFillBits;
   bool _packed;
-  std::optional<std::filesystem::path> _inFilePath;
-  std::optional<std::filesystem::path> _outFilePath;
+
+  int _inputFd;
+
+  int _outputSocketFd;
+  std::optional<int> _outputFileFd;
+
+  const int _rxBufSize = 4096;
+
+  void rxSymbol(uint8_t symbol);
 };
 
 #endif

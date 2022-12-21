@@ -1,5 +1,4 @@
 #include <cxxopts.hpp>
-#include <filesystem>
 #include <memory>
 #include <signal.h>
 #include <stdio.h>
@@ -10,18 +9,19 @@
 static bool stop = false;
 
 void sigint_handler(int s) {
-	(void)s;
+  (void)s;
 
-	stop = true;
+  stop = true;
 }
 
 int main(int argc, char **argv) {
   unsigned rxPort, txPort, debugLevel;
   bool keepFillBits, packed;
   std::optional<std::string> inFile, outFile;
-  std::optional<std::filesystem::path> inFilePath, outFilePath;
 
-  signal(SIGINT, &sigint_handler);
+  struct sigaction sa;
+  sa.sa_handler = sigint_handler;
+  sigaction(SIGINT, &sa, 0);
 
   cxxopts::Options options("tetra-impl", "Decodes TETRA downstream traffic");
 
@@ -57,16 +57,18 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  if (inFile.has_value()) {
-    inFilePath = std::filesystem::path(*inFile);
-  }
-
-  if (outFile.has_value()) {
-    outFilePath = std::filesystem::path(*outFile);
-  }
-
   auto decoder = std::make_unique<Decoder>(rxPort, txPort, packed, keepFillBits,
-                                           inFilePath, outFilePath);
+                                           inFile, outFile);
+
+  if (inFile.has_value()) {
+    std::cout << "Reading from input file " << *inFile << std::endl;
+  } else {
+    std::cout << "Listening on UDP socket " << rxPort << std::endl;
+  }
+  std::cout << "Sending on UDP socket " << txPort << std::endl;
+  if (outFile.has_value()) {
+    std::cout << "Writing to output file " << *outFile << std::endl;
+  }
 
   while (!stop) {
     decoder->main_loop();
