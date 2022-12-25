@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <cassert>
 #include <cstring>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -13,7 +14,8 @@
 Decoder::Decoder(unsigned rxPort, unsigned txPort, bool keepFillBits,
                  bool packed, std::optional<std::string> inFile,
                  std::optional<std::string> outFile)
-    : _keepFillBits(keepFillBits), _packed(packed) {
+    : _keepFillBits(keepFillBits), _packed(packed),
+      _lowerMac(std::make_shared<LowerMac>()) {
   // read input file from file or from socket
   if (inFile.has_value()) {
     _inputFd = open(inFile->c_str(), O_RDONLY);
@@ -100,6 +102,8 @@ void Decoder::main_loop() {
 }
 
 void Decoder::rxSymbol(uint8_t symbol) {
+  assert(symbol <= 1);
+
   // insert symbol at buffer end
   _frame.push_back(symbol);
 
@@ -126,7 +130,7 @@ void Decoder::rxSymbol(uint8_t symbol) {
   bool clearedFlag = false;
 
   // the frame can be processed either by presence of
-  // training sequence, either by synchronised and
+  // training sequence, either by synchronized and
   // still allowed missing frames
   if (frameFound || (_isSynchronized && ((_syncBitCounter % 510) == 0))) {
     processFrame();
@@ -159,15 +163,13 @@ void Decoder::resetSynchronizer() {
 }
 
 void Decoder::processFrame() {
-  // m_lowerMac->incrementTn();
-
   auto scoreSb = patternAtPositionScore(_frame, SYNC_TRAINING_SEQ, 214);
   auto scoreNdb = patternAtPositionScore(_frame, NORMAL_TRAINING_SEQ_1, 244);
   auto scoreNdbSplit =
       patternAtPositionScore(_frame, NORMAL_TRAINING_SEQ_2, 244);
 
   auto scoreMin = scoreSb;
-  BurstType burstType = SynchronisationBurst;
+  BurstType burstType = SynchronizationBurst;
 
   if (scoreNdb < scoreMin) {
     scoreMin = scoreNdb;
@@ -181,7 +183,7 @@ void Decoder::processFrame() {
 
   if (scoreMin <= 5) {
     // valid burst found, send it to lower MAC
-    // _lowerMac->process(_frame, burstType);
+    _lowerMac->process(_frame, burstType);
   }
 }
 

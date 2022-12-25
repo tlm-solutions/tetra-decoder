@@ -1,9 +1,12 @@
 #ifndef DECODER_HPP
 #define DECODER_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <l2/LowerMac.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation
@@ -33,6 +36,8 @@ public:
   void main_loop();
 
 private:
+  std::shared_ptr<LowerMac> _lowerMac;
+
   bool _keepFillBits;
   bool _packed;
 

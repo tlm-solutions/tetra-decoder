@@ -7,7 +7,7 @@ enum BurstType {
   NormalUplinkBurst_Split,
   NormalDownlinkBurst,
   NormalDownlinkBurst_Split,
-  SynchronisationBurst,
+  SynchronizationBurst,
 };
 
 #endif
