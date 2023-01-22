@@ -1,5 +1,5 @@
 /*
- * Implementation of ViterbiCodec.
+ * Original Implementation of ViterbiCodec.
  *
  * Author: Min Xu <xukmin@gmail.com>
  * Date: 01/30/2015
@@ -49,12 +49,12 @@ public:
   // We use 2.
   ViterbiCodec(int constraint, const std::vector<int> &polynomials);
 
-  std::string Encode(const std::string &bits) const;
-  std::string Decode(const std::string &bits) const;
+  [[nodiscard]] auto Encode(const std::string &bits) const -> std::string;
+  [[nodiscard]] std::string Decode(const std::string &bits) const;
 
-  int constraint() const { return constraint_c; }
+  [[nodiscard]] int constraint() const { return constraint_c; }
 
-  const std::vector<int> &polynomials() const { return polynomials_c; }
+  [[nodiscard]] const std::vector<int> &polynomials() const { return polynomials_c; }
 
 private:
   // Suppose

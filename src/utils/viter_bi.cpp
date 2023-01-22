@@ -1,5 +1,5 @@
 /*
- * Implementation of ViterbiCodec.
+ * Original Implementation of ViterbiCodec.
  *
  * Author: Min Xu <xukmin@gmail.com>
  * Date: 01/30/2015
