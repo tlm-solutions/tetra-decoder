@@ -1,27 +1,21 @@
-# Tetra Receiver
+# Tetra Decoder
 
-Receive multiple TETRA streams at once and send the bits out via UDP.
-
-The tetra streams can be decoding using [`tetra-rx` from the osmocom tetra project](https://github.com/osmocom/osmo-tetra) or [`decoder` from the tetra-kit project](https://gitlab.com/larryth/tetra-kit).
-
-Usage with tetra-rx: `socat STDIO UDP-LISTEN:42000 | stdbuf -i0 -o0 tetra-rx /dev/stdin`
+Decodes downlink TETRA stream.
+Use with [tetra-receiver](https://github.com/marenz2569/tetra-receiver).
 
 ## Usage
 ```
-Receive multiple TETRA streams at once and send the bits out via UDP
+Decodes TETRA downstream traffic
 Usage:
-  tetra-receiver [OPTION...]
+  tetra-impl [OPTION...]
 
-  -h, --help                  Print usage
-      --rf arg                RF gain (default: 10)
-      --if arg                IF gain (default: 10)
-      --bb arg                BB gain (default: 10)
-      --device-string arg     additional device arguments for osmosdr, see
-                              https://projects.osmocom.org/projects/gr-osmos
-                              dr/wiki/GrOsmoSDR (default: "")
-      --center-frequency arg  Center frequency of the SDR (default: 0)
-      --offsets arg           Offsets of the TETRA streams
-      --samp-rate arg         Sample rate of the sdr (default: 1000000)
-      --udp-start arg         Start UDP port. Each stream gets its own UDP
-                              port, starting at udp-start (default: 42000)
+  -h, --help            Print usage
+  -r, --rx arg          <UDP socket> receiving from phy (default: 42000)
+  -t, --tx arg          <UDP socket> sending Json data (default: 42100)
+  -i, --infile arg      <file> replay data from binary file instead of UDP
+  -o, --outfile arg     <file> record data to binary file (can be replayed
+                        with -i option)
+  -d arg                <level> print debug information (default: 0)
+  -f, --keep-fill-bits  keep fill bits
+  -P, --packed          pack rx data (1 byte = 8 bits)
 ```
