@@ -15,7 +15,7 @@ void Mle::serviceDMleSync(BitVec &vec) {
 
   _syncReceived = true;
 
-  std::cout << *this;
+//  std::cout << *this;
 }
 
 void Mle::serviceDMleSysinfo(BitVec &vec) {
@@ -41,7 +41,7 @@ void Mle::serviceDMleSysinfo(BitVec &vec) {
 
   _sysinfoReceived = true;
 
-  std::cout << *this;
+//  std::cout << *this;
 }
 
 std::ostream &operator<<(std::ostream &stream, const Mle &mle) {

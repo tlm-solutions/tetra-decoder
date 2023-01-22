@@ -183,6 +183,7 @@ void Decoder::processFrame() {
 
   if (scoreMin <= 5) {
     // valid burst found, send it to lower MAC
+    std::cout << "Processing burstType: " << burstType << std::endl;
     _lowerMac->process(_frame, burstType);
   }
 }

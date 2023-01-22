@@ -102,34 +102,84 @@ void UpperMac::processBSCH(const std::vector<uint8_t> &data) {
 
   _syncReceived = true;
 
-  std::cout << *this;
+//  std::cout << *this;
 }
 
 void UpperMac::processSCH_HD(const std::vector<uint8_t> &data) {
-  assert(data.size() == 124);
+  std::cout << "SCH_HD" << std::endl;
+  processSignallingChannel(data, true, false);
+}
 
+void UpperMac::processSCH_F(const std::vector<uint8_t> &data) {
+  std::cout << "SCH_F" << std::endl;
+  processSignallingChannel(data, false, false);
+}
+
+void UpperMac::processSTCH(const std::vector<uint8_t> &data) {
+  std::cout << "STCH" << std::endl;
+
+  _secondSlotStolen = false;
+
+  processSignallingChannel(data, true, true);
+}
+
+void UpperMac::processSignallingChannel(const std::vector<uint8_t> &data,
+                                        bool isHalfChannel,
+                                        bool isStolenChannel) {
   auto vec = BitVec(data);
 
+  _removeFillBits = true;
+  try {
+    processSignallingChannel(vec, isHalfChannel, isStolenChannel);
+  } catch (std::exception &e) {
+    std::cout << "Error with decoding: " << e.what() << std::endl;
+  }
+}
+
+void UpperMac::processSignallingChannel(BitVec &vec, bool isHalfChannel,
+                                        bool isStolenChannel) {
   auto pduType = vec.take(2);
 
-  switch (pduType) {
-  case 0b00:
-    // MAC-RESOURCE (downlink)
+  if (pduType == 0b00) {
+    // MAC-RESOURCE (downlink) or MAC-DATA (uplink)
+    // TMA-SAP
     processMacResource(vec);
-    break;
-  case 0b01:
+  } else if (pduType == 0b01) {
     // MAC-END or MAC-FRAG
-    processMacEndAndMacFragment(vec);
-    break;
-  case 0b10:
+    // TMA-SAP
+    auto subtype = vec.take(1);
+    if (subtype == 0b0) {
+      processMacFrag(vec);
+    } else if (subtype == 0b1) {
+      processMacEnd(vec);
+    }
+  } else if (pduType == 0b10) {
     // Broadcast
+    // TMB-SAP
+    // ✅ done
     processBroadcast(vec);
-    break;
-  case 0b11:
+  } else if (pduType == 0b11) {
     // Supplementary MAC PDU (not on STCH, SCH/HD or SCH-P8/HD)
     // MAC-U-SIGNAL (only on STCH)
-    processMacPdu(vec);
-    break;
+    // TMA-SAP or TMD-SAP
+    if (isHalfChannel && isStolenChannel) {
+      processMacUSignal(vec);
+    } else if ((!isHalfChannel) && (!isStolenChannel)) {
+      processSupplementaryMacPdu(vec);
+    } else {
+      // Reserved
+      // TODO: print unimplemented error
+    }
+  }
+
+  // TODO: one mac may contain multiple mac headers. proccess all the others
+  // layers first and then continue with the next
+  if (vec.bitsLeft() > 0) {
+    std::cout << "BitsLeft(): " << std::to_string(vec.bitsLeft()) << " " << vec
+              << std::endl;
+    if (!vec.isMacPadding()) {
+      processSignallingChannel(vec, isHalfChannel, isStolenChannel);
+    }
   }
 }
 
@@ -151,6 +201,21 @@ void UpperMac::processBroadcast(BitVec &vec) {
     break;
   case 0b11:
     // Reserved
+    // TODO: print unimplemented error
+    break;
+  }
+}
+
+void UpperMac::processSupplementaryMacPdu(BitVec &vec) {
+  auto subtype = vec.take(1);
+
+  switch (subtype) {
+  case 0b0:
+    processMacDBlck(vec);
+    break;
+  case 0b1:
+    // Reserved
+    // TODO: print unimplemented error
     break;
   }
 }
@@ -255,7 +320,296 @@ void UpperMac::processSysinfoPdu(BitVec &vec) {
 
   _sysinfoReceived = true;
 
-  std::cout << *this;
+//  std::cout << *this;
+}
+
+void UpperMac::processAccessDefinePdu(BitVec &vec) {
+  auto _ = vec.take(23);
+  auto optionalFieldFlag = vec.take(2);
+  if (optionalFieldFlag == 0b01) {
+    auto subscriberClassBitMap = vec.take(16);
+  } else if (optionalFieldFlag == 0b10) {
+    auto gssi = vec.take(24);
+  }
+  auto filterBits = vec.take(3);
+}
+
+void UpperMac::processMacUSignal(BitVec &vec) {
+  _secondSlotStolen = (vec.take(1) == 1) ? true : false;
+
+  // TODO: TM-SDU
+  auto tmSdu = BitVec(vec.takeVec(vec.bitsLeft()));
+  std::cout << "MAC U-SIGNAL" << std::endl;
+  std::cout << "  TM-SDU: size = " << std::to_string(tmSdu.bitsLeft()) << ": "
+            << tmSdu << std::endl;
+}
+
+void UpperMac::processMacDBlck(BitVec &vec) {
+  auto fillBitIndication = vec.take(1);
+  auto encrypted = vec.take(2);
+  auto address = vec.take(10);
+  auto immediateNappingPermisionFlag = vec.take(1);
+  auto slotGrantingFlag = vec.take(1);
+  auto basicSlotGrantingElement = 0;
+  if (slotGrantingFlag == 0b1) {
+    auto basicSlotGrantingElement = vec.take(8);
+  }
+
+  if (fillBitIndication == 0b1) {
+    removeFillBits(vec);
+  }
+
+  // TODO: TM-SDU
+  auto tmSdu = BitVec(vec.takeVec(vec.bitsLeft()));
+  std::cout << "MAC D-BLCK" << std::endl;
+  std::cout << "  TM-SDU: size = " << std::to_string(tmSdu.bitsLeft()) << ": "
+            << tmSdu << std::endl;
+}
+
+void UpperMac::processMacFrag(BitVec &vec) {
+  auto fillBitIndication = vec.take(1);
+
+  if (fillBitIndication == 0b1) {
+    removeFillBits(vec);
+  }
+
+  // TODO: TM-SDU
+  auto tmSdu = BitVec(vec.takeVec(vec.bitsLeft()));
+  std::cout << "MAC FRAG" << std::endl;
+  std::cout << "  TM-SDU: size = " << std::to_string(tmSdu.bitsLeft()) << ": "
+            << tmSdu << std::endl;
+}
+
+void UpperMac::processMacEnd(BitVec &vec) {
+  _secondSlotStolen = false;
+
+  auto preProcessingBitCount = vec.bitsLeft() + 3;
+
+  auto fillBitIndication = vec.take(1);
+  auto positionOfGrant = vec.take(1);
+  auto lengthIndictaion = vec.take(6);
+  // The immediate napping permission flag shall be present when the PDU is sent
+  // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
+  // sent using π/4-DQPSK modulation. auto immediateNapping = vec.take(1);
+  auto slotGrantingFlag = vec.take(1);
+  // The multiple slot granting flag shall be present when the slot granting
+  // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
+  // present when the slot granting flag is set to 0 or the PDU is sent using
+  // π/4-DQPSK or π/8-D8PSK modulation auto multipleSlotGranting = vec.take(1);
+  // The basic slot granting element shall be present when the slot granting
+  // flag is set to 1 and either the PDU is sent using π/4-DQPSK or π/8-D8PSK
+  // modulation, or the PDU is sent using QAM modulation and the multiple slot
+  // granting flag is set to 0.
+  auto basicSlotGrantingElement = 0;
+  if (slotGrantingFlag == 0b1) {
+    basicSlotGrantingElement = vec.take(8);
+  }
+  auto channelAllocationFlag = vec.take(1);
+  if (channelAllocationFlag == 0b1) {
+    auto channelAllocation1 = vec.take(22);
+    auto extendedCarrierNumberingFlag = vec.take(1);
+    if (extendedCarrierNumberingFlag == 0b1) {
+      auto channelAllocation2 = vec.take(9);
+    }
+    auto monitoringPattern = vec.take(2);
+    if (monitoringPattern == 0b00) {
+      auto frame18MonitoringPattern = vec.take(2);
+      auto upDownlinkAssignedForAugmentedChannelAllocation = vec.take(2);
+      auto bandwidthOfAllocatedChannel = vec.take(3);
+      auto modulationModeOfAllocatedChannel = vec.take(3);
+      if (modulationModeOfAllocatedChannel == 0b010) {
+        auto maximumUplinkQamModulationLevel = vec.take(3);
+        auto reserved = vec.take(3);
+      }
+      auto channelAllocation3 = vec.take(12);
+      auto nappingStatus = vec.take(2);
+      if (nappingStatus == 0b01) {
+        auto nappingInformation = vec.take(11);
+      }
+      auto reserved = vec.take(4);
+      auto conditionalElementAFlag = vec.take(1);
+      if (conditionalElementAFlag == 0b1) {
+        auto conditionalElementA = vec.take(16);
+      }
+      auto conditionalElementBFlag = vec.take(1);
+      if (conditionalElementBFlag == 0b1) {
+        auto conditionalElementB = vec.take(16);
+      }
+      auto furtherAugmentationFlag = vec.take(1);
+    }
+  }
+
+  auto macHeaderLength = preProcessingBitCount - vec.bitsLeft();
+  auto bitsLeft = lengthIndictaion * 8 - macHeaderLength;
+
+  // TODO: TM-SDU
+  auto tmSdu = BitVec(vec.takeVec(bitsLeft));
+  std::cout << "MAC END" << std::endl;
+  std::cout << "  TM-SDU: size = " << std::to_string(bitsLeft) << ": " << tmSdu
+            << std::endl;
+  std::cout << "  macHeaderLength = " << std::to_string(macHeaderLength)
+            << std::endl;
+  std::cout << "  fillBitIndication: 0b" << std::bitset<1>(fillBitIndication)
+            << std::endl;
+}
+
+void UpperMac::processMacResource(BitVec &vec) {
+  std::cout << "MAC RESOURCE" << std::endl;
+
+  auto preProcessingBitCount = vec.bitsLeft() + 2;
+
+  auto fillBitIndication = vec.take(1);
+  auto positionOfGrant = vec.take(1);
+  auto encryptionMode = vec.take(2);
+  auto randomAccessFlag = vec.take(1);
+  auto lengthIndictaion = vec.take(6);
+  if (lengthIndictaion == 0b111110 || lengthIndictaion == 0b111111) {
+    _secondSlotStolen = true;
+  }
+  std::cout << "  lengthIndictaion: 0b" << std::bitset<6>(lengthIndictaion)
+            << std::endl;
+  auto addressType = vec.take(3);
+  std::cout << "  addressType: 0b" << std::bitset<3>(addressType) << std::endl;
+  if (addressType == 0b000) {
+    removeFillBits(vec);
+
+    // std::cout << "  NULL PDU" << std::endl;
+    // std::cout << "  fillBitIndication: 0b" <<
+    // std::bitset<1>(fillBitIndication)
+    //           << std::endl;
+    // std::cout << "  encryptionMode: 0b" << std::bitset<2>(encryptionMode)
+    //           << std::endl;
+    // std::cout << "  lengthIndictaion: 0b" << std::bitset<5>(lengthIndictaion)
+    //           << std::endl;
+    return;
+  } else if (addressType == 0b001) {
+    auto ssi = vec.take(24);
+    std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+  } else if (addressType == 0b010) {
+    auto eventLabel = vec.take(10);
+  } else if (addressType == 0b011) {
+    auto ussi = vec.take(24);
+    std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+  } else if (addressType == 0b100) {
+    auto smi = vec.take(24);
+    std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+  } else if (addressType == 0b101) {
+    auto ssi = vec.take(24);
+    auto eventLabel = vec.take(10);
+    std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+    std::cout << "  EventLabel: " << std::to_string(eventLabel) << std::endl;
+  } else if (addressType == 0b110) {
+    auto ssi = vec.take(24);
+    auto usageMarker = vec.take(6);
+    std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+    std::cout << "  UsageMarker: " << std::to_string(usageMarker) << std::endl;
+  } else if (addressType == 0b111) {
+    auto smi = vec.take(24);
+    auto eventLabel = vec.take(10);
+    std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+    std::cout << "  EventLabel: " << std::to_string(eventLabel) << std::endl;
+  }
+  // The immediate napping permission flag shall be present when the PDU is sent
+  // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
+  // sent using π/4-DQPSK modulation. auto immediateNappingPermisionFlag =
+  // vec.take(1);
+  auto powerControlFlag = vec.take(1);
+  if (powerControlFlag == 0b1) {
+    auto powerControlElement = vec.take(4);
+  }
+  auto slotGrantingFlag = vec.take(1);
+  // The multiple slot granting flag shall be present when the slot granting
+  // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
+  // present when the slot granting flag is set to 0 or the PDU is sent using
+  // π/4-DQPSK or π/8-D8PSK modulation. auto multipleSlotGrantingFlag =
+  // vec.take(1); The basic slot granting element shall be present when the slot
+  // granting flag is set to 1 and either the PDU is sent using π/4-DQPSK or
+  // π/8-D8PSK modulation, or the PDU is sent using QAM modulation and the
+  // multiple slot granting flag is set to 0.
+  if (slotGrantingFlag == 0b1) {
+    auto basicSlotGrantingElement = vec.take(8);
+  }
+  auto channelAllocationFlag = vec.take(1);
+  if (channelAllocationFlag == 0b1) {
+    auto allocationType = vec.take(2);
+    auto timeslotAssigned = vec.take(4);
+    auto upDownlinkAssigned = vec.take(2);
+    auto clchPermission = vec.take(1);
+    auto cellChangeFlag = vec.take(1);
+    auto carrierNumber = vec.take(12);
+    auto extendedCarrierNumberingFlag = vec.take(1);
+    if (extendedCarrierNumberingFlag == 0b1) {
+      auto channelAllocation2 = vec.take(10);
+    }
+    auto monitoringPattern = vec.take(2);
+    if (monitoringPattern == 0b00) {
+      auto frame18MonitoringPattern = vec.take(2);
+    }
+    if (upDownlinkAssigned == 0b00) {
+      auto upDownlinkAssignedForAugmentedChannelAllocation = vec.take(2);
+      auto bandwidthOfAllocatedChannel = vec.take(3);
+      auto modulationModeOfAllocatedChannel = vec.take(3);
+      if (modulationModeOfAllocatedChannel == 0b010) {
+        auto maximumUplinkQamModulationLevel = vec.take(3);
+      } else {
+        auto reserved = vec.take(3);
+      }
+      auto channelAllocation3 = vec.take(12);
+      auto nappingStatus = vec.take(2);
+      if (nappingStatus == 0b01) {
+        auto nappingInformation = vec.take(11);
+      }
+      auto reserved = vec.take(4);
+      auto conditionalElementAFlag = vec.take(1);
+      if (conditionalElementAFlag == 0b1) {
+        auto conditionalElementA = vec.take(16);
+      }
+      auto conditionalElementBFlag = vec.take(1);
+      if (conditionalElementBFlag == 0b1) {
+        auto conditionalElementB = vec.take(16);
+      }
+      auto furtherAugmentationFlag = vec.take(1);
+    }
+  }
+
+  auto macHeaderLength = preProcessingBitCount - vec.bitsLeft();
+  auto bitsLeft = lengthIndictaion * 8 - macHeaderLength;
+
+  // std::cout << "MAC RESOURCE" << std::endl;
+  // std::cout << "  encryptionMode: 0b" << std::bitset<2>(encryptionMode)
+  //           << std::endl;
+  // std::cout << "  fillBitIndication: 0b" << std::bitset<1>(fillBitIndication)
+  //           << std::endl;
+  // std::cout << "  lengthIndictaion: 0b" << std::bitset<5>(lengthIndictaion)
+  //           << std::endl;
+  // std::cout << "  channelAllocationFlag: 0b"
+  //           << std::bitset<1>(channelAllocationFlag) << std::endl;
+
+  // if (fillBitIndication == 0b1 && (bitsLeft != 133) && (addressType !=
+  // 0b001)) { if (fillBitIndication == 0b1) {
+  //   removeFillBits(vec);
+  // }
+
+  if (lengthIndictaion == 0b111111) {
+    bitsLeft = vec.bitsLeft();
+  }
+
+  // TODO: TM-SDU
+  auto tmSdu = BitVec(vec.takeVec(bitsLeft));
+  std::cout << "  TM-SDU: size = " << std::to_string(bitsLeft) << ": " << tmSdu
+            << std::endl;
+  std::cout << "  macHeaderLength = " << std::to_string(macHeaderLength)
+            << std::endl;
+  std::cout << "  fillBitIndication: 0b" << std::bitset<1>(fillBitIndication)
+            << std::endl;
+}
+
+void UpperMac::removeFillBits(BitVec &vec) {
+  if (_removeFillBits == true) {
+    while (vec.takeLast() == 0b0)
+      ;
+  }
+  _removeFillBits = false;
 }
 
 void UpperMac::updateScramblingCode() {

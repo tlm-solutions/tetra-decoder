@@ -26,12 +26,16 @@ public:
   void processAACH(const std::vector<uint8_t> &data);
   void processBSCH(const std::vector<uint8_t> &data);
   void processSCH_HD(const std::vector<uint8_t> &data);
+  void processSCH_F(const std::vector<uint8_t> &data);
+  void processSTCH(const std::vector<uint8_t> &data);
 
   uint32_t scramblingCode() const { return _scramblingCode; }
   uint16_t colorCode() const { return _colorCode; }
   int32_t downlinkFrequency() const { return _downlinkFrequency; }
   int32_t uplinkFrequency() const { return _uplinkFrequency; }
   enum DownlinkUsage downlinkUsage() const { return _downlinkUsage; }
+  int downlinkTrafficUsageMarker() const { return _downlinkTrafficUsageMarker; }
+  bool secondSlotStolen() const { return _secondSlotStolen; }
 
   uint16_t tn() const { return _tn; }
   uint16_t fn() const { return _fn; }
@@ -41,16 +45,28 @@ public:
                                   const UpperMac &upperMac);
 
 private:
+  void processSignallingChannel(const std::vector<uint8_t> &data,
+                                bool isHalfChannel, bool isStolenChannel);
+  void processSignallingChannel(BitVec &vec, bool isHalfChannel,
+                                bool isStolenChannel);
+
   void updateScramblingCode();
 
-  void processMacResource(BitVec &vec){};
-  void processMacEndAndMacFragment(BitVec &vec){};
   void processBroadcast(BitVec &vec);
-  void processMacPdu(BitVec &vec){};
+  void processSupplementaryMacPdu(BitVec &vec);
 
   void processSysinfoPdu(BitVec &vec);
-  void processAccessDefinePdu(BitVec &vec){};
+  void processAccessDefinePdu(BitVec &vec);
   void processSysinfoDa(BitVec &vec){};
+
+  void processMacUSignal(BitVec &vec);
+  void processMacDBlck(BitVec &vec);
+  void processMacFrag(BitVec &vec);
+  void processMacEnd(BitVec &vec);
+  void processMacResource(BitVec &vec);
+
+  void removeFillBits(BitVec &vec);
+  bool _removeFillBits;
 
   // SYNC PDU
   bool _syncReceived = false;
@@ -113,6 +129,9 @@ private:
   // AACH
   enum DownlinkUsage _downlinkUsage;
   int _downlinkTrafficUsageMarker;
+
+  // STCH
+  bool _secondSlotStolen;
 
   std::shared_ptr<Mle> _mle;
 };

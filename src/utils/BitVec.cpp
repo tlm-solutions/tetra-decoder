@@ -40,4 +40,39 @@ uint64_t BitVec::take(const size_t numberBits) {
   return ret;
 }
 
+uint8_t BitVec::takeLast() {
+  if (1 > bitsLeft()) {
+    throw std::runtime_error("1 bit not left in BitVec (" +
+                             std::to_string(bitsLeft()) + ")");
+  }
+
+  auto last = _data.back();
+  _data.pop_back();
+
+  return last;
+}
+
 size_t BitVec::bitsLeft() { return _data.size(); }
+
+bool BitVec::isMacPadding() {
+  auto it = _data.begin();
+
+  if (*it++ != 1)
+    return false;
+
+  for (; it != _data.end(); it++) {
+    if (*it != 0)
+      return false;
+  }
+
+  return true;
+}
+
+std::ostream &operator<<(std::ostream &stream, const BitVec &vec) {
+  stream << "BitVec: ";
+  for (auto it = vec._data.begin(); it != vec._data.end(); it++) {
+    stream << std::to_string(*it);
+  }
+
+  return stream;
+}
