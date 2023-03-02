@@ -1,78 +1,79 @@
+/*
+ * Copyright (C) 2022 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
+
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
 
-#include <utils/BitVec.hpp>
+#include <utils/bit_vector.hpp>
 
-BitVec::BitVec(const std::vector<uint8_t> &data) : _data(data) {}
-
-std::vector<uint8_t> BitVec::takeVec(const size_t numberBits) {
-  if (numberBits > bitsLeft()) {
-    throw std::runtime_error(std::to_string(numberBits) +
-                             " bits not left in BitVec (" +
-                             std::to_string(bitsLeft()) + ")");
-  }
-
-  std::vector<uint8_t> res;
-
-  std::copy_n(_data.begin(), numberBits, std::back_inserter(res));
-
-  // delete first n entries
-  std::vector<decltype(_data)::value_type>(_data.begin() + numberBits,
-                                           _data.end())
-      .swap(_data);
-
-  return res;
-}
-
-uint64_t BitVec::take(const size_t numberBits) {
-  std::vector<uint8_t> bits = takeVec(numberBits);
-
-  uint64_t ret = 0;
-
-  for (auto it = bits.begin(); it != bits.end(); it++) {
-    if (it != bits.begin()) {
-      ret <<= 1;
+auto BitVector::take_vector(const size_t numberBits) -> std::vector<uint8_t> {
+    if (numberBits > bits_left()) {
+        throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
+                                 std::to_string(bits_left()) + ")");
     }
-    ret |= (*it & 0x1);
-  }
 
-  return ret;
+    std::vector<uint8_t> res;
+
+    std::copy_n(data_.begin(), numberBits, std::back_inserter(res));
+
+    // delete first n entries
+    std::vector<decltype(data_)::value_type>(data_.begin() + numberBits, data_.end()).swap(data_);
+
+    return res;
 }
 
-uint8_t BitVec::takeLast() {
-  if (1 > bitsLeft()) {
-    throw std::runtime_error("1 bit not left in BitVec (" +
-                             std::to_string(bitsLeft()) + ")");
-  }
+auto BitVector::take(const size_t numberBits) -> uint64_t {
+    std::vector<uint8_t> bits = take_vector(numberBits);
 
-  auto last = _data.back();
-  _data.pop_back();
+    uint64_t ret = 0;
 
-  return last;
+    for (auto it = bits.begin(); it != bits.end(); it++) {
+        if (it != bits.begin()) {
+            ret <<= 1;
+        }
+        ret |= (*it & 0x1);
+    }
+
+    return ret;
 }
 
-size_t BitVec::bitsLeft() { return _data.size(); }
+auto BitVector::take_last() -> uint8_t {
+    if (1 > bits_left()) {
+        throw std::runtime_error("1 bit not left in BitVec (" + std::to_string(bits_left()) + ")");
+    }
 
-bool BitVec::isMacPadding() {
-  auto it = _data.begin();
+    auto last = data_.back();
+    data_.pop_back();
 
-  if (*it++ != 1)
-    return false;
-
-  for (; it != _data.end(); it++) {
-    if (*it != 0)
-      return false;
-  }
-
-  return true;
+    return last;
 }
 
-std::ostream &operator<<(std::ostream &stream, const BitVec &vec) {
-  stream << "BitVec: ";
-  for (auto it = vec._data.begin(); it != vec._data.end(); it++) {
-    stream << std::to_string(*it);
-  }
+auto BitVector::is_mac_padding() const noexcept -> bool {
+    auto it = data_.begin();
 
-  return stream;
+    if (*it++ != 1)
+        return false;
+
+    for (; it != data_.end(); it++) {
+        if (*it != 0)
+            return false;
+    }
+
+    return true;
+}
+
+std::ostream& operator<<(std::ostream& stream, const BitVector& vec) {
+    stream << "BitVec: ";
+    for (unsigned char it : vec.data_) {
+        stream << std::to_string(it);
+    }
+
+    return stream;
 }

@@ -1,27 +1,37 @@
-#ifndef UTILS_BITVEC_HPP
-#define UTILS_BITVEC_HPP
+/*
+ * Copyright (C) 2022 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
+
+#ifndef TETRA_DECODER_UTILS_BIT_VECTOR_HPP
+#define TETRA_DECODER_UTILS_BIT_VECTOR_HPP
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
-class BitVec {
-public:
-  BitVec(const std::vector<uint8_t> &data);
-  ~BitVec(){};
+class BitVector {
+  private:
+    std::vector<uint8_t> data_;
 
-  std::vector<uint8_t> takeVec(const size_t numberBits);
-  uint64_t take(const size_t numberBits);
-  uint8_t takeLast();
-  size_t bitsLeft();
-  size_t size() { return bitsLeft(); }
-  bool isMacPadding();
+  public:
+    explicit BitVector(std::vector<uint8_t> data)
+        : data_(std::move(data)){};
+    ~BitVector() noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &stream, const BitVec &vec);
+    auto take_vector(std::size_t numberBits) -> std::vector<uint8_t>;
+    auto take(std::size_t numberBits) -> uint64_t;
+    auto take_last() -> uint8_t;
+    [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return data_.size(); };
+    [[nodiscard]] auto is_mac_padding() const noexcept -> bool;
 
-private:
-  std::vector<uint8_t> _data;
+    friend std::ostream& operator<<(std::ostream& stream, const BitVector& vec);
 };
 
-std::ostream &operator<<(std::ostream &stream, const BitVec &vec);
+std::ostream& operator<<(std::ostream& stream, const BitVector& vec);
 
-#endif
+#endif // TETRA_DECODER_UTILS_BIT_VECTOR_HPP
