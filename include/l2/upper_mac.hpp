@@ -1,10 +1,10 @@
 /*
-* Copyright (C) 2022 Transit Live Mapping Solutions
-* All rights reserved.
-*
-* Authors:
-*   Marenz Schmidl
-*   Tassilo Tanneberger
+ * Copyright (C) 2022 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
  */
 
 #ifndef L2_UPPERMAC_HPP
@@ -38,7 +38,7 @@ class UpperMac {
     [[nodiscard]] auto color_code() const noexcept -> uint16_t { return color_code_; }
     [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t { return downlink_frequency_; }
     [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t { return uplink_frequency_; }
-    [[nodiscard]] auto downlink_usage() const noexcept -> DownlinkUsage{ return downlink_usage_; }
+    [[nodiscard]] auto downlink_usage() const noexcept -> DownlinkUsage { return downlink_usage_; }
     [[nodiscard]] auto downlink_traffic_usage_marker() const noexcept -> int { return downlink_traffic_usage_marker_; }
     [[nodiscard]] auto second_slot_stolen() const noexcept -> bool { return second_slot_stolen_; }
 

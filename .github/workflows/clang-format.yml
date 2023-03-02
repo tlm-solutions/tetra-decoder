@@ -14,5 +14,5 @@ jobs:
           sudo apt-get install -y clang-tidy
       - name: Analyze
         run: |
-          clang-format --dry-run --Werror -style=file $(find ./ -name '*.cc' -print)
-          clang-format --dry-run --Werror -style=file $(find ./ -name '*.hh' -print)
+          clang-format --dry-run --Werror -style=file $(find ./ -name '*.cpp' -print)
+          clang-format --dry-run --Werror -style=file $(find ./ -name '*.hpp' -print)

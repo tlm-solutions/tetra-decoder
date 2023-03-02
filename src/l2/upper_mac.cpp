@@ -7,7 +7,6 @@
 void UpperMac::incrementTn() {
     time_slot_++;
 
-
     // TODO: remove magic numbers
     // time slot
     if (time_slot_ > 4) {
@@ -609,14 +608,15 @@ std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac) {
         stream << "SYNC:" << std::endl;
         stream << "  System code: 0b" << std::bitset<4>(upperMac.system_code_) << std::endl;
         stream << "  Color code: " << std::to_string(upperMac.color_code_) << std::endl;
-        stream << "  TN/FN/MN: " << std::to_string(upperMac.time_slot_) << "/" << std::to_string(upperMac.frame_number_) << "/"
-               << std::to_string(upperMac.multi_frame_number_) << std::endl;
+        stream << "  TN/FN/MN: " << std::to_string(upperMac.time_slot_) << "/" << std::to_string(upperMac.frame_number_)
+               << "/" << std::to_string(upperMac.multi_frame_number_) << std::endl;
         stream << "  Scrambling code: " << std::to_string(upperMac.scrambling_code_) << std::endl;
         std::string sharing_mode_map[] = {"Continuous transmission", "Carrier sharing", "MCCH sharing",
                                           "Traffic carrier sharing"};
         stream << "  Sharing mode: " << sharing_mode_map[upperMac.sharing_mode_] << std::endl;
         uint8_t ts_reserved_frames_map[] = {1, 2, 3, 4, 6, 9, 12, 18};
-        stream << "  TS reserved frames: " << std::to_string(ts_reserved_frames_map[upperMac.time_slot_reserved_frames_])
+        stream << "  TS reserved frames: "
+               << std::to_string(ts_reserved_frames_map[upperMac.time_slot_reserved_frames_])
                << " frames reserved per 2 multiframes" << std::endl;
         stream << "  "
                << (upperMac.up_lane_dtx_ ? "Discontinuous U-plane transmission is allowed"
@@ -657,7 +657,8 @@ std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac) {
             break;
         }
         stream << std::endl;
-        stream << "  RXLEV_ACCESS_MIN: " << std::to_string(-125 + 5 * upperMac.rxlev_access_min_) << " dBm" << std::endl;
+        stream << "  RXLEV_ACCESS_MIN: " << std::to_string(-125 + 5 * upperMac.rxlev_access_min_) << " dBm"
+               << std::endl;
         stream << "  ACCESS_PARAMETER: " << std::to_string(-53 + 2 * upperMac.access_parameter_) << " dBm" << std::endl;
         stream << "  RADIO_DOWNLINK_TIMEOUT: ";
         switch (upperMac.radio_downlink_timeout_) {
@@ -692,7 +693,8 @@ std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac) {
             stream << "    Waiting time: 0b" << std::bitset<4>(upperMac.defaults_for_access_code_a_.waiting_time_)
                    << std::endl;
             stream << "    Number of random access transmissions on uplink: 0b"
-                   << std::bitset<4>(upperMac.defaults_for_access_code_a_.number_of_random_access_transmissions_on_up_link_)
+                   << std::bitset<4>(
+                          upperMac.defaults_for_access_code_a_.number_of_random_access_transmissions_on_up_link_)
                    << std::endl;
             stream << "    Frame-length factor: 0b"
                    << std::bitset<1>(upperMac.defaults_for_access_code_a_.frame_length_factor_) << std::endl;
@@ -714,7 +716,8 @@ std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac) {
                 stream << "    Data priority supported: 0b"
                        << std::bitset<1>(upperMac.extended_service_broadcast_.data_priority_supported_) << std::endl;
                 stream << "    Extended advanced links and MAC-U-BLCK supported: 0b"
-                       << std::bitset<1>(upperMac.extended_service_broadcast_.extended_advanced_links_and_max_ublck_supported_)
+                       << std::bitset<1>(
+                              upperMac.extended_service_broadcast_.extended_advanced_links_and_max_ublck_supported_)
                        << std::endl;
                 stream << "    QoS negotiation supported: 0b"
                        << std::bitset<1>(upperMac.extended_service_broadcast_.qos_negotiation_supported_) << std::endl;

@@ -1,8 +1,8 @@
+#include <csignal>
+#include <cstdlib>
 #include <cxxopts.hpp>
 #include <memory>
-#include <csignal>
 #include <stdio.h>
-#include <cstdlib>
 
 #include <decoder.hpp>
 
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
         std::cout << "Writing to output file " << *output_file << std::endl;
     }
 
-    while (!stop) { //NOLINT handled by signal action
+    while (!stop) { // NOLINT handled by signal action
         decoder->main_loop();
     }
 

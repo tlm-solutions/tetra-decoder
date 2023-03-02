@@ -1,3 +1,5 @@
 /cmake-build-debug
 /build
 /cmake-build-release
+.idea
+/result

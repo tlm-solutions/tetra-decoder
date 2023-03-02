@@ -1,11 +1,11 @@
 /*
-* Copyright (C) 2022 Transit Live Mapping Solutions
-* All rights reserved.
-*
-* Authors:
-*   Marenz Schmidl
-*   Tassilo Tanneberger
-*/
+ * Copyright (C) 2022 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
 
 #ifndef L3_MLE_HPP
 #define L3_MLE_HPP
