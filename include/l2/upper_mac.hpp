@@ -58,7 +58,7 @@ class UpperMac {
     void process_supplementary_mac_pdu(BitVector& vec);
 
     void process_system_info_pdu(BitVector& vec);
-    void process_access_define_pdu(BitVector& vec);
+    static void process_access_define_pdu(BitVector& vec);
     void process_system_info_da(BitVector& vec){};
 
     void process_mac_usignal(BitVector& vec);
