@@ -591,7 +591,8 @@ void UpperMac::process_mac_resource(BitVector& vec) {
 
 void UpperMac::remove_fill_bits(BitVector& vec) {
     if (remove_fill_bits_) {
-        while (vec.take_last() == 0b0);
+        while (vec.take_last() == 0b0)
+            ;
     }
     remove_fill_bits_ = false;
 }
