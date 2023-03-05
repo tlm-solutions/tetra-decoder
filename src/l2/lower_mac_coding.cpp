@@ -96,7 +96,7 @@ auto LowerMac::viter_bi_decode_1614(const std::vector<uint8_t>& data) noexcept -
         string_input += (char)(idx + '0');
     }
 
-    std::string sOut = viter_bi_codec_1614_->decode(string_input);
+    std::string sOut = viter_bi_codec_1614_->Decode(string_input);
 
     std::vector<uint8_t> res;
 
