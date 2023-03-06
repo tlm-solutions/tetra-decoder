@@ -1,24 +1,29 @@
+project(tetra)
+
 cmake_minimum_required(VERSION 3.22)
+set(CMAKE_CXX_STANDARD 17)
 
-add_executable(tetra-impl
+
+add_executable(tetra
                src/main.cpp
-               src/Decoder.cpp
-               src/l2/LowerMac.cpp
-               src/l2/Coding.cpp
-               src/l2/UpperMac.cpp
-               src/l3/Mle.cpp
-               src/utils/BitVec.cpp
-               src/utils/Viterbi.cpp)
+        src/decoder.cpp
+        src/l2/lower_mac.cpp
+        src/l2/lower_mac_coding.cpp
+        src/l2/upper_mac.cpp
+        src/l3/mobile_link_entity.cpp
+        src/utils/bit_vector.cpp
+        src/utils/viter_bi_codec.cpp)
 
-target_compile_options(tetra-impl PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
 include_directories(src)
 
-find_package(cxxopts REQUIRED)
+find_package(cxxopts CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(fmt REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tetra-impl ZLIB::ZLIB)
+target_link_libraries(tetra ZLIB::ZLIB fmt::fmt)
 
-install(TARGETS tetra-impl DESTINATION bin)
+install(TARGETS tetra DESTINATION bin)
