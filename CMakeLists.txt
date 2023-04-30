@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(tetra
                src/main.cpp
         src/decoder.cpp
+        src/l2/address_type.cpp
         src/l2/lower_mac.cpp
         src/l2/lower_mac_coding.cpp
         src/l2/upper_mac.cpp
