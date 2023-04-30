@@ -32,8 +32,9 @@ void UpperMac::incrementTn() {
  * @brief Process ACCESS-ASSIGN - see 21.4.7.2
  *
  */
-void UpperMac::processAACH(const std::vector<uint8_t>& data) {
+void UpperMac::processAACH(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 14);
+    assert(burst_type.isDownlinkBurst());
 
     auto vec = BitVector(data);
 
@@ -77,8 +78,9 @@ void UpperMac::processAACH(const std::vector<uint8_t>& data) {
  * @brief Process SYNC - see 21.4.4.2
  *
  */
-void UpperMac::processBSCH(const std::vector<uint8_t>& data) {
+void UpperMac::processBSCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 60);
+    assert(burst_type.isDownlinkBurst());
 
     auto vec = BitVector(data);
 
@@ -102,58 +104,97 @@ void UpperMac::processBSCH(const std::vector<uint8_t>& data) {
 
     sync_received_ = true;
 
-    //  std::cout << *this;
+    std::cout << *this;
 }
 
-void UpperMac::processSCH_HD(const std::vector<uint8_t>& data) {
+void UpperMac::processSCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
+    assert(burst_type.isDownlinkBurst());
+
     std::cout << "SCH_HD" << std::endl;
-    process_signalling_channel(data, true, false);
+    process_signalling_channel(burst_type, data, true, false);
 }
 
-void UpperMac::processSCH_F(const std::vector<uint8_t>& data) {
+void UpperMac::processSCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data) {
+    assert(data.size() == 92);
+    assert(burst_type.isUplinkBurst());
+
+    auto vec = BitVector(data);
+
+    std::cout << "SCH_HU" << std::endl;
+
+    auto pduType = vec.take(1);
+    auto fill_bit_indication = vec.take(1);
+
+    remove_fill_bits_ = true;
+    remove_fill_bits(vec);
+
+    if (pduType == 0b0) {
+        process_mac_access(vec);
+    } else if (pduType == 0b1) {
+        process_mac_end_hu(vec);
+    }
+}
+
+void UpperMac::processSCH_F(const BurstType burst_type, const std::vector<uint8_t>& data) {
     std::cout << "SCH_F" << std::endl;
-    process_signalling_channel(data, false, false);
+    process_signalling_channel(burst_type, data, false, false);
 }
 
-void UpperMac::processSTCH(const std::vector<uint8_t>& data) {
+void UpperMac::processSTCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
     std::cout << "STCH" << std::endl;
 
     second_slot_stolen_ = false;
 
-    process_signalling_channel(data, true, true);
+    process_signalling_channel(burst_type, data, true, true);
 }
 
-void UpperMac::process_signalling_channel(const std::vector<uint8_t>& data, bool isHalfChannel, bool isStolenChannel) {
+void UpperMac::process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data,
+                                          bool isHalfChannel, bool isStolenChannel) {
     auto vec = BitVector(data);
 
     remove_fill_bits_ = true;
     try {
-        process_signalling_channel(vec, isHalfChannel, isStolenChannel);
+        process_signalling_channel(burst_type, vec, isHalfChannel, isStolenChannel);
     } catch (std::exception& e) {
         std::cout << "Error with decoding: " << e.what() << std::endl;
     }
 }
 
-void UpperMac::process_signalling_channel(BitVector& vec, bool isHalfChannel, bool isStolenChannel) {
+void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
+                                          bool isStolenChannel) {
     auto pduType = vec.take(2);
 
     if (pduType == 0b00) {
         // MAC-RESOURCE (downlink) or MAC-DATA (uplink)
         // TMA-SAP
-        process_mac_resource(vec);
+        if (burst_type.isDownlinkBurst()) {
+            process_mac_resource(vec);
+        } else {
+            // TODO: implement
+            process_mac_data(vec);
+        }
     } else if (pduType == 0b01) {
         // MAC-END or MAC-FRAG
         // TMA-SAP
         auto subtype = vec.take(1);
         if (subtype == 0b0) {
-            process_mac_frag(vec);
+            if (burst_type.isDownlinkBurst()) {
+                process_mac_frag_downlink(vec);
+            } else {
+                process_mac_frag_uplink(vec);
+            }
         } else if (subtype == 0b1) {
-            process_mac_end(vec);
+            if (burst_type.isDownlinkBurst()) {
+                process_mac_end_downlink(vec);
+            } else {
+                process_mac_end_uplink(vec);
+            }
         }
     } else if (pduType == 0b10) {
         // Broadcast
         // TMB-SAP
         // ✅ done
+        assert(burst_type.isDownlinkBurst());
         process_broadcast(vec);
     } else if (pduType == 0b11) {
         // Supplementary MAC PDU (not on STCH, SCH/HD or SCH-P8/HD)
@@ -162,7 +203,7 @@ void UpperMac::process_signalling_channel(BitVector& vec, bool isHalfChannel, bo
         if (isHalfChannel && isStolenChannel) {
             process_mac_usignal(vec);
         } else if ((!isHalfChannel) && (!isStolenChannel)) {
-            process_supplementary_mac_pdu(vec);
+            process_supplementary_mac_pdu(burst_type, vec);
         } else {
             // Reserved
             // TODO: print unimplemented error
@@ -174,7 +215,7 @@ void UpperMac::process_signalling_channel(BitVector& vec, bool isHalfChannel, bo
     if (vec.bits_left() > 0) {
         std::cout << "BitsLeft(): " << std::to_string(vec.bits_left()) << " " << vec << std::endl;
         if (!vec.is_mac_padding()) {
-            process_signalling_channel(vec, isHalfChannel, isStolenChannel);
+            process_signalling_channel(burst_type, vec, isHalfChannel, isStolenChannel);
         }
     }
 }
@@ -205,12 +246,16 @@ void UpperMac::process_broadcast(BitVector& vec) {
     }
 }
 
-void UpperMac::process_supplementary_mac_pdu(BitVector& vec) {
+void UpperMac::process_supplementary_mac_pdu(const BurstType burst_type, BitVector& vec) {
     auto subtype = vec.take(1);
 
     switch (subtype) {
     case 0b0:
-        process_mac_dblck(vec);
+        if (burst_type.isDownlinkBurst()) {
+            process_mac_d_blck(vec);
+        } else {
+            process_mac_u_blck(vec);
+        }
         break;
     case 0b1:
         // Reserved
@@ -334,7 +379,7 @@ void UpperMac::process_mac_usignal(BitVector& vec) {
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
-void UpperMac::process_mac_dblck(BitVector& vec) {
+void UpperMac::process_mac_d_blck(BitVector& vec) {
     auto fill_bit_indication = vec.take(1);
     auto encrypted = vec.take(2);
     auto address = vec.take(10);
@@ -355,7 +400,26 @@ void UpperMac::process_mac_dblck(BitVector& vec) {
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
-void UpperMac::process_mac_frag(BitVector& vec) {
+void UpperMac::process_mac_u_blck(BitVector& vec) {
+    auto fill_bit_indication = vec.take(1);
+    auto encrypted = vec.take(1);
+    auto event_label = vec.take(10);
+    auto reservation_requirement = vec.take(4);
+
+    if (fill_bit_indication == 0b1) {
+        remove_fill_bits(vec);
+    }
+
+    // TODO: TM-SDU
+    auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
+    std::cout << "MAC U-BLCK" << std::endl;
+    std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+    std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted) << std::endl;
+    std::cout << "  event label: " << event_label << std::endl;
+    std::cout << "  reservation_requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
+}
+
+void UpperMac::process_mac_frag_downlink(BitVector& vec) {
     auto fill_bit_indication = vec.take(1);
 
     if (fill_bit_indication == 0b1) {
@@ -368,7 +432,20 @@ void UpperMac::process_mac_frag(BitVector& vec) {
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
-void UpperMac::process_mac_end(BitVector& vec) {
+void UpperMac::process_mac_frag_uplink(BitVector& vec) {
+    auto fill_bit_indication = vec.take(1);
+
+    if (fill_bit_indication == 0b1) {
+        remove_fill_bits(vec);
+    }
+
+    // TODO: TM-SDU
+    auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
+    std::cout << "MAC FRAG" << std::endl;
+    std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+}
+
+void UpperMac::process_mac_end_downlink(BitVector& vec) {
     second_slot_stolen_ = false;
 
     auto pre_processing_bit_count = vec.bits_left() + 3;
@@ -434,12 +511,37 @@ void UpperMac::process_mac_end(BitVector& vec) {
     auto mac_header_length = pre_processing_bit_count - vec.bits_left();
     auto bits_left = length_indictaion * 8 - mac_header_length;
 
+    if (fill_bit_indication == 0b1) {
+        remove_fill_bits(vec);
+    }
+
     // TODO: TM-SDU
     auto tmSdu = BitVector(vec.take_vector(bits_left));
     std::cout << "MAC END" << std::endl;
+    std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tmSdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
-    std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
+}
+
+void UpperMac::process_mac_end_uplink(BitVector& vec) {
+    auto pre_processing_bit_count = vec.bits_left() + 3;
+
+    auto fill_bit_indication = vec.take(1);
+    auto length_indictaion = vec.take(6);
+
+    auto mac_header_length = pre_processing_bit_count - vec.bits_left();
+    auto bits_left = length_indictaion * 8 - mac_header_length;
+
+    if (fill_bit_indication == 0b1) {
+        remove_fill_bits(vec);
+    }
+
+    // TODO: TM-SDU
+    auto tmSdu = BitVector(vec.take_vector(bits_left));
+    std::cout << "MAC END" << std::endl;
+    std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
+    std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tmSdu << std::endl;
+    std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
 }
 
 void UpperMac::process_mac_resource(BitVector& vec) {
@@ -587,6 +689,112 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
     std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
+}
+
+void UpperMac::process_mac_data(BitVector& vec) {
+    auto fill_bit_indication = vec.take(1);
+    auto encrypted_flag = vec.take(1);
+    auto address_type = vec.take(2);
+
+    std::cout << "MAC DATA" << std::endl;
+    std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
+
+    if (address_type == 0b00) {
+        auto ssi = vec.take(24);
+        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+    } else if (address_type == 0b01) {
+        auto event_label = vec.take(10);
+        std::cout << "  Event Label: " << std::to_string(event_label) << std::endl;
+    } else if (address_type == 0b11) {
+        auto ussi = vec.take(24);
+        std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+    } else if (address_type == 0b11) {
+        auto smi = vec.take(24);
+        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+    }
+
+    auto length_indictaion_or_capacity_request = vec.take(1);
+    if (length_indictaion_or_capacity_request == 0b0) {
+        auto length_indictaion = vec.take(6);
+        std::cout << "  length indication: 0b" << std::bitset<6>(length_indictaion) << std::endl;
+        // TODO: parse this
+        if (length_indictaion == 0b111110) {
+            std::cout << "  Second half slot stolen on STCH" << std::endl;
+        } else if (length_indictaion == 0b111111) {
+            std::cout << "  Start of fragmentation on STCH" << std::endl;
+        }
+    } else {
+        auto fragmentation_flag = vec.take(1);
+        auto reservation_requirement = vec.take(4);
+        auto reserved = vec.take(1);
+        std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
+        std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
+        std::cout << "  reserved: 0b" << std::bitset<1>(reserved) << std::endl;
+    }
+
+    // TODO: TM-SDU
+    auto tm_sdu = vec;
+    std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+}
+
+void UpperMac::process_mac_access(BitVector& vec) {
+    std::cout << "MAC-ACCESS" << std::endl;
+    auto encrypted_flag = vec.take(1);
+    auto address_type = vec.take(2);
+
+    std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
+
+    if (address_type == 0b00) {
+        auto ssi = vec.take(24);
+        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+    } else if (address_type == 0b01) {
+        auto event_label = vec.take(10);
+        std::cout << "  Event Label: " << std::to_string(event_label) << std::endl;
+    } else if (address_type == 0b11) {
+        auto ussi = vec.take(24);
+        std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+    } else if (address_type == 0b11) {
+        auto smi = vec.take(24);
+        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+    }
+
+    auto optional_field_flag = vec.take(1);
+
+    if (optional_field_flag == 0b1) {
+        auto length_indictaion_or_capacity_request = vec.take(1);
+        if (length_indictaion_or_capacity_request == 0b0) {
+            // TODO: parse this
+            auto length_indictaion = vec.take(5);
+            std::cout << "  length indication: 0b" << std::bitset<5>(length_indictaion) << std::endl;
+        } else {
+            auto fragmentation_flag = vec.take(1);
+            auto reservation_requirement = vec.take(4);
+            std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
+            std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
+        }
+    }
+
+    // TODO: TM-SDU
+    auto tm_sdu = vec;
+    std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+}
+
+void UpperMac::process_mac_end_hu(BitVector& vec) {
+    std::cout << "MAC-END-HU" << std::endl;
+
+    auto length_indictaion_or_capacity_request = vec.take(1);
+    if (length_indictaion_or_capacity_request == 0b0) {
+        // TODO: parse this
+        auto length_indictaion = vec.take(4);
+        std::cout << "  length indication: 0b" << std::bitset<4>(length_indictaion) << std::endl;
+    } else {
+        auto reservation_requirement = vec.take(4);
+        std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
+    }
+
+    // TODO: TM-SDU
+    auto tm_sdu = vec;
+    std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
 void UpperMac::remove_fill_bits(BitVector& vec) {

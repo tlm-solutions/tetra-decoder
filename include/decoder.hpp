@@ -38,7 +38,8 @@
 class Decoder {
   public:
     Decoder(unsigned int receive_port, unsigned int send_port, bool keep_fill_bits, bool packed,
-            std::optional<std::string> input_file, std::optional<std::string> output_file);
+            std::optional<std::string> input_file, std::optional<std::string> output_file,
+            std::optional<unsigned int> uplink_scrambling_code);
     ~Decoder();
 
     void main_loop();
@@ -58,6 +59,9 @@ class Decoder {
     // optional output file
     std::optional<int> output_file_fd_ = std::nullopt;
 
+    // uplink ?
+    std::optional<unsigned int> uplink_scrambling_code_;
+
     const std::size_t kRX_BUFFER_SIZE = 4096;
     const std::size_t kFRAME_LEN = 510;
 
@@ -70,6 +74,10 @@ class Decoder {
                                                          0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0};          // p1..p22
     const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_3_BEGIN = {0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1}; // q11..q22
     const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_3_END = {1, 0, 1, 1, 0, 1, 1, 1, 0, 0};         // q1..q10
+
+    // 9.4.4.3.3 Extended training sequence
+    const std::vector<uint8_t> kEXTENDED_TRAINING_SEQ = {1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1,
+                                                         0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1}; // x1..x30
 
     // 9.4.4.3.4 Synchronisation training sequence
     const std::vector<uint8_t> kSYNC_TRAINING_SEQ = {1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0,
@@ -102,7 +110,7 @@ class Decoder {
      * MAC
      *
      */
-    void process_frame() noexcept;
+    void process_downlink_frame() noexcept;
 
     /**
      * @brief Return pattern/data comparison errors count at position in data

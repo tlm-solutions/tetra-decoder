@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
     unsigned int receive_port, send_port, debug_level;
     bool keep_fill_bits, packed;
     std::optional<std::string> input_file, output_file;
+    std::optional<unsigned> uplink_scrambling_code;
 
     struct sigaction signal_action {};
     signal_action.sa_handler = sigint_handler;
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
 		("d", "<level> print debug information", cxxopts::value<unsigned>()->default_value("0"))
 		("f,keep-fill-bits", "keep fill bits", cxxopts::value<bool>()->default_value("false"))
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
+		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
 		;
     // clang-format on
 
@@ -57,7 +59,8 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, keep_fill_bits, input_file, output_file);
+    auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, keep_fill_bits, input_file, output_file,
+                                             uplink_scrambling_code);
 
     if (input_file.has_value()) {
         std::cout << "Reading from input file " << *input_file << std::endl;

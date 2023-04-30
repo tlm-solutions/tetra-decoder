@@ -23,7 +23,8 @@ class LowerMac {
     LowerMac();
     ~LowerMac() = default;
 
-    void process(const std::vector<uint8_t>& frame, BurstType burst_type);
+    bool process(const std::vector<uint8_t>& frame, BurstType burst_type);
+    void set_scrambling_code(unsigned int scrambling_code) { upper_mac_->set_scrambling_code(scrambling_code); };
 
   private:
     std::unique_ptr<ViterbiCodec> viter_bi_codec_1614_;
