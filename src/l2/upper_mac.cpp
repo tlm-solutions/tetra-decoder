@@ -1,6 +1,7 @@
 #include <bitset>
 #include <cassert>
 
+#include <l2/address_type.hpp>
 #include <l2/upper_mac.hpp>
 #include <utils/bit_vector.hpp>
 
@@ -382,7 +383,9 @@ void UpperMac::process_mac_usignal(BitVector& vec) {
 void UpperMac::process_mac_d_blck(BitVector& vec) {
     auto fill_bit_indication = vec.take(1);
     auto encrypted = vec.take(2);
-    auto address = vec.take(10);
+    auto event_label = vec.take(10);
+    auto address = AddressType();
+    address.set_event_label(event_label);
     auto immediate_napping_permission_flag = vec.take(1);
     auto slot_granting_flag = vec.take(1);
     auto basic_slot_granting_element = 0;
@@ -398,12 +401,15 @@ void UpperMac::process_mac_d_blck(BitVector& vec) {
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC D-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+    std::cout << "  Address: " << address << std::endl;
 }
 
 void UpperMac::process_mac_u_blck(BitVector& vec) {
     auto fill_bit_indication = vec.take(1);
     auto encrypted = vec.take(1);
     auto event_label = vec.take(10);
+    auto address = AddressType();
+    address.set_event_label(event_label);
     auto reservation_requirement = vec.take(4);
 
     if (fill_bit_indication == 0b1) {
@@ -415,8 +421,8 @@ void UpperMac::process_mac_u_blck(BitVector& vec) {
     std::cout << "MAC U-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted) << std::endl;
-    std::cout << "  event label: " << event_label << std::endl;
     std::cout << "  reservation_requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
+    std::cout << "  Address: " << address << std::endl;
 }
 
 void UpperMac::process_mac_frag_downlink(BitVector& vec) {
@@ -559,6 +565,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     }
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
     auto address_type = vec.take(3);
+    auto address = AddressType();
     std::cout << "  address_type: 0b" << std::bitset<3>(address_type) << std::endl;
     if (address_type == 0b000) {
         remove_fill_bits(vec);
@@ -573,31 +580,22 @@ void UpperMac::process_mac_resource(BitVector& vec) {
         //           << std::endl;
         return;
     } else if (address_type == 0b001) {
-        auto ssi = vec.take(24);
-        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+        address.set_ssi(vec.take(24));
     } else if (address_type == 0b010) {
-        auto event_label = vec.take(10);
+        address.set_event_label(vec.take(10));
     } else if (address_type == 0b011) {
-        auto ussi = vec.take(24);
-        std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+        address.set_ussi(vec.take(24));
     } else if (address_type == 0b100) {
-        auto smi = vec.take(24);
-        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+        address.set_smi(vec.take(24));
     } else if (address_type == 0b101) {
-        auto ssi = vec.take(24);
-        auto event_label = vec.take(10);
-        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
-        std::cout << "  EventLabel: " << std::to_string(event_label) << std::endl;
+        address.set_ssi(vec.take(24));
+        address.set_event_label(vec.take(10));
     } else if (address_type == 0b110) {
-        auto ssi = vec.take(24);
-        auto usage_marker = vec.take(6);
-        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
-        std::cout << "  UsageMarker: " << std::to_string(usage_marker) << std::endl;
+        address.set_ssi(vec.take(24));
+        address.set_usage_marker(vec.take(6));
     } else if (address_type == 0b111) {
-        auto smi = vec.take(24);
-        auto event_label = vec.take(10);
-        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
-        std::cout << "  EventLabel: " << std::to_string(event_label) << std::endl;
+        address.set_smi(vec.take(24));
+        address.set_event_label(vec.take(10));
     }
     // The immediate napping permission flag shall be present when the PDU is sent
     // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
@@ -689,6 +687,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
     std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
+    std::cout << "  Address: " << address << std::endl;
 }
 
 void UpperMac::process_mac_data(BitVector& vec) {
@@ -699,18 +698,15 @@ void UpperMac::process_mac_data(BitVector& vec) {
     std::cout << "MAC DATA" << std::endl;
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
 
+    auto address = AddressType();
     if (address_type == 0b00) {
-        auto ssi = vec.take(24);
-        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+        address.set_ssi(vec.take(24));
     } else if (address_type == 0b01) {
-        auto event_label = vec.take(10);
-        std::cout << "  Event Label: " << std::to_string(event_label) << std::endl;
+        address.set_event_label(vec.take(10));
     } else if (address_type == 0b11) {
-        auto ussi = vec.take(24);
-        std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+        address.set_ussi(vec.take(24));
     } else if (address_type == 0b11) {
-        auto smi = vec.take(24);
-        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+        address.set_smi(vec.take(24));
     }
 
     auto length_indictaion_or_capacity_request = vec.take(1);
@@ -735,6 +731,7 @@ void UpperMac::process_mac_data(BitVector& vec) {
     // TODO: TM-SDU
     auto tm_sdu = vec;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+    std::cout << "  Address: " << address << std::endl;
 }
 
 void UpperMac::process_mac_access(BitVector& vec) {
@@ -744,18 +741,15 @@ void UpperMac::process_mac_access(BitVector& vec) {
 
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
 
+    auto address = AddressType();
     if (address_type == 0b00) {
-        auto ssi = vec.take(24);
-        std::cout << "  SSI: " << std::to_string(ssi) << std::endl;
+        address.set_ssi(vec.take(24));
     } else if (address_type == 0b01) {
-        auto event_label = vec.take(10);
-        std::cout << "  Event Label: " << std::to_string(event_label) << std::endl;
+        address.set_event_label(vec.take(10));
     } else if (address_type == 0b11) {
-        auto ussi = vec.take(24);
-        std::cout << "  USSI: " << std::to_string(ussi) << std::endl;
+        address.set_ussi(vec.take(24));
     } else if (address_type == 0b11) {
-        auto smi = vec.take(24);
-        std::cout << "  SMI: " << std::to_string(smi) << std::endl;
+        address.set_smi(vec.take(24));
     }
 
     auto optional_field_flag = vec.take(1);
@@ -777,6 +771,7 @@ void UpperMac::process_mac_access(BitVector& vec) {
     // TODO: TM-SDU
     auto tm_sdu = vec;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+    std::cout << "  Address: " << address << std::endl;
 }
 
 void UpperMac::process_mac_end_hu(BitVector& vec) {
