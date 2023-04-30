@@ -15,6 +15,7 @@
 #include <optional>
 #include <vector>
 
+#include <burst_type.hpp>
 #include <l3/mobile_link_entity.hpp>
 
 enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
@@ -27,12 +28,14 @@ class UpperMac {
     ;
 
     void incrementTn();
+    void set_scrambling_code(unsigned int scrambling_code) { scrambling_code_ = scrambling_code; };
 
-    void processAACH(const std::vector<uint8_t>& data);
-    void processBSCH(const std::vector<uint8_t>& data);
-    void processSCH_HD(const std::vector<uint8_t>& data);
-    void processSCH_F(const std::vector<uint8_t>& data);
-    void processSTCH(const std::vector<uint8_t>& data);
+    void processAACH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void processBSCH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void processSCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void processSCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void processSCH_F(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void processSTCH(const BurstType burst_type, const std::vector<uint8_t>& data);
 
     [[nodiscard]] auto scrambling_code() const noexcept -> uint32_t { return scrambling_code_; }
     [[nodiscard]] auto color_code() const noexcept -> uint16_t { return color_code_; }
@@ -49,23 +52,34 @@ class UpperMac {
     friend std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);
 
   private:
-    void process_signalling_channel(const std::vector<uint8_t>& data, bool isHalfChannel, bool isStolenChannel);
-    void process_signalling_channel(BitVector& vec, bool isHalfChannel, bool isStolenChannel);
+    void process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
+                                    bool isStolenChannel);
+    void process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
+                                    bool isStolenChannel);
 
     void update_scrambling_code();
 
     void process_broadcast(BitVector& vec);
-    void process_supplementary_mac_pdu(BitVector& vec);
+    void process_supplementary_mac_pdu(const BurstType burst_type, BitVector& vec);
 
+    // TMA-SAP Uplink
+    void process_mac_access(BitVector& vec);
+    void process_mac_end_hu(BitVector& vec);
+    void process_mac_data(BitVector& vec);
+    void process_mac_frag_uplink(BitVector& vec);
+    void process_mac_end_uplink(BitVector& vec);
+    void process_mac_u_blck(BitVector& vec);
+    // TMA-SAP Downlink
+    void process_mac_resource(BitVector& vec);
+    void process_mac_frag_downlink(BitVector& vec);
+    void process_mac_end_downlink(BitVector& vec);
+    void process_mac_d_blck(BitVector& vec);
+    // TMB-SAP broadcast
     void process_system_info_pdu(BitVector& vec);
     static void process_access_define_pdu(BitVector& vec);
     void process_system_info_da(BitVector& vec){};
-
+    // TMD-SAP
     void process_mac_usignal(BitVector& vec);
-    void process_mac_dblck(BitVector& vec);
-    void process_mac_frag(BitVector& vec);
-    void process_mac_end(BitVector& vec);
-    void process_mac_resource(BitVector& vec);
 
     void remove_fill_bits(BitVector& vec);
     bool remove_fill_bits_{};
