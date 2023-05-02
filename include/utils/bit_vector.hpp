@@ -24,6 +24,7 @@ class BitVector {
     ~BitVector() noexcept = default;
 
     auto take_vector(std::size_t numberBits) -> std::vector<uint8_t>;
+    void append(std::vector<uint8_t> bits);
     auto take(std::size_t numberBits) -> uint64_t;
     auto take_last() -> uint8_t;
     [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return data_.size(); };

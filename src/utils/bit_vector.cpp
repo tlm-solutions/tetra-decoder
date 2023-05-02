@@ -29,6 +29,8 @@ auto BitVector::take_vector(const size_t numberBits) -> std::vector<uint8_t> {
     return res;
 }
 
+void BitVector::append(std::vector<uint8_t> bits) { data_.insert(data_.end(), bits.begin(), bits.end()); }
+
 auto BitVector::take(const size_t numberBits) -> uint64_t {
     std::vector<uint8_t> bits = take_vector(numberBits);
 
