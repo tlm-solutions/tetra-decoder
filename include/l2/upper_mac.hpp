@@ -27,7 +27,7 @@ class UpperMac {
   public:
     UpperMac()
         : mobile_link_entity_(std::make_shared<MobileLinkEntity>())
-        , logical_link_control_(std::make_shared<LogicalLinkControl>()){};
+        , logical_link_control_(std::make_shared<LogicalLinkControl>(mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
     ;
 

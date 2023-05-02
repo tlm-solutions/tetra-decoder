@@ -15,11 +15,13 @@
 #include <memory>
 #include <vector>
 
+#include <l3/circuit_mode_control_entity.hpp>
 #include <utils/bit_vector.hpp>
 
 class MobileLinkEntity {
   public:
-    MobileLinkEntity() noexcept = default;
+    MobileLinkEntity()
+        : cmce_(std::make_shared<CircuitModeControlEntity>()){};
     ~MobileLinkEntity() noexcept = default;
 
     [[nodiscard]] inline auto mobile_country_code() const noexcept -> uint32_t { return mobile_country_code_; }
@@ -27,6 +29,8 @@ class MobileLinkEntity {
 
     void service_DMle_sync(BitVector& vec);
     void service_DMle_system_info(BitVector& vec);
+
+    void service_user_pdu(BitVector& vec);
 
     friend std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
 
@@ -53,6 +57,11 @@ class MobileLinkEntity {
     uint8_t sndcp_service_ = 0;
     uint8_t air_interface_encryption_service_ = 0;
     uint8_t advanced_link_supported_ = 0;
+
+    // this variable is set to true if sync is received. this is not available in uplink
+    bool is_downlink_ = false;
+
+    std::shared_ptr<CircuitModeControlEntity> cmce_;
 };
 
 std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
