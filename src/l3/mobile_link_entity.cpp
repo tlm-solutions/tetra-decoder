@@ -14,8 +14,9 @@ void MobileLinkEntity::service_DMle_sync(BitVector& vec) {
     late_entry_supported_ = vec.take(1);
 
     sync_received_ = true;
+    is_downlink_ = true;
 
-    //    std::cout << *this;
+    // std::cout << *this;
 }
 
 void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
@@ -40,7 +41,30 @@ void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
 
     system_info_received_ = true;
 
-    //    std::cout << *this;
+    // std::cout << *this;
+}
+
+void MobileLinkEntity::service_user_pdu(BitVector& vec) {
+    char* mle_pdu[] = {"Reserved",
+                       "MM protocol",
+                       "CMCE protocol",
+                       "Reserved",
+                       "SNDCP protocol",
+                       "MLE protocol",
+                       "TETRA management entity protocol",
+                       "Reserved for testing"};
+
+    auto pdu_type = vec.take(3);
+
+    std::cout << "MLE " << mle_pdu[pdu_type] << " " << vec << std::endl;
+
+    switch (pdu_type) {
+    case 0b010:
+        cmce_->process(is_downlink_, vec);
+        break;
+    default:
+        break;
+    }
 }
 
 std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle) {
