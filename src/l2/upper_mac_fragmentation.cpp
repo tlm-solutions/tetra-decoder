@@ -25,6 +25,8 @@ void UpperMac::fragmentation_end_burst() {
         fragment_map_[last_address_type_].push_back(*it);
     }
 
+    fragment_list_.clear();
+
     // frag end received. send to logical link control.
     if (fragment_end_received_) {
         auto tm_sdu = BitVector({});
@@ -37,7 +39,6 @@ void UpperMac::fragmentation_end_burst() {
 
         // remove key from the map
         fragment_map_.erase(last_address_type_);
-        fragment_list_.clear();
 
         logical_link_control_->process(last_address_type_, tm_sdu);
     }

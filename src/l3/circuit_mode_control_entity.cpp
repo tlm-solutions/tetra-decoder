@@ -64,5 +64,5 @@ void CircuitModeControlEntity::process_d_sds_data(BitVector& vec) {
         std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
     }
 
-    // TODO: pass to l3/short_data_service
+    sds_->process(vec);
 }
