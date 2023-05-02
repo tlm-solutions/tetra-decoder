@@ -105,7 +105,7 @@ void UpperMac::processBSCH(const BurstType burst_type, const std::vector<uint8_t
 
     sync_received_ = true;
 
-    std::cout << *this;
+    //    std::cout << *this;
 }
 
 void UpperMac::processSCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
@@ -118,6 +118,9 @@ void UpperMac::processSCH_HD(const BurstType burst_type, const std::vector<uint8
 void UpperMac::processSCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 92);
     assert(burst_type.isUplinkBurst());
+
+    fragmentation_start_burst();
+    last_address_type_ = AddressType();
 
     auto vec = BitVector(data);
 
@@ -134,6 +137,10 @@ void UpperMac::processSCH_HU(const BurstType burst_type, const std::vector<uint8
     } else if (pduType == 0b1) {
         process_mac_end_hu(vec);
     }
+    // TODO: one mac may contain multiple mac headers...
+    // compare with process_signalling_channel
+
+    fragmentation_end_burst();
 }
 
 void UpperMac::processSCH_F(const BurstType burst_type, const std::vector<uint8_t>& data) {
@@ -151,11 +158,14 @@ void UpperMac::processSTCH(const BurstType burst_type, const std::vector<uint8_t
 
 void UpperMac::process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data,
                                           bool isHalfChannel, bool isStolenChannel) {
+    // TODO: add start and end of burst for fragmentation.
     auto vec = BitVector(data);
 
     remove_fill_bits_ = true;
     try {
+        fragmentation_start_burst();
         process_signalling_channel(burst_type, vec, isHalfChannel, isStolenChannel);
+        fragmentation_end_burst();
     } catch (std::exception& e) {
         std::cout << "Error with decoding: " << e.what() << std::endl;
     }
@@ -397,11 +407,12 @@ void UpperMac::process_mac_d_blck(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC D-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
+
+    logical_link_control_->process(address, tm_sdu);
 }
 
 void UpperMac::process_mac_u_blck(BitVector& vec) {
@@ -416,13 +427,14 @@ void UpperMac::process_mac_u_blck(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC U-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted) << std::endl;
     std::cout << "  reservation_requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
     std::cout << "  Address: " << address << std::endl;
+
+    logical_link_control_->process(address, tm_sdu);
 }
 
 void UpperMac::process_mac_frag_downlink(BitVector& vec) {
@@ -432,10 +444,11 @@ void UpperMac::process_mac_frag_downlink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC FRAG" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+
+    fragmentation_push_tm_sdu_frag(tm_sdu);
 }
 
 void UpperMac::process_mac_frag_uplink(BitVector& vec) {
@@ -445,10 +458,11 @@ void UpperMac::process_mac_frag_uplink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC FRAG" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+
+    fragmentation_push_tm_sdu_frag(tm_sdu);
 }
 
 void UpperMac::process_mac_end_downlink(BitVector& vec) {
@@ -521,12 +535,13 @@ void UpperMac::process_mac_end_downlink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
-    auto tmSdu = BitVector(vec.take_vector(bits_left));
+    auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "MAC END" << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
-    std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tmSdu << std::endl;
+    std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
+
+    fragmentation_push_tm_sdu_end(tm_sdu);
 }
 
 void UpperMac::process_mac_end_uplink(BitVector& vec) {
@@ -542,12 +557,13 @@ void UpperMac::process_mac_end_uplink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    // TODO: TM-SDU
-    auto tmSdu = BitVector(vec.take_vector(bits_left));
+    auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "MAC END" << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
-    std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tmSdu << std::endl;
+    std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
+
+    fragmentation_push_tm_sdu_end(tm_sdu);
 }
 
 void UpperMac::process_mac_resource(BitVector& vec) {
@@ -560,7 +576,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     auto encryption_mode = vec.take(2);
     auto random_access_flag = vec.take(1);
     auto length_indictaion = vec.take(6);
-    if (length_indictaion == 0b111110 || length_indictaion == 0b111111) {
+    if (length_indictaion == 0b111110) {
         second_slot_stolen_ = true;
     }
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
@@ -618,6 +634,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
         auto basic_slot_granting_element = vec.take(8);
     }
     auto channel_allocation_flag = vec.take(1);
+    std::cout << "  channel_allocation_flag = 0b" << std::bitset<1>(channel_allocation_flag) << std::endl;
     if (channel_allocation_flag == 0b1) {
         auto allocation_type = vec.take(2);
         auto time_slot_assigned = vec.take(4);
@@ -678,19 +695,29 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     //   remove_fill_bits(vec);
     // }
 
-    if (length_indictaion == 0b111111) {
+    // XXX: check this
+    if (length_indictaion == 0b111111 || length_indictaion == 0b111110) {
         bits_left = vec.bits_left();
     }
 
-    // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
     std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
     std::cout << "  Address: " << address << std::endl;
+
+    if (!(length_indictaion == 0b111111 || length_indictaion == 0b111110)) {
+        // no fragmentation
+        logical_link_control_->process(address, tm_sdu);
+    } else {
+        fragmentation_push_tm_sdu_start(address, tm_sdu);
+    }
+    // fragmentation_push_tm_sdu_start(address, tm_sdu);
 }
 
 void UpperMac::process_mac_data(BitVector& vec) {
+    auto preprocessing_bit_count = vec.bits_left() + 2;
+
     auto fill_bit_indication = vec.take(1);
     auto encrypted_flag = vec.take(1);
     auto address_type = vec.take(2);
@@ -709,18 +736,24 @@ void UpperMac::process_mac_data(BitVector& vec) {
         address.set_smi(vec.take(24));
     }
 
-    auto length_indictaion_or_capacity_request = vec.take(1);
-    if (length_indictaion_or_capacity_request == 0b0) {
-        auto length_indictaion = vec.take(6);
-        std::cout << "  length indication: 0b" << std::bitset<6>(length_indictaion) << std::endl;
-        // TODO: parse this
-        if (length_indictaion == 0b111110) {
+    auto length_indication_or_capacity_request = vec.take(1);
+    auto fragmentation = false;
+    uint64_t length_indication{};
+    if (length_indication_or_capacity_request == 0b0) {
+        length_indication = vec.take(6);
+        std::cout << "  length indication: 0b" << std::bitset<6>(length_indication) << std::endl;
+        if (length_indication == 0b111110) {
             std::cout << "  Second half slot stolen on STCH" << std::endl;
-        } else if (length_indictaion == 0b111111) {
+            second_slot_stolen_ = true;
+        } else if (length_indication == 0b111111) {
             std::cout << "  Start of fragmentation on STCH" << std::endl;
+            fragmentation = true;
         }
     } else {
         auto fragmentation_flag = vec.take(1);
+        if (fragmentation_flag == 0b1) {
+            fragmentation = true;
+        }
         auto reservation_requirement = vec.take(4);
         auto reserved = vec.take(1);
         std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
@@ -728,13 +761,34 @@ void UpperMac::process_mac_data(BitVector& vec) {
         std::cout << "  reserved: 0b" << std::bitset<1>(reserved) << std::endl;
     }
 
-    // TODO: TM-SDU
-    auto tm_sdu = vec;
+    uint64_t bits_left = vec.bits_left();
+
+    auto null_pdu = false;
+    if (length_indication_or_capacity_request == 0b0) {
+        auto mac_header_length = preprocessing_bit_count - vec.bits_left();
+        bits_left = length_indication * 8 - mac_header_length;
+        if (length_indication == 0) {
+            bits_left = 0;
+            null_pdu = true;
+        }
+    }
+
+    auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
+
+    if (fragmentation) {
+        fragmentation_push_tm_sdu_start(address, tm_sdu);
+    } else if (null_pdu) {
+        // only write address to last_address_type_
+    } else {
+        logical_link_control_->process(address, tm_sdu);
+    }
 }
 
 void UpperMac::process_mac_access(BitVector& vec) {
+    auto preprocessing_bit_count = vec.bits_left() + 2;
+
     std::cout << "MAC-ACCESS" << std::endl;
     auto encrypted_flag = vec.take(1);
     auto address_type = vec.take(2);
@@ -753,25 +807,42 @@ void UpperMac::process_mac_access(BitVector& vec) {
     }
 
     auto optional_field_flag = vec.take(1);
+    uint64_t length_indication{};
+    uint64_t length_indication_or_capacity_request{};
+    auto fragmentation = false;
 
     if (optional_field_flag == 0b1) {
-        auto length_indictaion_or_capacity_request = vec.take(1);
-        if (length_indictaion_or_capacity_request == 0b0) {
-            // TODO: parse this
-            auto length_indictaion = vec.take(5);
-            std::cout << "  length indication: 0b" << std::bitset<5>(length_indictaion) << std::endl;
+        length_indication_or_capacity_request = vec.take(1);
+        if (length_indication_or_capacity_request == 0b0) {
+            length_indication = vec.take(5);
+            std::cout << "  length indication: 0b" << std::bitset<5>(length_indication) << std::endl;
         } else {
             auto fragmentation_flag = vec.take(1);
+            if (fragmentation_flag == 0b1) {
+                fragmentation = true;
+            }
             auto reservation_requirement = vec.take(4);
             std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
             std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
         }
     }
 
-    // TODO: TM-SDU
-    auto tm_sdu = vec;
+    uint64_t bits_left = vec.bits_left();
+
+    if (optional_field_flag == 0b1 && length_indication_or_capacity_request == 0b0) {
+        auto mac_header_length = preprocessing_bit_count - vec.bits_left();
+        bits_left = length_indication * 8 - mac_header_length;
+    }
+
+    auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
+
+    if (!fragmentation) {
+        logical_link_control_->process(address, tm_sdu);
+    } else {
+        fragmentation_push_tm_sdu_start(address, tm_sdu);
+    }
 }
 
 void UpperMac::process_mac_end_hu(BitVector& vec) {
@@ -790,6 +861,8 @@ void UpperMac::process_mac_end_hu(BitVector& vec) {
     // TODO: TM-SDU
     auto tm_sdu = vec;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
+    // XXX: implement combination of uplink and downlink
+    std::cout << "  Last fragment sent on reserved subslot. Cannot process!" << std::endl;
 }
 
 void UpperMac::remove_fill_bits(BitVector& vec) {

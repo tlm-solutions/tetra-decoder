@@ -13,9 +13,12 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include <burst_type.hpp>
+#include <l2/address_type.hpp>
+#include <l2/logical_link_control.hpp>
 #include <l3/mobile_link_entity.hpp>
 
 enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
@@ -23,7 +26,8 @@ enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssig
 class UpperMac {
   public:
     UpperMac()
-        : mobile_link_entity_(std::make_shared<MobileLinkEntity>()){};
+        : mobile_link_entity_(std::make_shared<MobileLinkEntity>())
+        , logical_link_control_(std::make_shared<LogicalLinkControl>()){};
     ~UpperMac() noexcept = default;
     ;
 
@@ -80,6 +84,14 @@ class UpperMac {
     void process_system_info_da(BitVector& vec){};
     // TMD-SAP
     void process_mac_usignal(BitVector& vec);
+
+    // fragmentation
+    // XXX: might have to delay processing as SSI may only be known after the Null PDU
+    void fragmentation_start_burst();
+    void fragmentation_end_burst();
+    void fragmentation_push_tm_sdu_start(AddressType address_type, BitVector& vec);
+    void fragmentation_push_tm_sdu_frag(BitVector& vec);
+    void fragmentation_push_tm_sdu_end(BitVector& vec);
 
     void remove_fill_bits(BitVector& vec);
     bool remove_fill_bits_{};
@@ -155,6 +167,13 @@ class UpperMac {
     bool second_slot_stolen_{};
 
     std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
+    std::shared_ptr<LogicalLinkControl> logical_link_control_;
+
+    // hashmap to keep track of framented mac segments
+    std::unordered_map<AddressType, std::vector<BitVector>> fragment_map_ = {};
+    std::vector<BitVector> fragment_list_{};
+    bool fragment_end_received_{};
+    AddressType last_address_type_{};
 };
 
 std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);

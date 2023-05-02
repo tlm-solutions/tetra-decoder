@@ -11,18 +11,17 @@
 
 #include <bitset>
 #include <optional>
+#include <sstream>
 
 class AddressType {
   public:
     AddressType() = default;
 
     explicit operator bool() const = delete;
-    // constexpr bool operator==(AddressType address_type) const {
-    //     return ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ && ussi_ == address_type.ussi_
-    //     &&
-    //            smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
-    // }
-    // constexpr bool operator!=(AddressType address_type) const { return !(*this == address_type); }
+    constexpr bool operator==(AddressType address_type) const {
+        return ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ && ussi_ == address_type.ussi_ &&
+               smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
+    }
 
     void set_ssi(uint64_t ssi) { ssi_ = ssi; }
     void set_event_label(uint64_t event_label) { event_label_ = event_label; }
@@ -39,6 +38,16 @@ class AddressType {
     std::optional<std::bitset<24>> smi_;
     std::optional<std::bitset<6>> usage_marker_;
 };
+
+namespace std {
+template <> struct hash<AddressType> {
+    std::size_t operator()(const AddressType& k) const {
+        auto stream = std::stringstream();
+        stream << k;
+        return std::hash<std::string>()(stream.str());
+    }
+};
+} // namespace std
 
 std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
 

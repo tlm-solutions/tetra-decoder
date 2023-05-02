@@ -11,6 +11,8 @@ add_executable(tetra
         src/l2/lower_mac.cpp
         src/l2/lower_mac_coding.cpp
         src/l2/upper_mac.cpp
+        src/l2/upper_mac_fragmentation.cpp
+        src/l2/logical_link_control.cpp
         src/l3/mobile_link_entity.cpp
         src/utils/bit_vector.cpp
         src/utils/viter_bi_codec.cpp)
