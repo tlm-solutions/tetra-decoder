@@ -44,7 +44,7 @@ void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
     // std::cout << *this;
 }
 
-void MobileLinkEntity::service_user_pdu(BitVector& vec) {
+void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& vec) {
     char* mle_pdu[] = {"Reserved",
                        "MM protocol",
                        "CMCE protocol",
@@ -60,7 +60,7 @@ void MobileLinkEntity::service_user_pdu(BitVector& vec) {
 
     switch (pdu_type) {
     case 0b010:
-        cmce_->process(is_downlink_, vec);
+        cmce_->process(is_downlink_, address, vec);
         break;
     default:
         break;

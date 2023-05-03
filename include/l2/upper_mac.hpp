@@ -17,9 +17,9 @@
 #include <vector>
 
 #include <burst_type.hpp>
-#include <l2/address_type.hpp>
 #include <l2/logical_link_control.hpp>
 #include <l3/mobile_link_entity.hpp>
+#include <utils/address_type.hpp>
 
 enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
 

@@ -44,7 +44,7 @@ void UpperMac::fragmentation_end_burst() {
     }
 }
 
-void UpperMac::fragmentation_push_tm_sdu_start(AddressType address_type, BitVector& vec) {
+void UpperMac::fragmentation_push_tm_sdu_start(const AddressType address_type, BitVector& vec) {
     fragment_map_[address_type] = std::vector<BitVector>({vec});
     last_address_type_ = address_type;
     fragment_list_.clear();
