@@ -3,9 +3,9 @@
 
 #include <l2/logical_link_control.hpp>
 
-void LogicalLinkControl::process(AddressType address_type, BitVector& vec) {
+void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
     std::cout << "LLC received: " << std::endl;
-    std::cout << "  Address: " << address_type << std::endl;
+    std::cout << "  Address: " << address << std::endl;
     std::cout << "  Data: " << vec << std::endl;
 
     char* llc_pdu[] = {"BL-ADATA without FCS",
@@ -31,18 +31,18 @@ void LogicalLinkControl::process(AddressType address_type, BitVector& vec) {
 
     switch (pdu_type) {
     case 0b0001:
-        process_bl_data_without_fcs(vec);
+        process_bl_data_without_fcs(address, vec);
         break;
     default:
         break;
     }
 }
 
-void LogicalLinkControl::process_bl_data_without_fcs(BitVector& vec) {
+void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, BitVector& vec) {
     auto n_s = vec.take(1);
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
-    mle_->service_user_pdu(vec);
+    mle_->service_user_pdu(address, vec);
 }
 
 std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc) { return stream; }

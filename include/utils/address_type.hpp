@@ -19,10 +19,14 @@ class AddressType {
 
     explicit operator bool() const = delete;
     constexpr bool operator==(AddressType address_type) const {
-        return ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ && ussi_ == address_type.ussi_ &&
-               smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
+        return country_code_ == address_type.country_code_ && network_code_ == address_type.network_code_ &&
+               sna_ == address_type.sna_ && ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ &&
+               ussi_ == address_type.ussi_ && smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
     }
 
+    void set_country_code(uint64_t country_code) { country_code_ = country_code; }
+    void set_network_code(uint64_t network_code) { network_code_ = network_code; }
+    void set_sna(uint64_t sna) { sna_ = sna; }
     void set_ssi(uint64_t ssi) { ssi_ = ssi; }
     void set_event_label(uint64_t event_label) { event_label_ = event_label; }
     void set_ussi(uint64_t ussi) { ussi_ = ussi; }
@@ -32,6 +36,9 @@ class AddressType {
     friend std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
 
   private:
+    std::optional<std::bitset<10>> country_code_;
+    std::optional<std::bitset<14>> network_code_;
+    std::optional<std::bitset<8>> sna_;
     std::optional<std::bitset<24>> ssi_;
     std::optional<std::bitset<10>> event_label_;
     std::optional<std::bitset<24>> ussi_;

@@ -1,8 +1,17 @@
 #include <ostream>
 
-#include <l2/address_type.hpp>
+#include <utils/address_type.hpp>
 
 std::ostream& operator<<(std::ostream& stream, const AddressType& address_type) {
+    if (address_type.country_code_) {
+        stream << "Country Code: " << address_type.country_code_.value().to_ulong() << " ";
+    }
+    if (address_type.network_code_) {
+        stream << "Network Code: " << address_type.network_code_.value().to_ulong() << " ";
+    }
+    if (address_type.sna_) {
+        stream << "SNA: " << address_type.sna_.value().to_ulong() << " ";
+    }
     if (address_type.ssi_) {
         stream << "SSI: " << address_type.ssi_.value().to_ulong() << " ";
     }

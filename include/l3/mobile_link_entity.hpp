@@ -30,7 +30,7 @@ class MobileLinkEntity {
     void service_DMle_sync(BitVector& vec);
     void service_DMle_system_info(BitVector& vec);
 
-    void service_user_pdu(BitVector& vec);
+    void service_user_pdu(const AddressType address, BitVector& vec);
 
     friend std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
 

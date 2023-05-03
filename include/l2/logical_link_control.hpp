@@ -14,8 +14,8 @@
 #include <memory>
 #include <vector>
 
-#include <l2/address_type.hpp>
 #include <l3/mobile_link_entity.hpp>
+#include <utils/address_type.hpp>
 #include <utils/bit_vector.hpp>
 
 class LogicalLinkControl {
@@ -24,12 +24,12 @@ class LogicalLinkControl {
         : mle_(mle){};
     ~LogicalLinkControl() noexcept = default;
 
-    void process(AddressType address_type, BitVector& vec);
+    void process(const AddressType address, BitVector& vec);
 
     friend std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);
 
   private:
-    void process_bl_data_without_fcs(BitVector& vec);
+    void process_bl_data_without_fcs(const AddressType address, BitVector& vec);
 
     std::shared_ptr<MobileLinkEntity> mle_;
 };

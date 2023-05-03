@@ -1,7 +1,6 @@
 #include <bitset>
 #include <cassert>
 
-#include <l2/address_type.hpp>
 #include <l2/upper_mac.hpp>
 #include <utils/bit_vector.hpp>
 
