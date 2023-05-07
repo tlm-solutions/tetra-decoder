@@ -157,7 +157,6 @@ void UpperMac::processSTCH(const BurstType burst_type, const std::vector<uint8_t
 
 void UpperMac::process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data,
                                           bool isHalfChannel, bool isStolenChannel) {
-    // TODO: add start and end of burst for fragmentation.
     auto vec = BitVector(data);
 
     remove_fill_bits_ = true;
@@ -180,7 +179,6 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
         if (burst_type.isDownlinkBurst()) {
             process_mac_resource(vec);
         } else {
-            // TODO: implement
             process_mac_data(vec);
         }
     } else if (pduType == 0b01) {
