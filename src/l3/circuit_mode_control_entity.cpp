@@ -5,30 +5,30 @@
 #include <l3/circuit_mode_control_entity.hpp>
 
 void CircuitModeControlEntity::process(bool is_downlink, const AddressType address, BitVector& vec) {
-    char* cmce_downlink_pdu[] = {"D-ALERT",        "D-CALL-PROCEEDING",
-                                 "D-CONNECT",      "D-CONNECT ACKNOWLEDGE",
-                                 "D-DISCONNECT",   "D-INFO",
-                                 "D-RELEASE",      "D-SETUP",
-                                 "D-STATUS",       "D-TX CEASED",
-                                 "D-TX CONTINUE",  "D-TX GRANTED",
-                                 "D-TX WAIT",      "D-TX INTERRUPT",
-                                 "D-CALL-RESTORE", "D-SDS-DATA",
-                                 "D-FACILITY",     "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "Reserved",
-                                 "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
-    char* cmce_uplink_pdu[] = {"U-ALERT",      "Reserved",    "U-CONNECT",      "Reserved",
-                               "U-DISCONNECT", "U-INFO",      "U-RELEASE",      "U-SETUP",
-                               "U-STATUS",     "U-TX CEASED", "U-TX DEMAND",    "Reserved",
-                               "Reserved",     "Reserved",    "U-CALL-RESTORE", "U-SDS-DATA",
-                               "U-FACILITY",   "Reserved",    "Reserved",       "Reserved",
-                               "Reserved",     "Reserved",    "Reserved",       "Reserved",
-                               "Reserved",     "Reserved",    "Reserved",       "Reserved",
-                               "Reserved",     "Reserved",    "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
+    std::string cmce_downlink_pdu[] = {"D-ALERT",        "D-CALL-PROCEEDING",
+                                       "D-CONNECT",      "D-CONNECT ACKNOWLEDGE",
+                                       "D-DISCONNECT",   "D-INFO",
+                                       "D-RELEASE",      "D-SETUP",
+                                       "D-STATUS",       "D-TX CEASED",
+                                       "D-TX CONTINUE",  "D-TX GRANTED",
+                                       "D-TX WAIT",      "D-TX INTERRUPT",
+                                       "D-CALL-RESTORE", "D-SDS-DATA",
+                                       "D-FACILITY",     "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "Reserved",
+                                       "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
+    std::string cmce_uplink_pdu[] = {"U-ALERT",      "Reserved",    "U-CONNECT",      "Reserved",
+                                     "U-DISCONNECT", "U-INFO",      "U-RELEASE",      "U-SETUP",
+                                     "U-STATUS",     "U-TX CEASED", "U-TX DEMAND",    "Reserved",
+                                     "Reserved",     "Reserved",    "U-CALL-RESTORE", "U-SDS-DATA",
+                                     "U-FACILITY",   "Reserved",    "Reserved",       "Reserved",
+                                     "Reserved",     "Reserved",    "Reserved",       "Reserved",
+                                     "Reserved",     "Reserved",    "Reserved",       "Reserved",
+                                     "Reserved",     "Reserved",    "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
 
     auto pdu_type = vec.take(5);
 

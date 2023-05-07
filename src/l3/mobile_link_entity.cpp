@@ -45,14 +45,14 @@ void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
 }
 
 void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& vec) {
-    char* mle_pdu[] = {"Reserved",
-                       "MM protocol",
-                       "CMCE protocol",
-                       "Reserved",
-                       "SNDCP protocol",
-                       "MLE protocol",
-                       "TETRA management entity protocol",
-                       "Reserved for testing"};
+    std::string mle_pdu[] = {"Reserved",
+                             "MM protocol",
+                             "CMCE protocol",
+                             "Reserved",
+                             "SNDCP protocol",
+                             "MLE protocol",
+                             "TETRA management entity protocol",
+                             "Reserved for testing"};
 
     auto pdu_type = vec.take(3);
 
