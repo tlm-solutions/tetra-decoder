@@ -33,6 +33,10 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
     case 0b0001:
         process_bl_data_without_fcs(address, vec);
         break;
+    case 0b0010:
+        // BL-UDATA without FCS
+        mle_->service_user_pdu(address, vec);
+        break;
     default:
         break;
     }
