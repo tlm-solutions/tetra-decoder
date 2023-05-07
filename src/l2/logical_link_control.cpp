@@ -8,22 +8,22 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
     std::cout << "  Address: " << address << std::endl;
     std::cout << "  Data: " << vec << std::endl;
 
-    char* llc_pdu[] = {"BL-ADATA without FCS",
-                       "BL-DATA without FCS",
-                       "BL-UDATA without FCS",
-                       "BL-ACK without FCS",
-                       "BL-ADATA with FCS",
-                       "BL-DATA with FCS",
-                       "BL-UDATA with FCS",
-                       "BL-ACK with FCS",
-                       "AL-SETUP",
-                       "AL-DATA/AL-DATA-AR/AL-FINAL/AL-FINAL-AR",
-                       "AL-UDATA/AL-UFINAL",
-                       "AL-ACK/AL-RNR",
-                       "AL-RECONNECT",
-                       "Supplementary LLC PDU",
-                       "Layer 2 signalling PDU",
-                       "AL-DISC"};
+    std::string llc_pdu[] = {"BL-ADATA without FCS",
+                             "BL-DATA without FCS",
+                             "BL-UDATA without FCS",
+                             "BL-ACK without FCS",
+                             "BL-ADATA with FCS",
+                             "BL-DATA with FCS",
+                             "BL-UDATA with FCS",
+                             "BL-ACK with FCS",
+                             "AL-SETUP",
+                             "AL-DATA/AL-DATA-AR/AL-FINAL/AL-FINAL-AR",
+                             "AL-UDATA/AL-UFINAL",
+                             "AL-ACK/AL-RNR",
+                             "AL-RECONNECT",
+                             "Supplementary LLC PDU",
+                             "Layer 2 signalling PDU",
+                             "AL-DISC"};
 
     auto pdu_type = vec.take(4);
 
