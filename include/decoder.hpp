@@ -37,9 +37,8 @@
  */
 class Decoder {
   public:
-    Decoder(unsigned int receive_port, unsigned int send_port, bool keep_fill_bits, bool packed,
-            std::optional<std::string> input_file, std::optional<std::string> output_file,
-            std::optional<unsigned int> uplink_scrambling_code);
+    Decoder(unsigned int receive_port, unsigned int send_port, bool packed, std::optional<std::string> input_file,
+            std::optional<std::string> output_file, std::optional<unsigned int> uplink_scrambling_code);
     ~Decoder();
 
     void main_loop();
@@ -47,7 +46,6 @@ class Decoder {
   private:
     std::shared_ptr<LowerMac> lower_mac_ = nullptr;
 
-    bool keep_fill_bits_ = false;
     bool packed_ = false;
     bool is_synchronized_ = false;
     std::size_t sync_bit_counter_ = 0;

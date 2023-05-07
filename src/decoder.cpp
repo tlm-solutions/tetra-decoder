@@ -22,11 +22,9 @@
 #include <fmt/color.h>
 #include <fmt/core.h>
 
-Decoder::Decoder(unsigned receive_port, unsigned send_port, bool keep_fill_bits, bool packed,
-                 std::optional<std::string> input_file, std::optional<std::string> output_file,
-                 std::optional<unsigned int> uplink_scrambling_code)
+Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
+                 std::optional<std::string> output_file, std::optional<unsigned int> uplink_scrambling_code)
     : lower_mac_(std::make_shared<LowerMac>())
-    , keep_fill_bits_(keep_fill_bits)
     , packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code) {
     // set scrambling_code for uplink

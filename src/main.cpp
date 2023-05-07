@@ -16,7 +16,7 @@ void sigint_handler(int s) {
 
 int main(int argc, char** argv) {
     unsigned int receive_port, send_port, debug_level;
-    bool keep_fill_bits, packed;
+    bool packed;
     std::optional<std::string> input_file, output_file;
     std::optional<unsigned> uplink_scrambling_code;
 
@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
 		("i,infile", "<file> replay data from binary file instead of UDP", cxxopts::value<std::optional<std::string>>(input_file))
 		("o,outfile", "<file> record data to binary file (can be replayed with -i option)", cxxopts::value<std::optional<std::string>>(output_file))
 		("d", "<level> print debug information", cxxopts::value<unsigned>()->default_value("0"))
-		("f,keep-fill-bits", "keep fill bits", cxxopts::value<bool>()->default_value("false"))
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
 		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
 		;
@@ -52,15 +51,14 @@ int main(int argc, char** argv) {
         send_port = result["tx"].as<unsigned>();
 
         debug_level = result["d"].as<unsigned>();
-        keep_fill_bits = result["keep-fill-bits"].as<bool>();
         packed = result["packed"].as<bool>();
     } catch (std::exception& e) {
         std::cout << "error parsing options: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
-    auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, keep_fill_bits, input_file, output_file,
-                                             uplink_scrambling_code);
+    auto decoder =
+        std::make_unique<Decoder>(receive_port, send_port, packed, input_file, output_file, uplink_scrambling_code);
 
     if (input_file.has_value()) {
         std::cout << "Reading from input file " << *input_file << std::endl;
