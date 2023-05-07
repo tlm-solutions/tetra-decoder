@@ -21,6 +21,9 @@ class ShortDataService {
 
   private:
     void process_simple_text_messaging(const AddressType to_address, const AddressType from_address, BitVector& vec);
+    void process_location_information_protocol(const AddressType to_address, const AddressType from_address,
+                                               BitVector& vec);
+    void process_default(const AddressType to_address, const AddressType from_address, BitVector& vec);
 };
 
 #endif
