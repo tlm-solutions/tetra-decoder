@@ -1,5 +1,7 @@
+#include <ctime>
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <sstream>
 
 #include <reporter.hpp>
 
@@ -20,7 +22,17 @@ Reporter::Reporter(unsigned send_port) {
 
 Reporter::~Reporter() { close(output_socket_fd_); }
 
+inline static std::string get_time() {
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    std::stringstream ss;
+    ss << std::put_time(&tm, "%F_%T%z");
+    return ss.str();
+}
+
 void Reporter::emit_report(nlohmann::json& message) {
+    message["time"] = get_time();
+
     std::string message_str = message.dump() + "\n";
 
     int n_bytes = sendto(output_socket_fd_, message_str.c_str(), message_str.length(), 0,
