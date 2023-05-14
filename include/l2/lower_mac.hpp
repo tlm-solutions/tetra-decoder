@@ -16,19 +16,21 @@
 
 #include <burst_type.hpp>
 #include <l2/upper_mac.hpp>
+#include <reporter.hpp>
 #include <utils/viter_bi_codec.hpp>
 
 class LowerMac {
   public:
-    LowerMac();
+    LowerMac(std::shared_ptr<Reporter> reporter);
     ~LowerMac() = default;
 
     bool process(const std::vector<uint8_t>& frame, BurstType burst_type);
     void set_scrambling_code(unsigned int scrambling_code) { upper_mac_->set_scrambling_code(scrambling_code); };
 
   private:
+    std::shared_ptr<Reporter> reporter_;
     std::unique_ptr<ViterbiCodec> viter_bi_codec_1614_;
-    std::shared_ptr<UpperMac> upper_mac_;
+    std::unique_ptr<UpperMac> upper_mac_;
 
     [[nodiscard]] static auto descramble(const std::vector<uint8_t>& data, int len, uint32_t scramblingCode) noexcept
         -> std::vector<uint8_t>;

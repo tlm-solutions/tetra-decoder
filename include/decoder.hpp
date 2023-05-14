@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <l2/lower_mac.hpp>
+#include <reporter.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation
@@ -44,7 +45,8 @@ class Decoder {
     void main_loop();
 
   private:
-    std::shared_ptr<LowerMac> lower_mac_ = nullptr;
+    std::unique_ptr<LowerMac> lower_mac_ = nullptr;
+    std::shared_ptr<Reporter> reporter_ = nullptr;
 
     bool packed_ = false;
     bool is_synchronized_ = false;
@@ -52,7 +54,6 @@ class Decoder {
 
     // input and output file descriptor
     int input_fd_ = 0;
-    int output_socket_fd_ = 0;
 
     // optional output file
     std::optional<int> output_file_fd_ = std::nullopt;

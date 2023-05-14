@@ -19,15 +19,17 @@
 #include <burst_type.hpp>
 #include <l2/logical_link_control.hpp>
 #include <l3/mobile_link_entity.hpp>
+#include <reporter.hpp>
 #include <utils/address_type.hpp>
 
 enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
 
 class UpperMac {
   public:
-    UpperMac()
-        : mobile_link_entity_(std::make_shared<MobileLinkEntity>())
-        , logical_link_control_(std::make_shared<LogicalLinkControl>(mobile_link_entity_)){};
+    UpperMac(std::shared_ptr<Reporter> reporter)
+        : reporter_(reporter)
+        , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_))
+        , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
     ;
 
@@ -56,6 +58,8 @@ class UpperMac {
     friend std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);
 
   private:
+    std::shared_ptr<Reporter> reporter_;
+
     void process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
                                     bool isStolenChannel);
     void process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
@@ -167,7 +171,7 @@ class UpperMac {
     bool second_slot_stolen_{};
 
     std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
-    std::shared_ptr<LogicalLinkControl> logical_link_control_;
+    std::unique_ptr<LogicalLinkControl> logical_link_control_;
 
     // hashmap to keep track of framented mac segments
     std::unordered_map<AddressType, std::vector<BitVector>> fragment_map_ = {};

@@ -104,7 +104,7 @@ void UpperMac::processBSCH(const BurstType burst_type, const std::vector<uint8_t
 
     sync_received_ = true;
 
-    //    std::cout << *this;
+    std::cout << *this;
 }
 
 void UpperMac::processSCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
@@ -118,28 +118,32 @@ void UpperMac::processSCH_HU(const BurstType burst_type, const std::vector<uint8
     assert(data.size() == 92);
     assert(burst_type.isUplinkBurst());
 
-    fragmentation_start_burst();
-    last_address_type_ = AddressType();
+    try {
+        fragmentation_start_burst();
+        last_address_type_ = AddressType();
 
-    auto vec = BitVector(data);
+        auto vec = BitVector(data);
 
-    std::cout << "SCH_HU" << std::endl;
+        std::cout << "SCH_HU" << std::endl;
 
-    auto pduType = vec.take(1);
-    auto fill_bit_indication = vec.take(1);
+        auto pduType = vec.take(1);
+        auto fill_bit_indication = vec.take(1);
 
-    remove_fill_bits_ = true;
-    remove_fill_bits(vec);
+        remove_fill_bits_ = true;
+        remove_fill_bits(vec);
 
-    if (pduType == 0b0) {
-        process_mac_access(vec);
-    } else if (pduType == 0b1) {
-        process_mac_end_hu(vec);
+        if (pduType == 0b0) {
+            process_mac_access(vec);
+        } else if (pduType == 0b1) {
+            process_mac_end_hu(vec);
+        }
+        // TODO: one mac may contain multiple mac headers...
+        // compare with process_signalling_channel
+
+        fragmentation_end_burst();
+    } catch (std::exception& e) {
+        std::cout << "Error with decoding: " << e.what() << std::endl;
     }
-    // TODO: one mac may contain multiple mac headers...
-    // compare with process_signalling_channel
-
-    fragmentation_end_burst();
 }
 
 void UpperMac::processSCH_F(const BurstType burst_type, const std::vector<uint8_t>& data) {
