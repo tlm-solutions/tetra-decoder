@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(tetra
                src/main.cpp
+               src/reporter.cpp
         src/decoder.cpp
         src/l2/lower_mac.cpp
         src/l2/lower_mac_coding.cpp
@@ -26,9 +27,10 @@ include_directories(src)
 find_package(cxxopts CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(fmt REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tetra ZLIB::ZLIB fmt::fmt)
+target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
 
 install(TARGETS tetra DESTINATION bin)

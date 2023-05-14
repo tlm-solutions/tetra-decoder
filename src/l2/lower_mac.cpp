@@ -3,7 +3,8 @@
 #include <fmt/color.h>
 #include <fmt/core.h>
 
-LowerMac::LowerMac() {
+LowerMac::LowerMac(std::shared_ptr<Reporter> reporter)
+    : reporter_(reporter) {
     /*
      * Initialize Viterbi coder/decoder for MAC
      *
@@ -28,7 +29,7 @@ LowerMac::LowerMac() {
     polynomials.push_back(0b11011);
     viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>(constraint, polynomials);
 
-    upper_mac_ = std::make_unique<UpperMac>();
+    upper_mac_ = std::make_unique<UpperMac>(reporter_);
 }
 
 static std::vector<uint8_t> vectorExtract(const std::vector<uint8_t>& vec, size_t pos, size_t length) {

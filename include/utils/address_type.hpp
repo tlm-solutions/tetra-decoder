@@ -6,18 +6,20 @@
  *   Marenz Schmidl
  */
 
-#ifndef TETRA_DECODER_ADDRESS_TYPE_HPP
-#define TETRA_DECODER_ADDRESS_TYPE_HPP
+#pragma once
 
 #include <bitset>
+#include <iostream>
 #include <optional>
 #include <sstream>
+
+#include <nlohmann/json.hpp>
 
 class AddressType {
   public:
     AddressType() = default;
 
-    explicit operator bool() const = delete;
+    // explicit operator bool() const = delete;
     constexpr bool operator==(AddressType address_type) const {
         return country_code_ == address_type.country_code_ && network_code_ == address_type.network_code_ &&
                sna_ == address_type.sna_ && ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ &&
@@ -32,6 +34,15 @@ class AddressType {
     void set_ussi(uint64_t ussi) { ussi_ = ussi; }
     void set_smi(uint64_t smi) { smi_ = smi; }
     void set_usage_marker(uint64_t usage_marker) { usage_marker_ = usage_marker; }
+
+    [[nodiscard]] auto country_code() const noexcept { return country_code_; }
+    [[nodiscard]] auto network_code() const noexcept { return network_code_; }
+    [[nodiscard]] auto sna() const noexcept { return sna_; }
+    [[nodiscard]] auto ssi() const noexcept { return ssi_; }
+    [[nodiscard]] auto event_label() const noexcept { return event_label_; }
+    [[nodiscard]] auto ussi() const noexcept { return ussi_; }
+    [[nodiscard]] auto smi() const noexcept { return smi_; }
+    [[nodiscard]] auto usage_marker() const noexcept { return usage_marker_; }
 
     friend std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
 
@@ -56,6 +67,38 @@ template <> struct hash<AddressType> {
 };
 } // namespace std
 
-std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
+namespace nlohmann {
+template <> struct adl_serializer<AddressType> {
+    static void to_json(json& j, AddressType address_type) {
+        j = json::object();
+        std::cout << address_type << std::endl << std::flush;
 
-#endif // TETRA_DECODER_BURSTTYPE_HPP
+        if (address_type.country_code()) {
+            j["country_code"] = address_type.country_code().value().to_ulong();
+        }
+        if (address_type.network_code()) {
+            j["network_code"] = address_type.network_code().value().to_ulong();
+        }
+        if (address_type.sna()) {
+            j["sna"] = address_type.sna().value().to_ulong();
+        }
+        if (address_type.ssi()) {
+            j["ssi"] = address_type.ssi().value().to_ulong();
+        }
+        if (address_type.event_label()) {
+            j["event_label"] = address_type.event_label().value().to_ulong();
+        }
+        if (address_type.ussi()) {
+            j["ussi"] = address_type.ussi().value().to_ulong();
+        }
+        if (address_type.smi()) {
+            j["smi"] = address_type.smi().value().to_ulong();
+        }
+        if (address_type.usage_marker()) {
+            j["usage_marker"] = address_type.usage_marker().value().to_ulong();
+        }
+    }
+};
+} // namespace nlohmann
+
+std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);

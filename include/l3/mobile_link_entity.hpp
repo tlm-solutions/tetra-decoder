@@ -16,12 +16,14 @@
 #include <vector>
 
 #include <l3/circuit_mode_control_entity.hpp>
+#include <reporter.hpp>
 #include <utils/bit_vector.hpp>
 
 class MobileLinkEntity {
   public:
-    MobileLinkEntity()
-        : cmce_(std::make_shared<CircuitModeControlEntity>()){};
+    MobileLinkEntity(std::shared_ptr<Reporter> reporter)
+        : reporter_(reporter)
+        , cmce_(std::make_unique<CircuitModeControlEntity>(reporter_)){};
     ~MobileLinkEntity() noexcept = default;
 
     [[nodiscard]] inline auto mobile_country_code() const noexcept -> uint32_t { return mobile_country_code_; }
@@ -61,7 +63,8 @@ class MobileLinkEntity {
     // this variable is set to true if sync is received. this is not available in uplink
     bool is_downlink_ = false;
 
-    std::shared_ptr<CircuitModeControlEntity> cmce_;
+    std::shared_ptr<Reporter> reporter_;
+    std::unique_ptr<CircuitModeControlEntity> cmce_;
 };
 
 std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);

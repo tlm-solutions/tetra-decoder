@@ -24,9 +24,12 @@
 
 Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
                  std::optional<std::string> output_file, std::optional<unsigned int> uplink_scrambling_code)
-    : lower_mac_(std::make_shared<LowerMac>())
+    : reporter_(std::make_shared<Reporter>(send_port))
     , packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code) {
+
+    lower_mac_ = std::make_unique<LowerMac>(reporter_);
+
     // set scrambling_code for uplink
     if (uplink_scrambling_code_.has_value()) {
         lower_mac_->set_scrambling_code(uplink_scrambling_code_.value());
@@ -57,24 +60,6 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
         }
     }
 
-    // output file descriptor for the udp socket
-    // there goes our nice json
-    struct sockaddr_in addr_output {};
-    std::memset(&addr_output, 0, sizeof(struct sockaddr_in));
-    addr_output.sin_family = AF_INET;
-    addr_output.sin_port = htons(send_port);
-    inet_aton("127.0.0.1", &addr_output.sin_addr);
-
-    output_socket_fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (connect(output_socket_fd_, (struct sockaddr*)&addr_output, sizeof(struct sockaddr)) > 0) {
-        fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "[ERROR] cannot connect to output address ");
-        // TODO: handle error
-    }
-
-    if (output_socket_fd_ < 0) {
-        throw std::runtime_error("Couldn't create output socket");
-    }
-
     if (output_file.has_value()) {
         // output file descriptor for saving data to file
         *output_file_fd_ = open(output_file->c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP);
@@ -86,7 +71,6 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
 
 Decoder::~Decoder() {
     close(input_fd_);
-    close(output_socket_fd_);
     if (output_file_fd_.has_value()) {
         close(*output_file_fd_);
     }

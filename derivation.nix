@@ -3,9 +3,9 @@
 , cmake
 , cxxopts
 , zlib
-, rapidjson
 , fmt
 , loguru-src
+, nlohmann_json
 }:
 clangStdenv.mkDerivation {
   name = "tetra-impl";
@@ -14,7 +14,7 @@ clangStdenv.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ cmake pkg-config fmt ];
-  buildInputs = [ cxxopts zlib rapidjson ];
+  buildInputs = [ cxxopts zlib nlohmann_json ];
 
   enableParallelBuilding = true;
 }
