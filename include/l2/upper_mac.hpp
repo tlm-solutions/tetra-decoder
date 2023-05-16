@@ -96,6 +96,7 @@ class UpperMac {
     void fragmentation_push_tm_sdu_start(AddressType address_type, BitVector& vec);
     void fragmentation_push_tm_sdu_frag(BitVector& vec);
     void fragmentation_push_tm_sdu_end(BitVector& vec);
+    void fragmentation_push_tm_sdu_end_hu(BitVector& vec);
 
     void remove_fill_bits(BitVector& vec);
     bool remove_fill_bits_{};
@@ -177,7 +178,10 @@ class UpperMac {
     std::unordered_map<AddressType, std::vector<BitVector>> fragment_map_ = {};
     std::vector<BitVector> fragment_list_{};
     bool fragment_end_received_{};
+    bool fragment_end_hu_received_{};
     AddressType last_address_type_{};
+    // save the last MAC-ACCESS or MAC-DATA where reservation_requirement is 0b0000 (1 sublot) for END-HU
+    AddressType last_address_type_end_hu_{};
 };
 
 std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);

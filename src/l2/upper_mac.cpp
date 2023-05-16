@@ -757,6 +757,11 @@ void UpperMac::process_mac_data(BitVector& vec) {
         }
         auto reservation_requirement = vec.take(4);
         auto reserved = vec.take(1);
+
+        if (reservation_requirement == 0b0000) {
+            last_address_type_end_hu_ = address;
+        }
+
         std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
         std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
         std::cout << "  reserved: 0b" << std::bitset<1>(reserved) << std::endl;
@@ -782,6 +787,7 @@ void UpperMac::process_mac_data(BitVector& vec) {
         fragmentation_push_tm_sdu_start(address, tm_sdu);
     } else if (null_pdu) {
         // only write address to last_address_type_
+        last_address_type_ = address;
     } else {
         logical_link_control_->process(address, tm_sdu);
     }
@@ -823,6 +829,11 @@ void UpperMac::process_mac_access(BitVector& vec) {
                 fragmentation = true;
             }
             auto reservation_requirement = vec.take(4);
+
+            if (reservation_requirement == 0b0000) {
+                last_address_type_end_hu_ = address;
+            }
+
             std::cout << "  fragmentation flag: 0b" << std::bitset<1>(fragmentation_flag) << std::endl;
             std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
         }
@@ -847,23 +858,35 @@ void UpperMac::process_mac_access(BitVector& vec) {
 }
 
 void UpperMac::process_mac_end_hu(BitVector& vec) {
+    auto preprocessing_bit_count = vec.bits_left() + 2;
     std::cout << "MAC-END-HU" << std::endl;
 
     auto length_indictaion_or_capacity_request = vec.take(1);
+    uint64_t length_indictaion;
     if (length_indictaion_or_capacity_request == 0b0) {
         // TODO: parse this
-        auto length_indictaion = vec.take(4);
+        length_indictaion = vec.take(4);
         std::cout << "  length indication: 0b" << std::bitset<4>(length_indictaion) << std::endl;
     } else {
         auto reservation_requirement = vec.take(4);
         std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
     }
 
-    // TODO: TM-SDU
-    auto tm_sdu = vec;
+    uint64_t bits_left = vec.bits_left();
+
+    if (length_indictaion_or_capacity_request == 0b0) {
+        auto mac_header_length = preprocessing_bit_count - vec.bits_left();
+        bits_left = length_indictaion * 8 - mac_header_length;
+    }
+
+    auto tm_sdu = BitVector(vec.take_vector(bits_left));
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     // XXX: implement combination of uplink and downlink
     std::cout << "  Last fragment sent on reserved subslot. Cannot process!" << std::endl;
+
+    // XXX: This just takes the last plausible MAC-DATA or MAC-ACCESS as start of fragmentation. this will be buggy, but
+    // at least a start to avoid having to deal with the combination of uplink and downlink processing
+    fragmentation_push_tm_sdu_end_hu(tm_sdu);
 }
 
 void UpperMac::remove_fill_bits(BitVector& vec) {
