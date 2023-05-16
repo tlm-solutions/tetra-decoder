@@ -3,6 +3,7 @@
 void UpperMac::fragmentation_start_burst() {
     // TODO: clear last_address_type_ for uplink
     fragment_end_received_ = false;
+    fragment_end_hu_received_ = false;
     // fragment_list_ = {};
 }
 
@@ -11,6 +12,48 @@ void UpperMac::fragmentation_end_burst() {
 
     // no fragments received, return
     if (fragment_list_.empty()) {
+        return;
+    }
+
+    // exception for MAC-END-HU
+    if (fragment_end_hu_received_ == true) {
+        if (fragment_map_.find(last_address_type_end_hu_) == fragment_map_.end()) {
+            std::cout << "MAC fragementation error. Could not find start fragment for address "
+                      << last_address_type_end_hu_ << std::endl;
+            return;
+        }
+
+        if (fragment_map_[last_address_type_end_hu_].size() != 1) {
+            std::cout << "MAC fragementation error. MAC-END-HU unplausible for address " << last_address_type_end_hu_
+                      << ". Aborting." << std::endl;
+            return;
+        }
+
+        if (fragment_list_.size() != 1) {
+            std::cout << "MAC fragementation error. MAC-END-HU unplausible amount of fragments: "
+                      << fragment_list_.size() << std::endl;
+            return;
+        }
+
+        // append fragment
+        fragment_map_[last_address_type_end_hu_].push_back(fragment_list_[0]);
+
+        fragment_list_.clear();
+
+        auto tm_sdu = BitVector({});
+
+        // combine to tm_sdu
+        for (auto it = fragment_map_[last_address_type_end_hu_].begin();
+             it != fragment_map_[last_address_type_end_hu_].end(); it++) {
+            auto bit_vec = *it;
+            tm_sdu.append(bit_vec.take_vector(bit_vec.bits_left()));
+        }
+
+        // remove key from the map
+        fragment_map_.erase(last_address_type_end_hu_);
+
+        logical_link_control_->process(last_address_type_end_hu_, tm_sdu);
+
         return;
     }
 
@@ -60,4 +103,10 @@ void UpperMac::fragmentation_push_tm_sdu_end(BitVector& vec) {
     fragment_end_received_ = true;
     fragment_list_.push_back(vec);
     std::cout << "MAC frag end" << std::endl;
+}
+
+void UpperMac::fragmentation_push_tm_sdu_end_hu(BitVector& vec) {
+    fragment_end_hu_received_ = true;
+    fragment_list_.push_back(vec);
+    std::cout << "MAC frag end HU" << std::endl;
 }
