@@ -20,6 +20,22 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     std::cout << "SDS " << std::bitset<8>(protocol_identifier) << std::endl;
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
 
+    {
+        auto vec_data = vec.take_vector(vec.bits_left());
+        vec = BitVector(vec_data);
+        auto vec_copy = BitVector(vec);
+
+        message["data"] = nlohmann::json::array();
+
+        for (uint64_t bits; vec_copy.bits_left() >= 8;) {
+            bits = vec_copy.take(8);
+            message["data"].push_back(bits);
+        }
+
+        message["bits_in_last_byte"] = vec_copy.bits_left();
+        message["data"].push_back(vec_copy.take(vec_copy.bits_left()));
+    }
+
     switch (protocol_identifier) {
     case 0b00000010:
         process_simple_text_messaging(to_address, from_address, vec);
@@ -31,22 +47,20 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
         process_default(to_address, from_address, vec);
         break;
     }
+
+    reporter_->emit_report(message);
 }
 
 void ShortDataService::process_default(const AddressType to_address, const AddressType from_address, BitVector& vec) {
-    message["data"] = nlohmann::json::array();
 
     std::stringstream stream;
     for (uint64_t bits; vec.bits_left() >= 8;) {
         bits = vec.take(8);
-        message["data"].push_back(bits);
         stream << " " << std::hex << std::setw(2) << std::setfill('0') << bits;
     }
 
     std::cout << "  decoded: " << stream.str() << std::endl;
     std::cout << "  " << vec << std::endl;
-
-    reporter_->emit_report(message);
 }
 
 void ShortDataService::process_simple_text_messaging(const AddressType to_address, const AddressType from_address,
