@@ -31,6 +31,7 @@ class LogicalLinkControl {
     friend std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);
 
   private:
+    void process_bl_adata_without_fcs(const AddressType address, BitVector& vec);
     void process_bl_data_without_fcs(const AddressType address, BitVector& vec);
 
     std::shared_ptr<Reporter> reporter_;
