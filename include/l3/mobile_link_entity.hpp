@@ -39,6 +39,9 @@ class MobileLinkEntity {
     friend std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
 
   private:
+    void service_data_pdu(const AddressType address, BitVector& vec);
+    void service_d_network_broadcast(const AddressType address, BitVector& vec);
+
     bool sync_received_ = false;
     uint32_t mobile_country_code_ = 0; // mmc
     uint32_t mobile_network_code_ = 0; // mobile_network_code
