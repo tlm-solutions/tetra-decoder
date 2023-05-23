@@ -59,6 +59,9 @@ void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& ve
     std::cout << "MLE " << mle_pdu[pdu_type] << " " << vec << std::endl;
 
     switch (pdu_type) {
+    case 0b001:
+        mm_->process(is_downlink_, address, vec);
+        break;
     case 0b010:
         cmce_->process(is_downlink_, address, vec);
         break;

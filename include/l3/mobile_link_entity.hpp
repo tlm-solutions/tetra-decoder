@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <l3/circuit_mode_control_entity.hpp>
+#include <l3/mobile_management.hpp>
 #include <reporter.hpp>
 #include <utils/bit_vector.hpp>
 
@@ -23,7 +24,8 @@ class MobileLinkEntity {
   public:
     MobileLinkEntity(std::shared_ptr<Reporter> reporter)
         : reporter_(reporter)
-        , cmce_(std::make_unique<CircuitModeControlEntity>(reporter_)){};
+        , cmce_(std::make_unique<CircuitModeControlEntity>(reporter_))
+        , mm_(std::make_unique<MobileManagement>()){};
     ~MobileLinkEntity() noexcept = default;
 
     [[nodiscard]] inline auto mobile_country_code() const noexcept -> uint32_t { return mobile_country_code_; }
@@ -65,6 +67,7 @@ class MobileLinkEntity {
 
     std::shared_ptr<Reporter> reporter_;
     std::unique_ptr<CircuitModeControlEntity> cmce_;
+    std::unique_ptr<MobileManagement> mm_;
 };
 
 std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
