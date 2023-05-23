@@ -14,6 +14,7 @@ add_executable(tetra
         src/l2/upper_mac_fragmentation.cpp
         src/l2/logical_link_control.cpp
         src/l3/mobile_link_entity.cpp
+        src/l3/mobile_management.cpp
         src/l3/circuit_mode_control_entity.cpp
         src/l3/short_data_service.cpp
         src/utils/address_type.cpp
