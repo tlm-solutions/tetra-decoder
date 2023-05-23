@@ -65,9 +65,45 @@ void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& ve
     case 0b010:
         cmce_->process(is_downlink_, address, vec);
         break;
+    case 0b101:
+        service_data_pdu(address, vec);
+        break;
     default:
         break;
     }
+}
+
+void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& vec) {
+
+    std::string mle_downlink_pdu_type[] = {
+        "D-NEW-CELL",    "D-PREPARE-FAIL", "D-NWRK-BROADCAST",   "D-NWRK-BROADCAST EXTENSION",
+        "D-RESTORE-ACK", "D-RESTORE-FAIL", "D-CHANNEL RESPONSE", "Extended PDU"};
+    std::string mle_uplink_pdu_type[] = {
+        "U-PREPARE", "U-PREPARE-DA", "U-IRREGULAR CHANNEL ADVICE", "U-CHANNEL CLASS ADVICE",
+        "U-RESTORE", "Reserved",     "U-CHANNEL REQUEST",          "Extended PDU"};
+
+    std::string mle_downlink_pdu_type_extension[] = {"D-NWRK-BROADCAST-DA",
+                                                     "D-NWRK-BROADCAST REMOVE",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved",
+                                                     "Reserved"};
+    std::string mle_uplink_pdu_type_extension[] = {
+        "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
+        "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
+    };
+
+    auto pdu_type = vec.take(3);
 }
 
 std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle) {
