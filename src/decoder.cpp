@@ -177,7 +177,7 @@ void Decoder::process_bit(uint8_t symbol) noexcept {
 
         if (score_nub_split < minimum_score) {
             minimum_score = score_nub_split;
-            burstType = BurstType::NormalUplinkBurst_Split;
+            burstType = BurstType::NormalUplinkBurstSplit;
         }
 
         if (score_ssn <= 4) {
@@ -219,7 +219,7 @@ void Decoder::process_downlink_frame() noexcept {
 
     if (score_ndb_split < minimum_score) {
         minimum_score = score_ndb_split;
-        burstType = BurstType::NormalDownlinkBurst_Split;
+        burstType = BurstType::NormalDownlinkBurstSplit;
     }
 
     if (minimum_score <= 5) {

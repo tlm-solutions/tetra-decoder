@@ -56,6 +56,8 @@ class ViterbiCodec {
 
     [[nodiscard]] const std::vector<int>& polynomials() const { return polynomials_c; }
 
+    friend auto operator<<(std::ostream& stream, const ViterbiCodec& vec) -> std::ostream&;
+
   private:
     // Suppose
     //
@@ -96,6 +98,6 @@ class ViterbiCodec {
     std::vector<std::string> outputs_c;
 };
 
-std::ostream& operator<<(std::ostream& os, const ViterbiCodec& codec);
+auto operator<<(std::ostream& os, const ViterbiCodec& codec) -> std::ostream&;
 
 #endif /* VITERBI2_H */

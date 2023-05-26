@@ -28,14 +28,16 @@ class LogicalLinkControl {
 
     void process(const AddressType address, BitVector& vec);
 
-    friend std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);
+    friend auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;
 
   private:
+    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
     void process_bl_adata_without_fcs(const AddressType address, BitVector& vec);
+    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
     void process_bl_data_without_fcs(const AddressType address, BitVector& vec);
 
-    std::shared_ptr<Reporter> reporter_;
-    std::shared_ptr<MobileLinkEntity> mle_;
+    std::shared_ptr<Reporter> reporter_{};
+    std::shared_ptr<MobileLinkEntity> mle_{};
 };
 
 std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);

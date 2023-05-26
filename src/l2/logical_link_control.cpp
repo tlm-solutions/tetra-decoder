@@ -62,4 +62,4 @@ void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, 
     mle_->service_user_pdu(address, vec);
 }
 
-std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc) { return stream; }
+auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream& { return stream; }

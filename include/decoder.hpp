@@ -45,8 +45,8 @@ class Decoder {
     void main_loop();
 
   private:
-    std::unique_ptr<LowerMac> lower_mac_ = nullptr;
-    std::shared_ptr<Reporter> reporter_ = nullptr;
+    std::unique_ptr<LowerMac> lower_mac_{};
+    std::shared_ptr<Reporter> reporter_{};
 
     bool packed_ = false;
     bool is_synchronized_ = false;

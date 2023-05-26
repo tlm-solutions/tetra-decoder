@@ -36,12 +36,18 @@ class UpperMac {
     void incrementTn();
     void set_scrambling_code(unsigned int scrambling_code) { scrambling_code_ = scrambling_code; };
 
-    void processAACH(const BurstType burst_type, const std::vector<uint8_t>& data);
-    void processBSCH(const BurstType burst_type, const std::vector<uint8_t>& data);
-    void processSCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data);
-    void processSCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data);
-    void processSCH_F(const BurstType burst_type, const std::vector<uint8_t>& data);
-    void processSTCH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // Access Assignment Channel
+    void process_AACH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // Broadcast Synchronization Channel
+    void process_BSCH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // Signalling CHannel for mapping onto Half-bursts on the Downlink
+    void process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // Signalling CHannel for mapping onto Half-bursts on the Uplink
+    void process_SCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // Signalling CHannel for mapping onto Full bursts
+    void process_SCH_F(const BurstType burst_type, const std::vector<uint8_t>& data);
+    // STealing CHannel
+    void process_STCH(const BurstType burst_type, const std::vector<uint8_t>& data);
 
     [[nodiscard]] auto scrambling_code() const noexcept -> uint32_t { return scrambling_code_; }
     [[nodiscard]] auto color_code() const noexcept -> uint16_t { return color_code_; }
@@ -55,10 +61,10 @@ class UpperMac {
     [[nodiscard]] auto frame_number() const noexcept -> uint16_t { return frame_number_; }
     [[nodiscard]] auto multi_frame_number() const noexcept -> uint16_t { return multi_frame_number_; }
 
-    friend std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);
+    friend auto operator<<(std::ostream& stream, const UpperMac& upperMac) -> std::ostream&;
 
   private:
-    std::shared_ptr<Reporter> reporter_;
+    std::shared_ptr<Reporter> reporter_{};
 
     void process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
                                     bool isStolenChannel);
@@ -171,8 +177,8 @@ class UpperMac {
     // STCH
     bool second_slot_stolen_{};
 
-    std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
-    std::unique_ptr<LogicalLinkControl> logical_link_control_;
+    std::shared_ptr<MobileLinkEntity> mobile_link_entity_{};
+    std::unique_ptr<LogicalLinkControl> logical_link_control_{};
 
     // hashmap to keep track of framented mac segments
     std::unordered_map<AddressType, std::vector<BitVector>> fragment_map_ = {};

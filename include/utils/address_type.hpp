@@ -44,7 +44,7 @@ class AddressType {
     [[nodiscard]] auto smi() const noexcept { return smi_; }
     [[nodiscard]] auto usage_marker() const noexcept { return usage_marker_; }
 
-    friend std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
+    friend auto operator<<(std::ostream& stream, const AddressType& address_type) -> std::ostream&;
 
   private:
     std::optional<std::bitset<10>> country_code_;
@@ -59,7 +59,7 @@ class AddressType {
 
 namespace std {
 template <> struct hash<AddressType> {
-    std::size_t operator()(const AddressType& k) const {
+    auto operator()(const AddressType& k) const -> std::size_t {
         auto stream = std::stringstream();
         stream << k;
         return std::hash<std::string>()(stream.str());
@@ -101,4 +101,4 @@ template <> struct adl_serializer<AddressType> {
 };
 } // namespace nlohmann
 
-std::ostream& operator<<(std::ostream& stream, const AddressType& address_type);
+auto operator<<(std::ostream& stream, const AddressType& address_type) -> std::ostream&;

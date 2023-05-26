@@ -30,9 +30,9 @@ class BitVector {
     [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return data_.size(); };
     [[nodiscard]] auto is_mac_padding() const noexcept -> bool;
 
-    friend std::ostream& operator<<(std::ostream& stream, const BitVector& vec);
+    friend auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
 };
 
-std::ostream& operator<<(std::ostream& stream, const BitVector& vec);
+auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
 
 #endif // TETRA_DECODER_UTILS_BIT_VECTOR_HPP

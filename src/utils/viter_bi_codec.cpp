@@ -31,7 +31,7 @@
 
 namespace {
 
-int HammingDistance(const std::string& x, const std::string& y) {
+auto HammingDistance(const std::string& x, const std::string& y) -> int {
     assert(x.size() == y.size());
     int distance = 0;
     for (std::size_t i = 0; i < x.size(); i++) {
@@ -42,7 +42,7 @@ int HammingDistance(const std::string& x, const std::string& y) {
 
 } // namespace
 
-std::ostream& operator<<(std::ostream& os, const ViterbiCodec& codec) {
+auto operator<<(std::ostream& os, const ViterbiCodec& codec) -> std::ostream& {
     os << "ViterbiCodec(" << codec.constraint() << ", {";
     const std::vector<int>& polynomials = codec.polynomials();
     assert(!polynomials.empty());
@@ -53,7 +53,7 @@ std::ostream& operator<<(std::ostream& os, const ViterbiCodec& codec) {
     return os << "})";
 }
 
-static int ReverseBits(int num_bits, int input) {
+static auto ReverseBits(int num_bits, int input) -> int {
     assert(input < (1 << num_bits));
     int output = 0;
     while (num_bits-- > 0) {

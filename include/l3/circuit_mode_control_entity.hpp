@@ -29,8 +29,8 @@ class CircuitModeControlEntity {
     void process_d_sds_data(const AddressType to_address, BitVector& vec);
     void process_u_sds_data(const AddressType from_address, BitVector& vec);
 
-    std::shared_ptr<Reporter> reporter_;
-    std::unique_ptr<ShortDataService> sds_;
+    std::shared_ptr<Reporter> reporter_{};
+    std::unique_ptr<ShortDataService> sds_{};
 };
 
 #endif
