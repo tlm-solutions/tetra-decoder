@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "loguru": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1660058337,
-        "narHash": "sha256-dA04+Myd8YJmEVTekZxXObMZP2wUNiTJrlOGKjUN2EM=",
-        "owner": "emilk",
-        "repo": "loguru",
-        "rev": "644f60dca77de3b0f718a03d370c8ebdf5f97968",
-        "type": "github"
-      },
-      "original": {
-        "owner": "emilk",
-        "repo": "loguru",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1671313200,
@@ -34,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "loguru": "loguru",
         "nixpkgs": "nixpkgs",
         "utils": "utils"
       }

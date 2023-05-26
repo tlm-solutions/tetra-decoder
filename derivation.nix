@@ -4,7 +4,6 @@
 , cxxopts
 , zlib
 , fmt
-, loguru-src
 , nlohmann_json
 }:
 clangStdenv.mkDerivation {

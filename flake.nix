@@ -3,21 +3,14 @@
     nixpkgs.url = github:NixOS/nixpkgs/nixos-22.11;
 
     utils.url = "github:numtide/flake-utils";
-
-    loguru = {
-      url = github:emilk/loguru;
-      flake = false;
-    };
   };
 
-  outputs = { self, utils, nixpkgs, loguru, ... }:
+  outputs = { self, utils, nixpkgs, ... }:
     utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          tetra-impl = pkgs.callPackage ./derivation.nix { 
-            loguru-src = loguru;
-          };
+          tetra-impl = pkgs.callPackage ./derivation.nix { };
         in
         rec {
           checks = packages;
