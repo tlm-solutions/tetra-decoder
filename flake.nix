@@ -10,16 +10,26 @@
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          tetra-impl = pkgs.callPackage ./derivation.nix { };
+          tetra-decoder = pkgs.callPackage ./derivation.nix { };
         in
         rec {
           checks = packages;
           packages = {
-            tetra-impl = tetra-impl;
-            default = tetra-impl;
+            inherit tetra-decoder;
+            default = tetra-decoder;
           };
         }
       ) // {
+      overlays.default = final: prev: {
+        inherit (self.packages.${prev.system})
+          tetra-decoder;
+      };
+
+      nixosModules = rec {
+        default = tetra-decoder;
+        tetra-decoder = import ./nixos-modules;
+      };
+
       hydraJobs =
         let
           hydraSystems = [ "x86_64-linux" ];
