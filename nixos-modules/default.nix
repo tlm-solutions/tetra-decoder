@@ -12,12 +12,12 @@ in {
     user = mkOption {
       type = types.str;
       default = "tetra-decoder";
-      description = "	systemd user\n";
+      description = "systemd user";
     };
     group = mkOption {
       type = types.str;
       default = "tetra-decoder";
-      description = "	group of systemd user\n";
+      description = "group of systemd user";
     };
     instances = mkOption {
       type = types.attrsOf (types.submodule {
