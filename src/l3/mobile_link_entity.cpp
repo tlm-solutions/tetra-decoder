@@ -106,7 +106,7 @@ void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& ve
     auto pdu_type = vec.take(3);
 }
 
-std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle) {
+auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream& {
     if (mle.sync_received_) {
         stream << "D-MLE-SYNC:" << std::endl;
         stream << "  MCC: " << mle.mobile_country_code_ << std::endl;

@@ -71,7 +71,7 @@ auto BitVector::is_mac_padding() const noexcept -> bool {
     return true;
 }
 
-std::ostream& operator<<(std::ostream& stream, const BitVector& vec) {
+auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream& {
     stream << "BitVec: ";
     for (unsigned char it : vec.data_) {
         stream << std::to_string(it);

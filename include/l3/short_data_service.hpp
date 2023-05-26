@@ -27,8 +27,8 @@ class ShortDataService {
                                                BitVector& vec);
     void process_default(const AddressType to_address, const AddressType from_address, BitVector& vec);
 
-    nlohmann::json message;
-    std::shared_ptr<Reporter> reporter_;
+    nlohmann::json message_;
+    std::shared_ptr<Reporter> reporter_{};
 };
 
 #endif

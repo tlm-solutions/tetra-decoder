@@ -22,7 +22,7 @@ Reporter::Reporter(unsigned send_port) {
 
 Reporter::~Reporter() { close(output_socket_fd_); }
 
-inline static std::string get_time() {
+inline static auto get_time() -> std::string {
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
     std::stringstream ss;

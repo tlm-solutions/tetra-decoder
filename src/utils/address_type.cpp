@@ -2,7 +2,7 @@
 
 #include <utils/address_type.hpp>
 
-std::ostream& operator<<(std::ostream& stream, const AddressType& address_type) {
+auto operator<<(std::ostream& stream, const AddressType& address_type) -> std::ostream& {
     if (address_type.country_code_) {
         stream << "Country Code: " << address_type.country_code_.value().to_ulong() << " ";
     }

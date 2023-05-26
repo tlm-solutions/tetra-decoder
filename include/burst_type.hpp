@@ -15,9 +15,9 @@ class BurstType {
     enum Value {
         ControlUplinkBurst,
         NormalUplinkBurst,
-        NormalUplinkBurst_Split,
+        NormalUplinkBurstSplit,
         NormalDownlinkBurst,
-        NormalDownlinkBurst_Split,
+        NormalDownlinkBurstSplit,
         SynchronizationBurst,
     };
 
@@ -33,24 +33,14 @@ class BurstType {
     constexpr bool operator==(BurstType::Value burst_type) const { return value_ == burst_type; }
     constexpr bool operator!=(BurstType::Value burst_type) const { return value_ != burst_type; }
 
-    [[nodiscard]] auto isUplinkBurst() const noexcept -> bool {
-        switch (value_) {
-        case ControlUplinkBurst:
-        case NormalUplinkBurst:
-        case NormalUplinkBurst_Split:
-            return true;
-        case NormalDownlinkBurst:
-        case NormalDownlinkBurst_Split:
-        case SynchronizationBurst:
-        default:
-            return false;
-        }
+    [[nodiscard]] auto is_uplink_burst() const noexcept -> bool {
+        return value_ == ControlUplinkBurst || value_ == NormalUplinkBurst || value_ == NormalUplinkBurstSplit;
     }
 
-    [[nodiscard]] auto isDownlinkBurst() const noexcept -> bool { return !isUplinkBurst(); }
+    [[nodiscard]] auto is_downlink_burst() const noexcept -> bool { return !is_uplink_burst(); }
 
   private:
-    Value value_;
+    Value value_{};
 };
 
 #endif // TETRA_DECODER_BURSTTYPE_HPP

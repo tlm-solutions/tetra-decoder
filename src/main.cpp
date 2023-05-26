@@ -14,7 +14,7 @@ void sigint_handler(int s) {
     stop = true;
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     unsigned int receive_port, send_port, debug_level;
     bool packed;
     std::optional<std::string> input_file, output_file;

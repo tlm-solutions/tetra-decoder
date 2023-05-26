@@ -7,15 +7,15 @@
 #include <l3/short_data_service.hpp>
 
 void ShortDataService::process(const AddressType to_address, const AddressType from_address, BitVector& vec) {
-    message = {};
+    message_ = {};
 
-    message["type"] = "SDS";
-    message["to"] = to_address;
-    message["from"] = from_address;
+    message_["type"] = "SDS";
+    message_["to"] = to_address;
+    message_["from"] = from_address;
 
     auto protocol_identifier = vec.take(8);
 
-    message["protocol_identifier"] = protocol_identifier;
+    message_["protocol_identifier"] = protocol_identifier;
 
     std::cout << "SDS " << std::bitset<8>(protocol_identifier) << std::endl;
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
@@ -25,15 +25,15 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
         vec = BitVector(vec_data);
         auto vec_copy = BitVector(vec);
 
-        message["data"] = nlohmann::json::array();
+        message_["data"] = nlohmann::json::array();
 
         for (uint64_t bits; vec_copy.bits_left() >= 8;) {
             bits = vec_copy.take(8);
-            message["data"].push_back(bits);
+            message_["data"].push_back(bits);
         }
 
-        message["bits_in_last_byte"] = vec_copy.bits_left();
-        message["data"].push_back(vec_copy.take(vec_copy.bits_left()));
+        message_["bits_in_last_byte"] = vec_copy.bits_left();
+        message_["data"].push_back(vec_copy.take(vec_copy.bits_left()));
     }
 
     switch (protocol_identifier) {
@@ -48,7 +48,7 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
         break;
     }
 
-    reporter_->emit_report(message);
+    reporter_->emit_report(message_);
 }
 
 void ShortDataService::process_default(const AddressType to_address, const AddressType from_address, BitVector& vec) {
@@ -79,7 +79,7 @@ void ShortDataService::process_simple_text_messaging(const AddressType to_addres
     std::cout << "  " << vec << std::endl;
 }
 
-static double integer_to_double(uint32_t data, std::size_t bits, double multiplier) {
+static auto integer_to_double(uint32_t data, std::size_t bits, double multiplier) -> double {
     if (data & (1 << (bits - 1))) {
         data = ~data;
         data += 1;
@@ -91,19 +91,19 @@ static double integer_to_double(uint32_t data, std::size_t bits, double multipli
     }
 }
 
-static double decode_longitude(uint64_t v) {
+static auto decode_longitude(uint64_t v) -> double {
     assert(v < std::pow(2, 25));
 
     return integer_to_double(static_cast<uint32_t>(v), 25, 180.0);
 }
 
-static double decode_latitude(uint64_t v) {
+static auto decode_latitude(uint64_t v) -> double {
     assert(v < std::pow(2, 24));
 
     return integer_to_double(static_cast<uint32_t>(v), 24, 90.0);
 }
 
-static std::string decode_position_error(uint64_t v) {
+static auto decode_position_error(uint64_t v) -> std::string {
     assert(v < 8);
 
     const std::string position_error[] = {"< 2 m",   "< 20 m",    "< 200 m",  "< 2 km",
@@ -112,7 +112,7 @@ static std::string decode_position_error(uint64_t v) {
     return position_error[v];
 }
 
-static double decode_horizontal_velocity(uint64_t v) {
+static auto decode_horizontal_velocity(uint64_t v) -> double {
     assert(v < std::pow(2, 7));
 
     if (v == 127) {
@@ -127,7 +127,7 @@ static double decode_horizontal_velocity(uint64_t v) {
     }
 }
 
-static std::string decode_direction_of_travel(uint64_t v) {
+static auto decode_direction_of_travel(uint64_t v) -> std::string {
     assert(v < std::pow(2, 4));
 
     const std::string direction_of_travel[] = {"0 N",    "22.5 NNE",  "45 NE",  "67.5 ENE",  "90 E",   "112.5 ESE",

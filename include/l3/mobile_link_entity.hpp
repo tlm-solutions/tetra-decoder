@@ -36,7 +36,7 @@ class MobileLinkEntity {
 
     void service_user_pdu(const AddressType address, BitVector& vec);
 
-    friend std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
+    friend auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream&;
 
   private:
     void service_data_pdu(const AddressType address, BitVector& vec);
@@ -68,11 +68,11 @@ class MobileLinkEntity {
     // this variable is set to true if sync is received. this is not available in uplink
     bool is_downlink_ = false;
 
-    std::shared_ptr<Reporter> reporter_;
-    std::unique_ptr<CircuitModeControlEntity> cmce_;
-    std::unique_ptr<MobileManagement> mm_;
+    std::shared_ptr<Reporter> reporter_{};
+    std::unique_ptr<CircuitModeControlEntity> cmce_{};
+    std::unique_ptr<MobileManagement> mm_{};
 };
 
-std::ostream& operator<<(std::ostream& stream, const MobileLinkEntity& mle);
+auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream&;
 
 #endif
