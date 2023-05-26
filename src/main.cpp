@@ -24,7 +24,7 @@ auto main(int argc, char** argv) -> int {
     signal_action.sa_handler = sigint_handler;
     sigaction(SIGINT, &signal_action, 0);
 
-    cxxopts::Options options("tetra-impl", "Decodes TETRA downstream traffic");
+    cxxopts::Options options("tetra-decoder", "Decodes TETRA downstream traffic");
 
     // clang-format off
 	options.add_options()
