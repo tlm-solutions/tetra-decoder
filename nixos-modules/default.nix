@@ -42,6 +42,20 @@ in {
             Extra arguments for tetra-decoder decoder
           '';
         };
+        options.borzoiUrl = mkOption {
+          type = types.str;
+          default = "";
+          description = ''
+            Url for HTTP Post to borzoi
+          '';
+        };
+        options.borzoiStationUuid = mkOption {
+          type = types.str;
+          default = "00000000-0000-0000-0000-000000000000";
+          description = ''
+            UUID of the borzoi station
+          '';
+        };
       });
       default = { };
       description = ''
@@ -77,24 +91,56 @@ in {
 
         script = let
           pythonScript = pkgs.writeScript "tetra-sender-${instanceName}" ''
-            #!${pkgs.python3}/bin/python3
+            #!${pkgs.python3.withPackages(ps: [ ps.requests ])}/bin/python3
             # -*- coding: utf-8 -*-
 
             import json
             import socket
+            import requests
+            import sys
 
             UDP_IP = "127.0.0.1"
             UDP_PORT = ${toString instanceConfig.transmitPort}
+            BORZOI_URL = "${toString instanceConfig.borzoiUrl}"
+            BORZOI_STATION_UUID = "${toString instanceConfig.borzoiStationUuid}"
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind((UDP_IP, UDP_PORT))
 
             while True:
               data, addr = sock.recvfrom(4096)
+
               print(f"received message: {data}")
+              sys.stdout.flush()
+
+              data = data.decode('utf-8').strip('\n')
+              data = json.loads(data)
+
+              try:
+                data['source_ssi'] = data['from']['ssi']
+                data['destination_ssi'] = data['to']['ssi']
+                data['telegram_type'] = data['type']
+                del data['from']
+                del data['to']
+                del data['type']
+                data['arbitrary'] = {"bits_in_last_byte": data["bits_in_last_byte"]}
+                del data["bits_in_last_byte"]
+                data["station"] = BORZOI_STATION_UUID
+              except:
+                print(f"Could not send data to borzoi: {data}")
+                continue
+
+              try:
+                r = requests.post(BORZOI_URL, json=data)
+              except requests.exceptions.ConnectionError:
+                print(f"Borzoi refused connection")
+                continue
+
+              if r.status_code != 200:
+                print(f"Sending data to borzoi failed with HTTP code: {r.status_code}")
           '';
         in ''
-          exec ${pythonScript}
+          exec ${pythonScript} &
         '';
 
         serviceConfig = {
