@@ -137,6 +137,7 @@ in {
                 continue
 
               if r.status_code != 200:
+                print(f"Send following data to borzoi: {data}")
                 print(f"Sending data to borzoi failed with HTTP code: {r.status_code}")
           '';
         in ''
