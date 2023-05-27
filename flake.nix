@@ -27,7 +27,13 @@
 
       nixosModules = rec {
         default = tetra-decoder;
-        tetra-decoder = import ./nixos-modules;
+        tetra-decoder = {
+          imports = [ ./nixos-modules ];
+
+          nixpkgs.overlays = [
+            self.overlays.default
+          ];
+        };
       };
 
       hydraJobs =
