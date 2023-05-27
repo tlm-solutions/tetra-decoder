@@ -76,11 +76,12 @@ in {
         wantedBy = [ "multi-user.target" ];
 
         script = let
-          pythonScript = lib.writeScript "tetra-sender-${instanceName}" ''
-            #!/usr/bin/env python3
+          pythonScript = pkgs.writeScript "tetra-sender-${instanceName}" ''
+            #!${pkgs.python3}/bin/python3
             # -*- coding: utf-8 -*-
 
             import json
+            import socket
 
             UDP_IP = "127.0.0.1"
             UDP_PORT = ${toString instanceConfig.transmitPort}
@@ -93,7 +94,7 @@ in {
               print(f"received message: {data}")
           '';
         in ''
-          exec pythonScript
+          exec ${pythonScript}
         '';
 
         serviceConfig = {
