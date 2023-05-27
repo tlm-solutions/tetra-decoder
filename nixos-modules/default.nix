@@ -126,6 +126,7 @@ in {
                 data['arbitrary'] = {"bits_in_last_byte": data["bits_in_last_byte"]}
                 del data["bits_in_last_byte"]
                 data["station"] = BORZOI_STATION_UUID
+                data["time"] = data["time"].replace('_', 'T')
               except:
                 print(f"Could not send data to borzoi: {data}")
                 continue
