@@ -7,7 +7,7 @@ Use with [tetra-receiver](https://github.com/marenz2569/tetra-receiver).
 ```
 Decodes TETRA downstream traffic
 Usage:
-  tetra-impl [OPTION...]
+  tetra-decoder [OPTION...]
 
   -h, --help         Print usage
   -r, --rx arg       <UDP socket> receiving from phy (default: 42000)

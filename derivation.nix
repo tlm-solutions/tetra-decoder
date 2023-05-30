@@ -7,7 +7,7 @@
 , nlohmann_json
 }:
 clangStdenv.mkDerivation {
-  name = "tetra-impl";
+  name = "tetra-decoder";
   version = "0.1.0";
 
   src = ./.;

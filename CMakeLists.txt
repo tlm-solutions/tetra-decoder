@@ -1,10 +1,10 @@
-project(tetra)
+project(tetra-decoder)
 
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 17)
 
 
-add_executable(tetra
+add_executable(tetra-decoder
                src/main.cpp
                src/reporter.cpp
         src/decoder.cpp
@@ -21,7 +21,7 @@ add_executable(tetra
         src/utils/bit_vector.cpp
         src/utils/viter_bi_codec.cpp)
 
-target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra-decoder PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
 include_directories(src)
 
@@ -32,6 +32,6 @@ find_package(nlohmann_json REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
+target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
 
-install(TARGETS tetra DESTINATION bin)
+install(TARGETS tetra-decoder DESTINATION bin)
