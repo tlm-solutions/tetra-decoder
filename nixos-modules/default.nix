@@ -107,14 +107,25 @@ in {
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.bind((UDP_IP, UDP_PORT))
 
+            old_data = ""
             while True:
               data, addr = sock.recvfrom(4096)
 
               print(f"received message: {data}")
               sys.stdout.flush()
 
-              data = data.decode('utf-8').strip('\n')
-              data = json.loads(data)
+              old_data += data.decode('utf-8')
+
+              if len(old_data) > 0 and old_data[-1] != "\n":
+                continue
+              else:
+                try:
+                  data = json.loads(old_data.strip('\n'))
+                  old_data = ""
+                except:
+                  print(f"Error parsing json: {old_data}")
+                  old_data = ""
+                  continue
 
               try:
                 data['source_ssi'] = data['from']['ssi']
