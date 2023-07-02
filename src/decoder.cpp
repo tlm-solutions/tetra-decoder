@@ -23,16 +23,26 @@
 #include <fmt/core.h>
 
 Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
-                 std::optional<std::string> output_file, std::optional<unsigned int> uplink_scrambling_code)
+                 std::optional<std::string> output_file, bool iq_or_bit_stream,
+                 std::optional<unsigned int> uplink_scrambling_code)
     : reporter_(std::make_shared<Reporter>(send_port))
     , packed_(packed)
-    , uplink_scrambling_code_(uplink_scrambling_code) {
+    , uplink_scrambling_code_(uplink_scrambling_code)
+    , iq_or_bit_stream_(iq_or_bit_stream) {
 
     lower_mac_ = std::make_unique<LowerMac>(reporter_);
 
-    // set scrambling_code for uplink
     if (uplink_scrambling_code_.has_value()) {
+        // set scrambling_code for uplink
         lower_mac_->set_scrambling_code(uplink_scrambling_code_.value());
+
+        if (iq_or_bit_stream_) {
+            throw std::runtime_error("IQ Stream is not supported for uplink decoding");
+        }
+    } else {
+        if (iq_or_bit_stream_) {
+            throw std::runtime_error("IQ Stream is not supported for downlink decoding");
+        }
     }
 
     // read input file from file or from socket

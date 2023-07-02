@@ -18,6 +18,7 @@ Usage:
                      with -i option)
   -d arg             <level> print debug information (default: 0)
   -P, --packed       pack rx data (1 byte = 8 bits)
+      --iq           Receive IQ instead of bitstream
       --uplink arg   <scrambling code> enable uplink parsing with
                      predefined scrambilng code
 ```

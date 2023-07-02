@@ -39,7 +39,8 @@
 class Decoder {
   public:
     Decoder(unsigned int receive_port, unsigned int send_port, bool packed, std::optional<std::string> input_file,
-            std::optional<std::string> output_file, std::optional<unsigned int> uplink_scrambling_code);
+            std::optional<std::string> output_file, bool iq_or_bit_stream,
+            std::optional<unsigned int> uplink_scrambling_code);
     ~Decoder();
 
     void main_loop();
@@ -60,6 +61,10 @@ class Decoder {
 
     // uplink ?
     std::optional<unsigned int> uplink_scrambling_code_;
+
+    // IQ stream -> true
+    // bit stream -> false
+    bool iq_or_bit_stream_;
 
     const std::size_t kRX_BUFFER_SIZE = 4096;
     const std::size_t kFRAME_LEN = 510;
