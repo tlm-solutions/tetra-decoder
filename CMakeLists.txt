@@ -8,6 +8,7 @@ add_executable(tetra
                src/main.cpp
                src/reporter.cpp
         src/decoder.cpp
+        src/bit_stream_decoder.cpp
         src/l2/lower_mac.cpp
         src/l2/lower_mac_coding.cpp
         src/l2/upper_mac.cpp
