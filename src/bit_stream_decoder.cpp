@@ -7,18 +7,8 @@
  *   Tassilo Tanneberger
  */
 
-#include <arpa/inet.h>
-#include <cassert>
-#include <cstring>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <stdexcept>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
+#include <bit_stream_decoder.hpp>
 #include <burst_type.hpp>
-#include <decoder.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 

@@ -9,6 +9,7 @@
 
 #include <arpa/inet.h>
 #include <cassert>
+#include <complex>
 #include <cstring>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -31,19 +32,12 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
     , iq_or_bit_stream_(iq_or_bit_stream) {
 
     lower_mac_ = std::make_shared<LowerMac>(reporter_);
-    bit_stream_decoder_ = std::make_unique<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
+    bit_stream_decoder_ = std::make_shared<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
+    iq_stream_decoder_ = std::make_unique<IQStreamDecoder>(bit_stream_decoder_, uplink_scrambling_code_.has_value());
 
     if (uplink_scrambling_code_.has_value()) {
         // set scrambling_code for uplink
         lower_mac_->set_scrambling_code(uplink_scrambling_code_.value());
-
-        if (iq_or_bit_stream_) {
-            throw std::runtime_error("IQ Stream is not supported for uplink decoding");
-        }
-    } else {
-        if (iq_or_bit_stream_) {
-            throw std::runtime_error("IQ Stream is not supported for downlink decoding");
-        }
     }
 
     // read input file from file or from socket
@@ -108,7 +102,15 @@ void Decoder::main_loop() {
     }
 
     if (iq_or_bit_stream_) {
-        throw std::runtime_error("IQ Stream is not supported");
+        std::complex<float>* rx_buffer_complex = reinterpret_cast<std::complex<float>*>(rx_buffer);
+
+        assert(("Size of rx_buffer is not a multiple of std::complex<float>",
+                bytes_read % sizeof(*rx_buffer_complex) == 0));
+        auto size = bytes_read / sizeof(*rx_buffer_complex);
+
+        for (auto i = 0; i < size; i++) {
+            iq_stream_decoder_->process_complex(rx_buffer_complex[i]);
+        }
     } else {
         for (auto i = 0; i < bytes_read; i++) {
             if (packed_) {

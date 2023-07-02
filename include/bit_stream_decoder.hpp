@@ -15,7 +15,6 @@
 #include <vector>
 
 #include <l2/lower_mac.hpp>
-#include <reporter.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation

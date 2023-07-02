@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <bit_stream_decoder.hpp>
+#include <iq_stream_decoder.hpp>
 #include <l2/lower_mac.hpp>
 #include <reporter.hpp>
 
@@ -48,7 +49,8 @@ class Decoder {
   private:
     std::shared_ptr<LowerMac> lower_mac_{};
     std::shared_ptr<Reporter> reporter_{};
-    std::unique_ptr<BitStreamDecoder> bit_stream_decoder_{};
+    std::shared_ptr<BitStreamDecoder> bit_stream_decoder_{};
+    std::unique_ptr<IQStreamDecoder> iq_stream_decoder_{};
 
     bool packed_ = false;
 
