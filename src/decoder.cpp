@@ -62,7 +62,7 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
 
     if (output_file.has_value()) {
         // output file descriptor for saving data to file
-        *output_file_fd_ = open(output_file->c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP);
+        output_file_fd_ = open(output_file->c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP);
         if (*output_file_fd_ < 0) {
             throw std::runtime_error("Couldn't open output file");
         }
@@ -90,7 +90,7 @@ void Decoder::main_loop() {
     }
 
     if (output_file_fd_.has_value()) {
-        if (write(*output_file_fd_, rx_buffer, bytes_read) > 0) {
+        if (write(*output_file_fd_, rx_buffer, bytes_read) != bytes_read) {
             // unable to write to output TODO: possible log or fail hard
             return;
         }
