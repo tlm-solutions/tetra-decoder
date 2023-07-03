@@ -21,11 +21,11 @@ class FixedQueue : public std::queue<T, Container> {
 
     void pop(const T& value) { std::logic_error("Function not implemented"); }
 
-    typename Container::iterator begin() { return this->c.begin(); }
+    typename Container::const_iterator cbegin() { return this->c.cbegin(); }
 
-    typename Container::reverse_iterator rbegin() { return this->c.rbegin(); }
+    typename Container::const_reverse_iterator crbegin() { return this->c.crbegin(); }
 
-    typename Container::iterator end() { return this->c.end(); }
+    typename Container::const_iterator cend() { return this->c.cend(); }
 
-    typename Container::reverse_iterator rend() { return this->c.rend(); }
+    typename Container::const_reverse_iterator crend() { return this->c.crend(); }
 };

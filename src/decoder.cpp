@@ -33,7 +33,8 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
 
     lower_mac_ = std::make_shared<LowerMac>(reporter_);
     bit_stream_decoder_ = std::make_shared<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
-    iq_stream_decoder_ = std::make_unique<IQStreamDecoder>(bit_stream_decoder_, uplink_scrambling_code_.has_value());
+    iq_stream_decoder_ =
+        std::make_unique<IQStreamDecoder>(lower_mac_, bit_stream_decoder_, uplink_scrambling_code_.has_value());
 
     if (uplink_scrambling_code_.has_value()) {
         // set scrambling_code for uplink
