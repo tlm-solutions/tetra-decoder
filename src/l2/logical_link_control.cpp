@@ -40,6 +40,8 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
         // BL-UDATA without FCS
         mle_->service_user_pdu(address, vec);
         break;
+    case 0b1101:
+        process_supplementary_llc_pdu(address, vec);
     default:
         break;
     }
@@ -60,6 +62,29 @@ void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, 
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
     mle_->service_user_pdu(address, vec);
+}
+
+void LogicalLinkControl::process_supplementary_llc_pdu(const AddressType address, BitVector& vec) {
+    std::string supplementary_llc_pdu[] = {"AL-X-DATA/AL-X-DATA-AR/AL-X-FINAL/AL-X-FINAL-AR", "AL-X-UDATA/AL-X-UFINAL",
+                                           "AL-X-UDATA/AL-X-UFINAL", "AL-X-ACK/AL-X-RNR", "Reserved"};
+
+    auto pdu_type = vec.take(2);
+
+    std::cout << "  " << supplementary_llc_pdu[pdu_type] << std::endl;
+    std::cout << "  Data: " << vec << std::endl;
+
+    switch (pdu_type) {
+    case 0b00:
+        break;
+    case 0b01:
+        break;
+    case 0b10:
+        break;
+    case 0b11:
+        break;
+    default:
+        break;
+    }
 }
 
 auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream& { return stream; }
