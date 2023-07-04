@@ -29,7 +29,21 @@ LowerMac::LowerMac(std::shared_ptr<Reporter> reporter)
     polynomials.push_back(0b11011);
     viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>(constraint, polynomials);
 
-    upper_mac_ = std::make_unique<UpperMac>(reporter_);
+    upper_mac_ = std::make_shared<UpperMac>(reporter_);
+}
+
+LowerMac::LowerMac(const LowerMac& lowerMac) {
+    reporter_ = lowerMac.reporter_;
+    upper_mac_ = lowerMac.upper_mac_;
+
+    std::vector<int> polynomials;
+    int constraint = 6;
+
+    polynomials.push_back(0b10011);
+    polynomials.push_back(0b11101);
+    polynomials.push_back(0b10111);
+    polynomials.push_back(0b11011);
+    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>(constraint, polynomials);
 }
 
 static auto vectorExtract(const std::vector<uint8_t>& vec, size_t pos, size_t length) -> std::vector<uint8_t> {
@@ -47,12 +61,14 @@ static auto vectorAppend(const std::vector<uint8_t>& vec, std::vector<uint8_t>& 
     return res;
 }
 
-auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) -> bool {
+auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) -> std::vector<std::function<void()>> {
     std::vector<uint8_t> sb;
     std::vector<uint8_t> bkn1;
     std::vector<uint8_t> bkn2;
     std::vector<uint8_t> bb;
     std::vector<uint8_t> cb;
+
+    std::vector<std::function<void()>> functions{};
 
     // The BLCH may be mapped onto block 2 of the downlink slots, when a SCH/HD,
     // SCH-P8/HD or a BSCH is mapped onto block 1. The number of BLCH occurrences
@@ -192,16 +208,14 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         cb = vectorExtract(frame, 4, 84);
         cb = vectorAppend(frame, cb, 118, 84);
         cb = descramble(cb, 168, upper_mac_->scrambling_code());
+
+        // XXX: assume to be control channel
         cb = deinterleave(cb, 168, 13);
         cb = depuncture23(cb, 168);
         cb = viter_bi_decode_1614(cb);
         if (check_crc_16_ccitt(cb, 108)) {
             cb = vectorExtract(cb, 0, 92);
-            upper_mac_->process_SCH_HU(burst_type, cb);
-            return true;
-        } else {
-            // fmt::print("CUB Burst crc failed\n");
-            return false;
+            functions.push_back(std::bind(&UpperMac::process_SCH_HU, upper_mac_, burst_type, cb));
         }
     } else if (burst_type == BurstType::NormalUplinkBurst) {
         bkn1 = vectorExtract(frame, 4, 216);
@@ -214,10 +228,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn1 = viter_bi_decode_1614(bkn1);
         if (check_crc_16_ccitt(bkn1, 284)) {
             bkn1 = vectorExtract(bkn1, 0, 268);
-            fmt::print("NUB Burst crc good\n");
-            upper_mac_->process_SCH_F(burst_type, bkn1);
-        } else {
-            // fmt::print("NUB Burst crc failed\n");
+            // fmt::print("NUB Burst crc good\n");
+            functions.push_back(std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, bkn1));
         }
     } else if (burst_type == BurstType::NormalUplinkBurstSplit) {
         // TODO: finish NormalUplinkBurstSplit implementation
@@ -231,23 +243,23 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn1 = viter_bi_decode_1614(bkn1);
         if (check_crc_16_ccitt(bkn1, 140)) {
             bkn1 = vectorExtract(bkn1, 0, 124);
-            fmt::print("NUB_S 1 Burst crc good\n");
-            upper_mac_->process_STCH(burst_type, bkn1);
+            // fmt::print("NUB_S 1 Burst crc good\n");
+            functions.push_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
         }
 
-        if (upper_mac_->second_slot_stolen()) {
-            bkn2 = deinterleave(bkn2, 216, 101);
-            bkn2 = depuncture23(bkn2, 216);
-            bkn2 = viter_bi_decode_1614(bkn2);
-            if (check_crc_16_ccitt(bkn2, 140)) {
-                bkn2 = vectorExtract(bkn2, 0, 124);
-                fmt::print("NUB_S 2 Burst crc good\n");
-                upper_mac_->process_STCH(burst_type, bkn2);
+        bkn2 = deinterleave(bkn2, 216, 101);
+        bkn2 = depuncture23(bkn2, 216);
+        bkn2 = viter_bi_decode_1614(bkn2);
+        if (check_crc_16_ccitt(bkn2, 140)) {
+            bkn2 = vectorExtract(bkn2, 0, 124);
+            if (upper_mac_->second_slot_stolen()) {
+                // fmt::print("NUB_S 2 Burst crc good\n");
+                functions.push_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn2));
             }
         }
     } else {
         throw std::runtime_error("LowerMac does not implement the burst type supplied");
     }
 
-    return true;
+    return functions;
 }

@@ -143,7 +143,10 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             std::advance(end, 103);
 
             auto corrected = channel_estimation({start, end}, training_seq_x_reversed_conj_);
-            lower_mac_->process(symbols_to_bitstream(corrected), BurstType::ControlUplinkBurst);
+            auto funcs = lower_mac_->process(symbols_to_bitstream(corrected), BurstType::ControlUplinkBurst);
+            for (auto func : funcs) {
+                func();
+            }
         }
 
         if (std::abs(find_p) >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -153,7 +156,10 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             std::advance(end, 231);
 
             auto corrected = channel_estimation({start, end}, training_seq_p_reversed_conj_);
-            lower_mac_->process(symbols_to_bitstream(corrected), BurstType::NormalUplinkBurstSplit);
+            auto funcs = lower_mac_->process(symbols_to_bitstream(corrected), BurstType::NormalUplinkBurstSplit);
+            for (auto func : funcs) {
+                func();
+            }
         }
 
         if (std::abs(find_n) >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -163,7 +169,10 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             std::advance(end, 231);
 
             auto corrected = channel_estimation({start, end}, training_seq_n_reversed_conj_);
-            lower_mac_->process(symbols_to_bitstream(corrected), BurstType::NormalUplinkBurst);
+            auto funcs = lower_mac_->process(symbols_to_bitstream(corrected), BurstType::NormalUplinkBurst);
+            for (auto func : funcs) {
+                func();
+            }
         }
     } else {
         auto bits = symbols_to_bitstream({symbol});
