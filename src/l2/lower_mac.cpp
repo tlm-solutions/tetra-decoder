@@ -200,7 +200,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             upper_mac_->process_SCH_HU(burst_type, cb);
             return true;
         } else {
-            fmt::print("CUB Burst crc failed\n");
+            // fmt::print("CUB Burst crc failed\n");
             return false;
         }
     } else if (burst_type == BurstType::NormalUplinkBurst) {
@@ -217,7 +217,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             fmt::print("NUB Burst crc good\n");
             upper_mac_->process_SCH_F(burst_type, bkn1);
         } else {
-            //						fmt::print("NUB Burst crc failed\n");
+            // fmt::print("NUB Burst crc failed\n");
         }
     } else if (burst_type == BurstType::NormalUplinkBurstSplit) {
         // TODO: finish NormalUplinkBurstSplit implementation
@@ -232,14 +232,18 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         if (check_crc_16_ccitt(bkn1, 140)) {
             bkn1 = vectorExtract(bkn1, 0, 124);
             fmt::print("NUB_S 1 Burst crc good\n");
+            upper_mac_->process_STCH(burst_type, bkn1);
         }
 
-        bkn2 = deinterleave(bkn2, 216, 101);
-        bkn2 = depuncture23(bkn2, 216);
-        bkn2 = viter_bi_decode_1614(bkn2);
-        if (check_crc_16_ccitt(bkn2, 140)) {
-            bkn2 = vectorExtract(bkn2, 0, 124);
-            fmt::print("NUB_S 2 Burst crc good\n");
+        if (upper_mac_->second_slot_stolen()) {
+            bkn2 = deinterleave(bkn2, 216, 101);
+            bkn2 = depuncture23(bkn2, 216);
+            bkn2 = viter_bi_decode_1614(bkn2);
+            if (check_crc_16_ccitt(bkn2, 140)) {
+                bkn2 = vectorExtract(bkn2, 0, 124);
+                fmt::print("NUB_S 2 Burst crc good\n");
+                upper_mac_->process_STCH(burst_type, bkn2);
+            }
         }
     } else {
         throw std::runtime_error("LowerMac does not implement the burst type supplied");

@@ -206,7 +206,9 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
         // Broadcast
         // TMB-SAP
         // ✅ done
-        assert(burst_type.is_downlink_burst());
+        if (burst_type.is_uplink_burst()) {
+            throw std::runtime_error("Uplink Burst Type may not send broadcast packets");
+        }
         process_broadcast(vec);
     } else if (pduType == 0b11) {
         // Supplementary MAC PDU (not on STCH, SCH/HD or SCH-P8/HD)
@@ -388,6 +390,7 @@ void UpperMac::process_mac_usignal(BitVector& vec) {
     // TODO: TM-SDU
     auto tm_sdu = BitVector(vec.take_vector(vec.bits_left()));
     std::cout << "MAC U-SIGNAL" << std::endl;
+    std::cout << "  Second subslot is stolen: " << (second_slot_stolen_ ? "true" : "false") << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
@@ -577,9 +580,10 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     auto encryption_mode = vec.take(2);
     auto random_access_flag = vec.take(1);
     auto length_indictaion = vec.take(6);
-    if (length_indictaion == 0b111110) {
+    if (length_indictaion == 0b111110 || length_indictaion == 0b111111) {
         second_slot_stolen_ = true;
     }
+    std::cout << "  Second subslot is stolen: " << (second_slot_stolen_ ? "true" : "false") << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
     auto address_type = vec.take(3);
     auto address = AddressType();
@@ -707,7 +711,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
     std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
     std::cout << "  Address: " << address << std::endl;
 
-    if (!(length_indictaion == 0b111111 || length_indictaion == 0b111110)) {
+    if (length_indictaion != 0b111111) {
         // no fragmentation
         logical_link_control_->process(address, tm_sdu);
     } else {
@@ -747,7 +751,9 @@ void UpperMac::process_mac_data(BitVector& vec) {
             std::cout << "  Second half slot stolen on STCH" << std::endl;
             second_slot_stolen_ = true;
         } else if (length_indication == 0b111111) {
+            std::cout << "  Second half slot stolen on STCH" << std::endl;
             std::cout << "  Start of fragmentation on STCH" << std::endl;
+            second_slot_stolen_ = true;
             fragmentation = true;
         }
     } else {
