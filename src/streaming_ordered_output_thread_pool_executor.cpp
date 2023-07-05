@@ -71,28 +71,26 @@ void StreamingOrderedOutputThreadPoolExecutor<ReturnType>::queueWork(std::functi
 template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecutor<ReturnType>::get() {
     std::optional<ReturnType> result{};
 
-    while (!result.has_value()) {
-        {
-            std::lock_guard lk(cv_output_item_m);
-            if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
-                result = search->second;
-                outputCounter++;
-                break;
-            }
+    {
+        std::lock_guard lk(cv_output_item_m);
+        if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
+            result = search->second;
+            outputCounter++;
+            return *result;
+        }
+    }
+
+    std::unique_lock<std::mutex> lk(cv_output_item_m);
+    cv_output_item.wait(lk, [&] {
+        // find the output item and if found set outputCounter_ to the next item
+        if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
+            result = search->second;
+            outputCounter++;
+            return true;
         }
 
-        std::unique_lock<std::mutex> lk(cv_output_item_m);
-        cv_output_item.wait(lk, [&] {
-            // find the output item and if found set outputCounter_ to the next item
-            if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
-                result = search->second;
-                outputCounter++;
-                return true;
-            }
-
-            return false;
-        });
-    }
+        return false;
+    });
 
     return *result;
 }
