@@ -10,10 +10,13 @@
 #pragma once
 
 #include <complex>
+#include <memory>
+#include <thread>
 
 #include <bit_stream_decoder.hpp>
 #include <fixed_queue.hpp>
 #include <l2/lower_mac.hpp>
+#include <streaming_ordered_output_thread_pool_executor.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation
@@ -29,6 +32,8 @@ class IQStreamDecoder {
     void process_complex(std::complex<float> symbol) noexcept;
 
   private:
+    void upperMacWorker();
+
     std::complex<float> hard_decision(std::complex<float> symbol);
     std::vector<uint8_t> symbols_to_bitstream(std::vector<std::complex<float>> const& stream);
 
@@ -61,4 +66,8 @@ class IQStreamDecoder {
     std::shared_ptr<BitStreamDecoder> bit_stream_decoder_{};
 
     bool is_uplink_{};
+
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>> threadPool_;
+
+    std::thread upperMacWorkerThread_;
 };

@@ -8,6 +8,7 @@ add_executable(tetra
                src/main.cpp
                src/reporter.cpp
         src/decoder.cpp
+        src/streaming_ordered_output_thread_pool_executor.cpp
         src/bit_stream_decoder.cpp
         src/iq_stream_decoder.cpp
         src/l2/lower_mac.cpp
