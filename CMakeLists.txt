@@ -30,6 +30,8 @@ add_executable(tetra-puncturing
 target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
+include(lib/ViterbiDecoderCpp/viterbi-config.cmake)
+
 include_directories(src)
 
 find_package(cxxopts CONFIG REQUIRED)
@@ -39,7 +41,7 @@ find_package(nlohmann_json REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
+target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi)
 
 install(TARGETS tetra DESTINATION bin)
 install(TARGETS tetra-puncturing DESTINATION bin)

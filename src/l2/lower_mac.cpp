@@ -5,29 +5,7 @@
 
 LowerMac::LowerMac(std::shared_ptr<Reporter> reporter)
     : reporter_(reporter) {
-    /*
-     * Initialize Viterbi coder/decoder for MAC
-     *
-     * 8.2.3.1.1 Generator polynomials for the RCPC 16-state mother code of rate
-     * 1/4
-     *
-     * G1 = 1 + D +             D^4 (8.3)
-     * G2 = 1 +     D^2 + D^3 + D^4 (8.4)
-     * G3 = 1 + D + D^2 +       D^4 (8.5)
-     * G4 = 1 + D +       D^3 + D^4 (8.6)
-     *
-     * NOTE: representing bit order must be reversed for the codec, eg. 1 + D + 0
-     * + 0 + D^4 -> 10011
-     *
-     */
-    std::vector<int> polynomials;
-    int constraint = 6;
-
-    polynomials.push_back(0b10011);
-    polynomials.push_back(0b11101);
-    polynomials.push_back(0b10111);
-    polynomials.push_back(0b11011);
-    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>(constraint, polynomials);
+    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>();
 
     upper_mac_ = std::make_shared<UpperMac>(reporter_);
 }
@@ -36,14 +14,7 @@ LowerMac::LowerMac(const LowerMac& lowerMac) {
     reporter_ = lowerMac.reporter_;
     upper_mac_ = lowerMac.upper_mac_;
 
-    std::vector<int> polynomials;
-    int constraint = 6;
-
-    polynomials.push_back(0b10011);
-    polynomials.push_back(0b11101);
-    polynomials.push_back(0b10111);
-    polynomials.push_back(0b11011);
-    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>(constraint, polynomials);
+    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>();
 }
 
 static auto vectorExtract(const std::vector<uint8_t>& vec, size_t pos, size_t length) -> std::vector<uint8_t> {
@@ -81,8 +52,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         sb = vectorExtract(frame, 94, 120);
         sb = descramble(sb, 120, 0x0003);
         sb = deinterleave(sb, 120, 11);
-        sb = depuncture23(sb, 120);
-        sb = viter_bi_decode_1614(sb);
+        sb = viter_bi_decode_1614(depuncture23(sb, 120));
         if (check_crc_16_ccitt(sb, 76)) {
             sb = vectorExtract(sb, 0, 60);
             upper_mac_->process_BSCH(burst_type, sb);
@@ -103,8 +73,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn2 = vectorExtract(frame, 282, 216);
         bkn2 = descramble(bkn2, 216, upper_mac_->scrambling_code());
         bkn2 = deinterleave(bkn2, 216, 101);
-        bkn2 = depuncture23(bkn2, 216);
-        bkn2 = viter_bi_decode_1614(bkn2);
+        bkn2 = viter_bi_decode_1614(depuncture23(bkn2, 216));
         // if the crc does not work, then it might be a BLCH
         if (check_crc_16_ccitt(bkn2, 140)) {
             bkn2 = vectorExtract(bkn2, 0, 124);
@@ -136,8 +105,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             // control channel
             // ✅done
             bkn1 = deinterleave(bkn1, 432, 103);
-            bkn1 = depuncture23(bkn1, 432);
-            bkn1 = viter_bi_decode_1614(bkn1);
+            bkn1 = viter_bi_decode_1614(depuncture23(bkn1, 432));
             if (check_crc_16_ccitt(bkn1, 284)) {
                 bkn1 = vectorExtract(bkn1, 0, 268);
                 upper_mac_->process_SCH_F(burst_type, bkn1);
@@ -163,8 +131,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
             bkn1 = deinterleave(bkn1, 216, 101);
-            bkn1 = depuncture23(bkn1, 216);
-            bkn1 = viter_bi_decode_1614(bkn1);
+            bkn1 = viter_bi_decode_1614(depuncture23(bkn1, 216));
             if (check_crc_16_ccitt(bkn1, 140)) {
                 bkn1 = vectorExtract(bkn1, 0, 124);
                 upper_mac_->process_STCH(burst_type, bkn1);
@@ -172,8 +139,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
             if (upper_mac_->second_slot_stolen()) {
                 bkn2 = deinterleave(bkn2, 216, 101);
-                bkn2 = depuncture23(bkn2, 216);
-                bkn2 = viter_bi_decode_1614(bkn2);
+                bkn2 = viter_bi_decode_1614(depuncture23(bkn2, 216));
                 if (check_crc_16_ccitt(bkn2, 140)) {
                     bkn2 = vectorExtract(bkn2, 0, 124);
                     upper_mac_->process_STCH(burst_type, bkn2);
@@ -189,16 +155,14 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             // ✅done
 
             bkn1 = deinterleave(bkn1, 216, 101);
-            bkn1 = depuncture23(bkn1, 216);
-            bkn1 = viter_bi_decode_1614(bkn1);
+            bkn1 = viter_bi_decode_1614(depuncture23(bkn1, 216));
             if (check_crc_16_ccitt(bkn1, 140)) {
                 bkn1 = vectorExtract(bkn1, 0, 124);
                 upper_mac_->process_SCH_HD(burst_type, bkn1);
             }
             // control channel
             bkn2 = deinterleave(bkn2, 216, 101);
-            bkn2 = depuncture23(bkn2, 216);
-            bkn2 = viter_bi_decode_1614(bkn2);
+            bkn2 = viter_bi_decode_1614(depuncture23(bkn2, 216));
             if (check_crc_16_ccitt(bkn2, 140)) {
                 bkn2 = vectorExtract(bkn2, 0, 124);
                 upper_mac_->process_SCH_HD(burst_type, bkn2);
@@ -211,8 +175,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // XXX: assume to be control channel
         cb = deinterleave(cb, 168, 13);
-        cb = depuncture23(cb, 168);
-        cb = viter_bi_decode_1614(cb);
+        cb = viter_bi_decode_1614(depuncture23(cb, 168));
         if (check_crc_16_ccitt(cb, 108)) {
             cb = vectorExtract(cb, 0, 92);
             functions.push_back(std::bind(&UpperMac::process_SCH_HU, upper_mac_, burst_type, cb));
@@ -224,8 +187,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // XXX: assume to be control channel
         bkn1 = deinterleave(bkn1, 432, 103);
-        bkn1 = depuncture23(bkn1, 432);
-        bkn1 = viter_bi_decode_1614(bkn1);
+        bkn1 = viter_bi_decode_1614(depuncture23(bkn1, 432));
         if (check_crc_16_ccitt(bkn1, 284)) {
             bkn1 = vectorExtract(bkn1, 0, 268);
             // fmt::print("NUB Burst crc good\n");
@@ -239,8 +201,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn2 = descramble(bkn2, 216, upper_mac_->scrambling_code());
 
         bkn1 = deinterleave(bkn1, 216, 101);
-        bkn1 = depuncture23(bkn1, 216);
-        bkn1 = viter_bi_decode_1614(bkn1);
+        bkn1 = viter_bi_decode_1614(depuncture23(bkn1, 216));
         if (check_crc_16_ccitt(bkn1, 140)) {
             bkn1 = vectorExtract(bkn1, 0, 124);
             // fmt::print("NUB_S 1 Burst crc good\n");
@@ -248,8 +209,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         }
 
         bkn2 = deinterleave(bkn2, 216, 101);
-        bkn2 = depuncture23(bkn2, 216);
-        bkn2 = viter_bi_decode_1614(bkn2);
+        bkn2 = viter_bi_decode_1614(depuncture23(bkn2, 216));
         if (check_crc_16_ccitt(bkn2, 140)) {
             bkn2 = vectorExtract(bkn2, 0, 124);
             if (upper_mac_->second_slot_stolen()) {
