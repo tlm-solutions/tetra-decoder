@@ -24,7 +24,11 @@ add_executable(tetra
         src/utils/bit_vector.cpp
         src/utils/viter_bi_codec.cpp)
 
+add_executable(tetra-puncturing
+               src/examples/tetra_puncturing.cpp)
+
 target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
 include_directories(src)
 
@@ -38,3 +42,4 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
 
 install(TARGETS tetra DESTINATION bin)
+install(TARGETS tetra-puncturing DESTINATION bin)
