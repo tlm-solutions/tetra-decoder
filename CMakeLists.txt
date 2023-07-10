@@ -27,8 +27,13 @@ add_executable(tetra
 add_executable(tetra-puncturing
                src/examples/tetra_puncturing.cpp)
 
+add_executable(tetra-viterbi
+               src/examples/viter_bi_codec.cpp
+               src/examples/tetra_viterbi.cpp)
+
 target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra-viterbi PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
 include(lib/ViterbiDecoderCpp/viterbi-config.cmake)
 
@@ -42,6 +47,8 @@ find_package(nlohmann_json REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(tetra ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi)
+target_link_libraries(tetra-viterbi viterbi)
 
 install(TARGETS tetra DESTINATION bin)
 install(TARGETS tetra-puncturing DESTINATION bin)
+install(TARGETS tetra-viterbi DESTINATION bin)
