@@ -5,16 +5,8 @@
 
 LowerMac::LowerMac(std::shared_ptr<Reporter> reporter)
     : reporter_(reporter) {
-    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>();
-
+    viter_bi_codec_1614_ = std::make_shared<ViterbiCodec>();
     upper_mac_ = std::make_shared<UpperMac>(reporter_);
-}
-
-LowerMac::LowerMac(const LowerMac& lowerMac) {
-    reporter_ = lowerMac.reporter_;
-    upper_mac_ = lowerMac.upper_mac_;
-
-    viter_bi_codec_1614_ = std::make_unique<ViterbiCodec>();
 }
 
 static auto vectorExtract(const std::vector<uint8_t>& vec, size_t pos, size_t length) -> std::vector<uint8_t> {
