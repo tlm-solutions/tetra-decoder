@@ -75,6 +75,7 @@ template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecut
         std::lock_guard lk(cv_output_item_m);
         if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
             result = search->second;
+            outputMap.erase(search);
             outputCounter++;
             return *result;
         }
@@ -85,6 +86,7 @@ template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecut
         // find the output item and if found set outputCounter_ to the next item
         if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
             result = search->second;
+            outputMap.erase(search);
             outputCounter++;
             return true;
         }
