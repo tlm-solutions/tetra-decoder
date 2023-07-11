@@ -31,7 +31,7 @@ add_executable(tetra-viterbi
                src/examples/viter_bi_codec.cpp
                src/examples/tetra_viterbi.cpp)
 
-target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra PUBLIC -std=c++17 -Wall -Wno-unused-variable -msse4.1)
 target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 target_compile_options(tetra-viterbi PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 

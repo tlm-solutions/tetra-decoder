@@ -14,6 +14,7 @@
 // include for viterbi algorithm size_t
 #include <stdio.h>
 #include "viterbi/viterbi_decoder_scalar.h"
+#include "viterbi/x86/viterbi_decoder_sse_u16.h"
 
 constexpr size_t K = 5;
 constexpr size_t R = 4;
@@ -21,22 +22,22 @@ constexpr size_t R = 4;
 class ViterbiCodec {
   public:
     ViterbiCodec(){};
-    [[nodiscard]] std::vector<uint8_t> Decode(const std::vector<int8_t>& bits) const;
+    [[nodiscard]] std::vector<uint8_t> Decode(const std::vector<int16_t>& bits) const;
 
   private:
     const std::vector<uint8_t> G = {19, 29, 23, 27};
 
-    const int8_t soft_decision_high = +1;
-    const int8_t soft_decision_low = -1;
-    const uint8_t max_error = uint8_t(soft_decision_high - soft_decision_low) * uint8_t(R);
-    const uint8_t error_margin = max_error * uint8_t(3u);
+    const int16_t soft_decision_high = +1;
+    const int16_t soft_decision_low = -1;
+    const uint16_t max_error = uint16_t(soft_decision_high - soft_decision_low) * uint16_t(R);
+    const uint16_t error_margin = max_error * uint16_t(3u);
 
-    ViterbiDecoder_Config<uint8_t> config = {
+    const ViterbiDecoder_Config<uint16_t> config = {
         .soft_decision_max_error = max_error,
-        .initial_start_error = std::numeric_limits<uint8_t>::min(),
-        .initial_non_start_error = static_cast<uint8_t>(std::numeric_limits<uint8_t>::min() + error_margin),
-        .renormalisation_threshold = static_cast<uint8_t>(std::numeric_limits<uint8_t>::max() - error_margin)};
+        .initial_start_error = std::numeric_limits<uint16_t>::min(),
+        .initial_non_start_error = static_cast<uint16_t>(std::numeric_limits<uint16_t>::min() + error_margin),
+        .renormalisation_threshold = static_cast<uint16_t>(std::numeric_limits<uint16_t>::max() - error_margin)};
 
-    ViterbiBranchTable<K, R, int8_t> branch_table =
-        ViterbiBranchTable<K, R, int8_t>(G.data(), soft_decision_high, soft_decision_low);
+    const ViterbiBranchTable<K, R, int16_t> branch_table =
+        ViterbiBranchTable<K, R, int16_t>(G.data(), soft_decision_high, soft_decision_low);
 };

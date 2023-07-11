@@ -79,7 +79,8 @@ std::vector<uint8_t> new_viterbi_decode(const std::vector<int8_t>& bits, std::si
 
     auto config = get_hard8_decoding_config(R);
     auto branch_table = ViterbiBranchTable<K, R, int8_t>(G.data(), config.soft_decision_high, config.soft_decision_low);
-    auto vitdec = std::make_unique<ViterbiDecoder_Scalar<K, R, uint8_t, int8_t>>(branch_table, config.decoder_config);
+    auto vitdec = ViterbiDecoder_Core<K, R, uint8_t, int8_t>(branch_table, config.decoder_config);
+    using Decoder = ViterbiDecoder_Scalar<K, R, uint8_t, int8_t>;
 
     const size_t total_bits = bits.size() / R;
     const size_t total_tail_bits = K - 1u;
@@ -90,12 +91,12 @@ std::vector<uint8_t> new_viterbi_decode(const std::vector<int8_t>& bits, std::si
     std::vector<uint8_t> output_bytes;
     output_bytes.resize(total_bits / 8);
 
-    vitdec->set_traceback_length(total_data_bits);
+    vitdec.set_traceback_length(total_data_bits);
 
-    vitdec->reset();
-    vitdec->update(bits.data(), bits.size());
-    vitdec->chainback(output_bytes.data(), total_data_bits, end_state);
-    const uint64_t error = vitdec->get_error();
+    vitdec.reset();
+    Decoder::template update<uint64_t>(vitdec, bits.data(), bits.size());
+    vitdec.chainback(output_bytes.data(), total_data_bits, end_state);
+    const uint64_t error = vitdec.get_error();
     std::cout << "error=" << error << std::endl;
 
     return output_bytes;

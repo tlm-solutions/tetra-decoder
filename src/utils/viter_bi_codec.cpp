@@ -9,8 +9,9 @@
 
 #include <utils/viter_bi_codec.hpp>
 
-std::vector<uint8_t> ViterbiCodec::Decode(const std::vector<int8_t>& bits) const {
-    auto vitdec = ViterbiDecoder_Scalar<K, R, uint8_t, int8_t>(branch_table, config);
+std::vector<uint8_t> ViterbiCodec::Decode(const std::vector<int16_t>& bits) const {
+    auto vitdec = ViterbiDecoder_Core<K, R, uint16_t, int16_t>(branch_table, config);
+    using Decoder = ViterbiDecoder_SSE_u16<K, R>;
 
     const size_t total_bits = bits.size() / R;
     const size_t total_tail_bits = K - 1u;
@@ -21,7 +22,7 @@ std::vector<uint8_t> ViterbiCodec::Decode(const std::vector<int8_t>& bits) const
     vitdec.set_traceback_length(total_data_bits);
 
     vitdec.reset();
-    vitdec.update(bits.data(), bits.size());
+    Decoder::template update<uint64_t>(vitdec, bits.data(), bits.size());
     vitdec.chainback(output_bytes.data(), total_data_bits, 0);
     const uint64_t error = vitdec.get_error();
     // std::cout << "error=" << error << std::endl;

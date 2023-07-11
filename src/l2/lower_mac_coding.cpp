@@ -66,10 +66,10 @@ auto LowerMac::deinterleave(const std::vector<uint8_t>& data, const uint32_t K, 
  * @brief Depuncture with 2/3 rate - 8.2.3.1.3
  *
  */
-auto LowerMac::depuncture23(const std::vector<uint8_t>& data, const uint32_t len) noexcept -> std::vector<int8_t> {
+auto LowerMac::depuncture23(const std::vector<uint8_t>& data, const uint32_t len) noexcept -> std::vector<int16_t> {
     const uint8_t P[] = {0, 1, 2, 5}; // 8.2.3.1.3 - P[1..t]
-    std::vector<int8_t> res(4 * len * 2 / 3,
-                            0); // 8.2.3.1.2 with flag 0 for erase bit in Viterbi routine
+    std::vector<int16_t> res(4 * len * 2 / 3,
+                             0); // 8.2.3.1.2 with flag 0 for erase bit in Viterbi routine
 
     uint8_t t = 3;      // 8.2.3.1.3
     uint8_t period = 8; // 8.2.3.1.2
@@ -90,7 +90,7 @@ auto LowerMac::depuncture23(const std::vector<uint8_t>& data, const uint32_t len
  *
  */
 
-auto LowerMac::viter_bi_decode_1614(const std::vector<int8_t>& data) noexcept -> std::vector<uint8_t> {
+auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) noexcept -> std::vector<uint8_t> {
     std::vector<std::uint8_t> out{};
     for (auto elem : viter_bi_codec_1614_->Decode(data)) {
         for (auto i = 0; i < 8; i++) {

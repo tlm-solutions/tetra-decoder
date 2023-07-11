@@ -42,12 +42,12 @@ class LowerMac {
     [[nodiscard]] static auto deinterleave(const std::vector<uint8_t>& data, uint32_t K, uint32_t a) noexcept
         -> std::vector<uint8_t>;
     [[nodiscard]] static auto depuncture23(const std::vector<uint8_t>& data, uint32_t len) noexcept
-        -> std::vector<int8_t>;
+        -> std::vector<int16_t>;
     [[nodiscard]] static auto reed_muller_3014_decode(const std::vector<uint8_t>& data) noexcept
         -> std::vector<uint8_t>;
     [[nodiscard]] static auto check_crc_16_ccitt(const std::vector<uint8_t>& data, int len) noexcept -> int;
 
-    [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int8_t>& data) noexcept -> std::vector<uint8_t>;
+    [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) noexcept -> std::vector<uint8_t>;
 };
 
 #endif
