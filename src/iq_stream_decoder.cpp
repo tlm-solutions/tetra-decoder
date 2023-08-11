@@ -23,7 +23,7 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
     std::transform(training_seq_x_.crbegin(), training_seq_x_.crend(),
                    std::back_inserter(training_seq_x_reversed_conj_), [](auto v) { return std::conj(v); });
 
-    threadPool_ = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>>(16);
+    threadPool_ = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>>(4);
 
     upperMacWorkerThread_ = std::thread(&IQStreamDecoder::upperMacWorker, this);
 }
