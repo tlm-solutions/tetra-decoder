@@ -10,6 +10,9 @@
 #include <streaming_ordered_output_thread_pool_executor.hpp>
 
 #include <optional>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 template <typename ReturnType>
 StreamingOrderedOutputThreadPoolExecutor<ReturnType>::StreamingOrderedOutputThreadPoolExecutor(int numWorkers) {
@@ -33,7 +36,7 @@ template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<Ret
 
         if (!work.has_value()) {
             std::unique_lock<std::mutex> lk(cv_input_item_m);
-            cv_input_item.wait(lk, [&] {
+            cv_input_item.wait_for(lk, 10ms, [&] {
                 if (!inputQueue.empty()) {
                     work = inputQueue.front();
                     inputQueue.pop_front();
@@ -82,7 +85,7 @@ template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecut
     }
 
     std::unique_lock<std::mutex> lk(cv_output_item_m);
-    cv_output_item.wait(lk, [&] {
+    cv_output_item.wait_for(lk, 10ms, [&] {
         // find the output item and if found set outputCounter_ to the next item
         if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
             result = search->second;
