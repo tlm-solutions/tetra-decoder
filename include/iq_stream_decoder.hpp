@@ -60,7 +60,7 @@ class IQStreamDecoder {
         {1.0, -1.0}, {-1.0, 1.0}, {-1.0, -1.0}, {-1.0, 1.0}, {1.0, 1.0}, {1.0, 1.0}, {-1.0, -1.0}};
     std::vector<std::complex<float>> training_seq_x_reversed_conj_{};
 
-    const float SEQUENCE_DETECTION_THRESHOLD = 1.5;
+    const float SEQUENCE_DETECTION_THRESHOLD = 1.7;
 
     std::shared_ptr<LowerMac> lower_mac_{};
     std::shared_ptr<BitStreamDecoder> bit_stream_decoder_{};

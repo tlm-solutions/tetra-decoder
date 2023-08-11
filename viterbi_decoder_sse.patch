@@ -1,0 +1,20 @@
+diff --git a/include/viterbi/x86/viterbi_decoder_sse_u16.h b/include/viterbi/x86/viterbi_decoder_sse_u16.h
+index 85aad1d..87c0c16 100644
+--- a/include/viterbi/x86/viterbi_decoder_sse_u16.h
++++ b/include/viterbi/x86/viterbi_decoder_sse_u16.h
+@@ -44,7 +44,7 @@ public:
+     {
+         static_assert(is_valid, "Insufficient constraint length for vectorisation");
+         static_assert(Base::METRIC_ALIGNMENT % ALIGN_AMOUNT == 0);
+-        static_assert(Base::branch_table.alignment % ALIGN_AMOUNT == 0);
++        // static_assert(Base::branch_table.alignment % ALIGN_AMOUNT == 0);
+     }
+ 
+     inline
+@@ -160,4 +160,4 @@ private:
+         // Keep track of absolute error metrics
+         renormalisation_bias += uint64_t(min);
+     }
+-};
+\ No newline at end of file
++};

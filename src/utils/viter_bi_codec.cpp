@@ -9,8 +9,8 @@
 
 #include <utils/viter_bi_codec.hpp>
 
-std::vector<uint8_t> ViterbiCodec::Decode(const std::vector<int8_t>& bits) const {
-    auto vitdec = ViterbiDecoder_Scalar<K, R, uint8_t, int8_t>(branch_table, config);
+std::vector<uint8_t> ViterbiCodec::Decode(const std::vector<int16_t>& bits) const {
+    auto vitdec = ViterbiDecoder_SSE_u16<K, R>(branch_table, config);
 
     const size_t total_bits = bits.size() / R;
     const size_t total_tail_bits = K - 1u;
