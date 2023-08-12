@@ -8,9 +8,12 @@
  */
 
 #include <streaming_ordered_output_thread_pool_executor.hpp>
+#if defined(__linux__)
+#include <pthread.h>
+#endif
 
-#include <optional>
 #include <chrono>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -18,6 +21,13 @@ template <typename ReturnType>
 StreamingOrderedOutputThreadPoolExecutor<ReturnType>::StreamingOrderedOutputThreadPoolExecutor(int numWorkers) {
     for (auto i = 0; i < numWorkers; i++) {
         std::thread t(&StreamingOrderedOutputThreadPoolExecutor<ReturnType>::worker, this);
+
+#if defined(__linux__)
+        auto handle = t.native_handle();
+        auto threadName = "StreamWorker" + std::to_string(i);
+        pthread_setname_np(handle, threadName.c_str());
+#endif
+
         workers.push_back(std::move(t));
     }
 }
@@ -74,28 +84,26 @@ void StreamingOrderedOutputThreadPoolExecutor<ReturnType>::queueWork(std::functi
 template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecutor<ReturnType>::get() {
     std::optional<ReturnType> result{};
 
-    {
-        std::lock_guard lk(cv_output_item_m);
+    while (!result.has_value()) {
+        std::unique_lock<std::mutex> lk(cv_output_item_m);
+        cv_output_item.wait_for(lk, 10ms, [&] {
+            // find the output item and if found set outputCounter_ to the next item
+            if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
+                result = search->second;
+                outputMap.erase(search);
+                outputCounter++;
+                return true;
+            }
+
+            return false;
+        });
+
         if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
             result = search->second;
             outputMap.erase(search);
             outputCounter++;
-            return *result;
         }
     }
-
-    std::unique_lock<std::mutex> lk(cv_output_item_m);
-    cv_output_item.wait_for(lk, 10ms, [&] {
-        // find the output item and if found set outputCounter_ to the next item
-        if (auto search = outputMap.find(outputCounter); search != outputMap.end()) {
-            result = search->second;
-            outputMap.erase(search);
-            outputCounter++;
-            return true;
-        }
-
-        return false;
-    });
 
     return *result;
 }

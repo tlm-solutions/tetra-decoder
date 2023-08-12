@@ -8,6 +8,9 @@
  */
 
 #include <thread>
+#if defined(__linux__)
+#include <pthread.h>
+#endif
 
 #include <iq_stream_decoder.hpp>
 
@@ -26,6 +29,11 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
     threadPool_ = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>>(4);
 
     upperMacWorkerThread_ = std::thread(&IQStreamDecoder::upperMacWorker, this);
+
+#if defined(__linux__)
+    auto handle = upperMacWorkerThread_.native_handle();
+    pthread_setname_np(handle, "UpperMacWorker");
+#endif
 }
 
 void IQStreamDecoder::upperMacWorker() {
@@ -146,6 +154,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
         std::advance(end_x, 15);
         auto find_x = convolve_valid({start_x, end_x}, training_seq_x_reversed_conj_)[0];
 
+        // use actual signal for further processing
         auto start = symbol_buffer_.cbegin();
 
         if (std::abs(find_x) >= SEQUENCE_DETECTION_THRESHOLD) {

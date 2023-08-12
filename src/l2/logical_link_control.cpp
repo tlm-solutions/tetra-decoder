@@ -40,6 +40,9 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
         // BL-UDATA without FCS
         mle_->service_user_pdu(address, vec);
         break;
+    case 0b0011:
+        process_bl_ack_without_fcs(address, vec);
+        break;
     case 0b1101:
         process_supplementary_llc_pdu(address, vec);
     default:
@@ -60,6 +63,13 @@ void LogicalLinkControl::process_bl_adata_without_fcs(const AddressType address,
 void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, BitVector& vec) {
     auto n_s = vec.take(1);
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
+
+    mle_->service_user_pdu(address, vec);
+}
+
+void LogicalLinkControl::process_bl_ack_without_fcs(const AddressType address, BitVector& vec) {
+    auto n_r = vec.take(1);
+    std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
     mle_->service_user_pdu(address, vec);
 }

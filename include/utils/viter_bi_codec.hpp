@@ -11,10 +11,12 @@
 
 #include <limits>
 
+// clang-format off
 // include for viterbi algorithm size_t
 #include <stdio.h>
 #include "viterbi/viterbi_decoder_scalar.h"
 #include "viterbi/x86/viterbi_decoder_sse_u16.h"
+// clang-format on
 
 constexpr size_t K = 5;
 constexpr size_t R = 4;
