@@ -35,8 +35,20 @@ class LogicalLinkControl {
     void process_bl_adata_without_fcs(const AddressType address, BitVector& vec);
     // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
     void process_bl_data_without_fcs(const AddressType address, BitVector& vec);
+    void process_bl_udata_without_fcs(const AddressType address, BitVector& vec);
     void process_bl_ack_without_fcs(const AddressType address, BitVector& vec);
+
+    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
+    void process_bl_adata_with_fcs(const AddressType address, BitVector& vec);
+    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
+    void process_bl_data_with_fcs(const AddressType address, BitVector& vec);
+    void process_bl_udata_with_fcs(const AddressType address, BitVector& vec);
+    void process_bl_ack_with_fcs(const AddressType address, BitVector& vec);
+
     void process_supplementary_llc_pdu(const AddressType address, BitVector& vec);
+
+    static auto compute_fcs(std::vector<uint8_t> const& data) -> uint32_t;
+    static auto check_fcs(BitVector& vec) -> bool;
 
     std::shared_ptr<Reporter> reporter_{};
     std::shared_ptr<MobileLinkEntity> mle_{};

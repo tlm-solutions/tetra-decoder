@@ -29,10 +29,45 @@ auto BitVector::take_vector(const size_t numberBits) -> std::vector<uint8_t> {
     return res;
 }
 
+auto BitVector::take_last_vector(const size_t numberBits) -> std::vector<uint8_t> {
+    if (numberBits > bits_left()) {
+        throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
+                                 std::to_string(bits_left()) + ")");
+    }
+
+    std::vector<uint8_t> res;
+
+    auto start = data_.begin();
+    // advance to position of last N elements
+    std::advance(start, bits_left() - numberBits);
+
+    std::copy_n(start, numberBits, std::back_inserter(res));
+
+    // delete last n entries
+    std::vector<decltype(data_)::value_type>(data_.begin(), data_.begin() + bits_left() - numberBits).swap(data_);
+
+    return res;
+}
+
 void BitVector::append(std::vector<uint8_t> bits) { data_.insert(data_.end(), bits.begin(), bits.end()); }
 
 auto BitVector::take(const size_t numberBits) -> uint64_t {
     std::vector<uint8_t> bits = take_vector(numberBits);
+
+    uint64_t ret = 0;
+
+    for (auto it = bits.begin(); it != bits.end(); it++) {
+        if (it != bits.begin()) {
+            ret <<= 1;
+        }
+        ret |= (*it & 0x1);
+    }
+
+    return ret;
+}
+
+auto BitVector::take_last(const size_t numberBits) -> uint64_t {
+    std::vector<uint8_t> bits = take_last_vector(numberBits);
 
     uint64_t ret = 0;
 

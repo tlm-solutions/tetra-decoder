@@ -3,6 +3,40 @@
 
 #include <l2/logical_link_control.hpp>
 
+auto LogicalLinkControl::compute_fcs(std::vector<uint8_t> const& data) -> uint32_t {
+    uint32_t crc = 0xFFFFFFFF;
+    if (data.size() < 32) {
+        crc <<= (32 - data.size());
+    }
+
+    for (auto it = data.cbegin(); it != data.cend(); it++) {
+        uint8_t bit = (*it ^ (crc >> 31)) & 1;
+        crc <<= 1;
+        if (bit) {
+            crc = crc ^ 0x04C11DB7;
+        }
+    }
+    return ~crc;
+}
+
+auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
+    // remove last 32 bits
+    auto fcs = vec.take_last(32);
+    auto bits = BitVector(vec).take_vector(vec.bits_left());
+
+    auto computed_fcs = LogicalLinkControl::compute_fcs(bits);
+
+    if (fcs != computed_fcs) {
+        std::cout << "  FCS error" << std::endl;
+        std::cout << "    FCS           0b" << std::bitset<32>(fcs) << std::endl;
+        std::cout << "    computed FCS: 0b" << std::bitset<32>(computed_fcs) << std::endl;
+        return false;
+    } else {
+        std::cout << "  FCS good" << std::endl;
+        return true;
+    }
+}
+
 void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
     std::cout << "LLC received: " << std::endl;
     std::cout << "  Address: " << address << std::endl;
@@ -31,17 +65,36 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
 
     switch (pdu_type) {
     case 0b0000:
+        // BL-ADATA without FCS
         process_bl_adata_without_fcs(address, vec);
         break;
     case 0b0001:
+        // BL-DATA without FCS
         process_bl_data_without_fcs(address, vec);
         break;
     case 0b0010:
         // BL-UDATA without FCS
-        mle_->service_user_pdu(address, vec);
+        process_bl_udata_without_fcs(address, vec);
         break;
     case 0b0011:
+        // BL-ACK without FCS
         process_bl_ack_without_fcs(address, vec);
+        break;
+    case 0b0100:
+        // BL-ADATA with FCS
+        process_bl_adata_with_fcs(address, vec);
+        break;
+    case 0b0101:
+        // BL-DATA with FCS
+        process_bl_data_with_fcs(address, vec);
+        break;
+    case 0b0110:
+        // BL-UDATA with FCS
+        process_bl_udata_with_fcs(address, vec);
+        break;
+    case 0b0111:
+        // BL-ACK with FCS
+        process_bl_ack_with_fcs(address, vec);
         break;
     case 0b1101:
         process_supplementary_llc_pdu(address, vec);
@@ -67,11 +120,51 @@ void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, 
     mle_->service_user_pdu(address, vec);
 }
 
+void LogicalLinkControl::process_bl_udata_without_fcs(const AddressType address, BitVector& vec) {
+    mle_->service_user_pdu(address, vec);
+}
+
 void LogicalLinkControl::process_bl_ack_without_fcs(const AddressType address, BitVector& vec) {
     auto n_r = vec.take(1);
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
     mle_->service_user_pdu(address, vec);
+}
+
+void LogicalLinkControl::process_bl_adata_with_fcs(const AddressType address, BitVector& vec) {
+    auto n_r = vec.take(1);
+    auto n_s = vec.take(1);
+
+    std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
+    std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
+
+    if (LogicalLinkControl::check_fcs(vec)) {
+        mle_->service_user_pdu(address, vec);
+    }
+}
+
+void LogicalLinkControl::process_bl_data_with_fcs(const AddressType address, BitVector& vec) {
+    auto n_s = vec.take(1);
+    std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
+
+    if (LogicalLinkControl::check_fcs(vec)) {
+        mle_->service_user_pdu(address, vec);
+    }
+}
+
+void LogicalLinkControl::process_bl_udata_with_fcs(const AddressType address, BitVector& vec) {
+    if (LogicalLinkControl::check_fcs(vec)) {
+        mle_->service_user_pdu(address, vec);
+    }
+}
+
+void LogicalLinkControl::process_bl_ack_with_fcs(const AddressType address, BitVector& vec) {
+    auto n_r = vec.take(1);
+    std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
+
+    if (LogicalLinkControl::check_fcs(vec)) {
+        mle_->service_user_pdu(address, vec);
+    }
 }
 
 void LogicalLinkControl::process_supplementary_llc_pdu(const AddressType address, BitVector& vec) {
