@@ -5,8 +5,9 @@
 #include <stdio.h>
 
 #include <decoder.hpp>
+#include <signal_handler.hpp>
 
-static bool stop = false;
+volatile bool stop = false;
 
 void sigint_handler(int s) {
     (void)s;

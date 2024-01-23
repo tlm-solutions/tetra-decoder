@@ -18,12 +18,14 @@
 #include <type_traits>
 #include <vector>
 
+#include <signal_handler.hpp>
+
 // thread pool executing work but outputting it the order of the input
 template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
 
   public:
     StreamingOrderedOutputThreadPoolExecutor(int numWorkers);
-    ~StreamingOrderedOutputThreadPoolExecutor() = default;
+    ~StreamingOrderedOutputThreadPoolExecutor();
 
     // append work to the queue
     void queueWork(std::function<ReturnType()> work);

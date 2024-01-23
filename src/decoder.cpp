@@ -88,16 +88,19 @@ void Decoder::main_loop() {
     auto bytes_read = read(input_fd_, rx_buffer, sizeof(rx_buffer));
 
     if (errno == EINTR) {
+        stop = 1;
         return;
     } else if (bytes_read < 0) {
         throw std::runtime_error("Read error");
     } else if (bytes_read == 0) {
+        stop = 1;
         return;
     }
 
     if (output_file_fd_.has_value()) {
         if (write(*output_file_fd_, rx_buffer, bytes_read) != bytes_read) {
             // unable to write to output TODO: possible log or fail hard
+            stop = 1;
             return;
         }
     }

@@ -16,6 +16,7 @@
 #include <bit_stream_decoder.hpp>
 #include <fixed_queue.hpp>
 #include <l2/lower_mac.hpp>
+#include <signal_handler.hpp>
 #include <streaming_ordered_output_thread_pool_executor.hpp>
 
 /**
@@ -27,7 +28,7 @@ class IQStreamDecoder {
   public:
     IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac, std::shared_ptr<BitStreamDecoder> bit_stream_decoder,
                     bool is_uplink);
-    ~IQStreamDecoder() = default;
+    ~IQStreamDecoder();
 
     void process_complex(std::complex<float> symbol) noexcept;
 

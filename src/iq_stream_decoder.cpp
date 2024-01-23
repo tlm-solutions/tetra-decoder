@@ -36,8 +36,14 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
 #endif
 }
 
+IQStreamDecoder::~IQStreamDecoder() {
+    // TODO: replace this crude hack that keeps the StreamingOrderedOutputThreadPoolExecutor<...> get function from blocking on programm stop
+    threadPool_->queueWork([]() { return std::vector<std::function<void()>>(); });
+    upperMacWorkerThread_.join();
+}
+
 void IQStreamDecoder::upperMacWorker() {
-    while (true) {
+    while (!stop) {
         for (auto func : threadPool_->get()) {
             func();
         }

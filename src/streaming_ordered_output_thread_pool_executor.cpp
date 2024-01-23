@@ -32,8 +32,14 @@ StreamingOrderedOutputThreadPoolExecutor<ReturnType>::StreamingOrderedOutputThre
     }
 }
 
+template <typename ReturnType>
+StreamingOrderedOutputThreadPoolExecutor<ReturnType>::~StreamingOrderedOutputThreadPoolExecutor() {
+    for (auto& t : workers)
+        t.join();
+}
+
 template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<ReturnType>::worker() {
-    while (true) {
+    while (!stop) {
         std::optional<std::pair<uint64_t, std::function<ReturnType()>>> work{};
 
         {
