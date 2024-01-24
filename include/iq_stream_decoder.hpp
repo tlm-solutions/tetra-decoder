@@ -33,19 +33,21 @@ class IQStreamDecoder {
     void process_complex(std::complex<float> symbol) noexcept;
 
   private:
+    using QueueT = FixedQueue<std::complex<float>, 300>;
+
     void upperMacWorker();
 
     std::complex<float> hard_decision(std::complex<float> symbol);
     std::vector<uint8_t> symbols_to_bitstream(std::vector<std::complex<float>> const& stream);
 
-    std::vector<std::complex<float>> convolve_valid(std::vector<std::complex<float>> const& a,
-                                                    std::vector<std::complex<float>> const& b);
+    void abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA, const std::complex<float>* itb,
+                                  const std::size_t len, float* res);
 
     std::vector<std::complex<float>> channel_estimation(std::vector<std::complex<float>> const& stream,
                                                         std::vector<std::complex<float>> const& pilots);
 
-    FixedQueue<std::complex<float>, 300> symbol_buffer_;
-    FixedQueue<std::complex<float>, 300> symbol_buffer_hard_decision_;
+    QueueT symbol_buffer_;
+    QueueT symbol_buffer_hard_decision_;
 
     // 9.4.4.3.2 Normal training sequence
     const std::vector<std::complex<float>> training_seq_n_ = {{-1, -1}, {-1, 1}, {1, 1},   {1, 1},  {-1, -1}, {1, -1},

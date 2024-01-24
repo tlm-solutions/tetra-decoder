@@ -37,7 +37,8 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
 }
 
 IQStreamDecoder::~IQStreamDecoder() {
-    // TODO: replace this crude hack that keeps the StreamingOrderedOutputThreadPoolExecutor<...> get function from blocking on programm stop
+    // TODO: replace this crude hack that keeps the StreamingOrderedOutputThreadPoolExecutor<...> get function from
+    // blocking on programm stop
     threadPool_->queueWork([]() { return std::vector<std::function<void()>>(); });
     upperMacWorkerThread_.join();
 }
@@ -100,27 +101,14 @@ std::vector<uint8_t> IQStreamDecoder::symbols_to_bitstream(std::vector<std::comp
     return bits;
 }
 
-std::vector<std::complex<float>> IQStreamDecoder::convolve_valid(std::vector<std::complex<float>> const& a,
-                                                                 std::vector<std::complex<float>> const& b) {
-    std::vector<std::complex<float>> res;
-
-    // make shure a is longer equal than b
-    if (b.size() > a.size()) {
-        return convolve_valid(b, a);
+void IQStreamDecoder::abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
+                                               const std::complex<float>* const itb, const std::size_t len,
+                                               float* res) {
+    std::complex<float> acc = {0.0, 0.0};
+    for (std::size_t i = 0; i < len; ++i) {
+        acc += queueA[offsetA + i] * itb[i];
     }
-
-    for (int i = 0; i < a.size() - b.size() + 1; i++) {
-        std::complex<float> v{};
-        auto ita = a.begin();
-        std::advance(ita, i);
-        auto itb = b.rbegin();
-        for (; itb != b.rend(); ita++, itb++) {
-            v += *ita * *itb;
-        }
-        res.push_back(v);
-    }
-
-    return res;
+    *res = std::abs(acc);
 }
 
 std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector<std::complex<float>> const& stream,
@@ -131,6 +119,10 @@ std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector
 
 void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
     if (is_uplink_) {
+        float detectedN;
+        float detectedP;
+        float detectedX;
+
         // Control Uplink Burst or Normal Uplink Burst
         symbol_buffer_.push(symbol);
         symbol_buffer_hard_decision_.push(hard_decision(symbol));
@@ -140,30 +132,21 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
         //
         // find NUB
         // 2 tail + 108 coded symbols + middle of 11 training sequence (6) = 116
-        auto start_n = symbol_buffer_hard_decision_.cbegin();
-        std::advance(start_n, 109);
-        auto end_n = start_n;
-        std::advance(end_n, 11);
-        auto find_n = convolve_valid({start_n, end_n}, training_seq_n_reversed_conj_)[0];
+        abs_convolve_same_length(symbol_buffer_hard_decision_, 109, training_seq_n_reversed_conj_.data(),
+                                 training_seq_n_reversed_conj_.size(), &detectedN);
         // find NUB_Split
         // 2 tail + 108 coded symbols + middle of 11 training sequence (6) = 116
-        auto start_p = symbol_buffer_hard_decision_.cbegin();
-        std::advance(start_p, 109);
-        auto end_p = start_p;
-        std::advance(end_p, 11);
-        auto find_p = convolve_valid({start_p, end_p}, training_seq_p_reversed_conj_)[0];
+        abs_convolve_same_length(symbol_buffer_hard_decision_, 109, training_seq_p_reversed_conj_.data(),
+                                 training_seq_p_reversed_conj_.size(), &detectedP);
         // find CUB
         // 2 tail + 42 coded symbols + middle of 15 training sequence (8) = 52
-        auto start_x = symbol_buffer_hard_decision_.cbegin();
-        std::advance(start_x, 44);
-        auto end_x = start_x;
-        std::advance(end_x, 15);
-        auto find_x = convolve_valid({start_x, end_x}, training_seq_x_reversed_conj_)[0];
+        abs_convolve_same_length(symbol_buffer_hard_decision_, 44, training_seq_x_reversed_conj_.data(),
+                                 training_seq_x_reversed_conj_.size(), &detectedX);
 
         // use actual signal for further processing
         auto start = symbol_buffer_.cbegin();
 
-        if (std::abs(find_x) >= SEQUENCE_DETECTION_THRESHOLD) {
+        if (detectedX >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential CUB found" << std::endl;
 
             auto end = start;
@@ -174,7 +157,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bitstream, BurstType::ControlUplinkBurst));
         }
 
-        if (std::abs(find_p) >= SEQUENCE_DETECTION_THRESHOLD) {
+        if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB_Split found" << std::endl;
 
             auto end = start;
@@ -185,7 +168,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
                                              BurstType::NormalUplinkBurstSplit));
         }
 
-        if (std::abs(find_n) >= SEQUENCE_DETECTION_THRESHOLD) {
+        if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB found" << std::endl;
 
             auto end = start;
