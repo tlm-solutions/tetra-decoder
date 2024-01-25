@@ -7,6 +7,10 @@ template <typename T, int MaxLen, typename Container = std::deque<T>> class Fixe
     Container queue{};
 
   public:
+    using const_iterator = typename Container::const_iterator;
+    using const_reverse_iterator = typename Container::const_reverse_iterator;
+    using const_reference = typename Container::const_reference;
+
     FixedQueue() {
         for (auto i = 0; i < MaxLen; i++) {
             T default_value{};

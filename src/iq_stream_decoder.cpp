@@ -67,10 +67,9 @@ std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> symbol) {
     }
 }
 
-std::vector<uint8_t> IQStreamDecoder::symbols_to_bitstream(std::vector<std::complex<float>> const& stream) {
-    std::vector<uint8_t> bits;
-
-    for (auto it = stream.begin(); it != stream.end(); it++) {
+template <class iterator_type>
+void IQStreamDecoder::symbols_to_bitstream(iterator_type it, std::vector<uint8_t>& bits, std::size_t len) {
+    for (auto i = 0; i < len; ++it, ++i) {
 
         auto real = it->real();
         auto imag = it->imag();
@@ -97,8 +96,6 @@ std::vector<uint8_t> IQStreamDecoder::symbols_to_bitstream(std::vector<std::comp
             }
         }
     }
-
-    return bits;
 }
 
 void IQStreamDecoder::abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
@@ -143,43 +140,48 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
         abs_convolve_same_length(symbol_buffer_hard_decision_, 44, training_seq_x_reversed_conj_.data(),
                                  training_seq_x_reversed_conj_.size(), &detectedX);
 
-        // use actual signal for further processing
-        auto start = symbol_buffer_.cbegin();
-
         if (detectedX >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential CUB found" << std::endl;
 
-            auto end = start;
-            std::advance(end, 103);
+            auto len = 103;
 
-            auto corrected = channel_estimation({start, end}, training_seq_x_reversed_conj_);
-            auto bitstream = symbols_to_bitstream(corrected);
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bitstream, BurstType::ControlUplinkBurst));
+            std::vector<uint8_t> bits;
+            bits.reserve(len * 2);
+
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+
+            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst));
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB_Split found" << std::endl;
 
-            auto end = start;
-            std::advance(end, 231);
+            auto len = 231;
 
-            auto corrected = channel_estimation({start, end}, training_seq_p_reversed_conj_);
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, symbols_to_bitstream(corrected),
-                                             BurstType::NormalUplinkBurstSplit));
+            std::vector<uint8_t> bits;
+            bits.reserve(len * 2);
+
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+
+            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit));
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB found" << std::endl;
 
-            auto end = start;
-            std::advance(end, 231);
+            auto len = 231;
 
-            auto corrected = channel_estimation({start, end}, training_seq_n_reversed_conj_);
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, symbols_to_bitstream(corrected),
-                                             BurstType::NormalUplinkBurst));
+            std::vector<uint8_t> bits;
+            bits.reserve(len * 2);
+
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+
+            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst));
         }
     } else {
-        auto bits = symbols_to_bitstream({symbol});
+        std::vector<std::complex<float>> stream = {symbol};
+        std::vector<uint8_t> bits;
+        symbols_to_bitstream(stream.cbegin(), bits, 1);
         for (auto it = bits.begin(); it != bits.end(); ++it) {
             bit_stream_decoder_->process_bit(*it);
         }
