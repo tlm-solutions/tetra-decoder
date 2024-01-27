@@ -37,21 +37,28 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
 }
 
 IQStreamDecoder::~IQStreamDecoder() {
+    // the last work packet has been passed into the StreamingOrderedOutputThreadPoolExecutor.
+    // wait until the work is finished and its input and output queue is drained.
+    //
     // TODO: replace this crude hack that keeps the StreamingOrderedOutputThreadPoolExecutor<...> get function from
     // blocking on programm stop
-    threadPool_->queueWork([]() { return std::vector<std::function<void()>>(); });
+    threadPool_->queueWork([]() { return std::vector<std::function<void()>>({std::function<void()>()}); });
     upperMacWorkerThread_.join();
 }
 
 void IQStreamDecoder::upperMacWorker() {
-    while (!stop) {
-        for (auto func : threadPool_->get()) {
+    for (;;) {
+        auto work_funcs = threadPool_->get();
+        for (auto func : work_funcs) {
+            // exit when we get the special zero work exit function
+            if (!func)
+                return;
             func();
         }
     }
 }
 
-std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> symbol) {
+std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> const& symbol) {
     if (symbol.real() > 0) {
         if (symbol.imag() > 0) {
             return std::complex<float>(1, 1);
@@ -68,33 +75,37 @@ std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> symbol) {
 }
 
 template <class iterator_type>
-void IQStreamDecoder::symbols_to_bitstream(iterator_type it, std::vector<uint8_t>& bits, std::size_t len) {
+void IQStreamDecoder::symbols_to_bitstream(iterator_type it, uint8_t* const bits, const std::size_t len) {
     for (auto i = 0; i < len; ++it, ++i) {
 
         auto real = it->real();
         auto imag = it->imag();
+        uint8_t symb0, symb1;
 
         if (real > 0.0) {
             if (imag > 0.0) {
                 // I
-                bits.push_back(0);
-                bits.push_back(0);
+                symb0 = 0;
+                symb1 = 0;
             } else {
                 // IV
-                bits.push_back(1);
-                bits.push_back(0);
+                symb0 = 1;
+                symb1 = 0;
             }
         } else {
             if (imag > 0.0) {
                 // II
-                bits.push_back(0);
-                bits.push_back(1);
+                symb0 = 0;
+                symb1 = 1;
             } else {
                 // III
-                bits.push_back(1);
-                bits.push_back(1);
+                symb0 = 1;
+                symb1 = 1;
             }
         }
+
+        bits[i * 2] = symb0;
+        bits[i * 2 + 1] = symb1;
     }
 }
 
@@ -145,12 +156,12 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
 
             auto len = 103;
 
-            std::vector<uint8_t> bits;
-            bits.reserve(len * 2);
+            std::vector<uint8_t> bits(len * 2);
 
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
 
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst));
+            auto lower_mac_process_cub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst);
+            threadPool_->queueWork(lower_mac_process_cub);
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -158,12 +169,13 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
 
             auto len = 231;
 
-            std::vector<uint8_t> bits;
-            bits.reserve(len * 2);
+            std::vector<uint8_t> bits(len * 2);
 
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
 
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit));
+            auto lower_mac_process_nubs =
+                std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
+            threadPool_->queueWork(lower_mac_process_nubs);
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -171,17 +183,18 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
 
             auto len = 231;
 
-            std::vector<uint8_t> bits;
-            bits.reserve(len * 2);
+            std::vector<uint8_t> bits(len * 2);
 
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits, len);
+            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
 
-            threadPool_->queueWork(std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst));
+            auto lower_mac_process_nub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst);
+            threadPool_->queueWork(lower_mac_process_nub);
         }
     } else {
+        // TODO: this path needs to change!
         std::vector<std::complex<float>> stream = {symbol};
-        std::vector<uint8_t> bits;
-        symbols_to_bitstream(stream.cbegin(), bits, 1);
+        std::vector<uint8_t> bits(2);
+        symbols_to_bitstream(stream.cbegin(), bits.data(), 1);
         for (auto it = bits.begin(); it != bits.end(); ++it) {
             bit_stream_decoder_->process_bit(*it);
         }

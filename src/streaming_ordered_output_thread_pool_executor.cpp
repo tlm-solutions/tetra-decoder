@@ -39,8 +39,14 @@ StreamingOrderedOutputThreadPoolExecutor<ReturnType>::~StreamingOrderedOutputThr
 }
 
 template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<ReturnType>::worker() {
-    while (!stop) {
+    for (;;) {
         std::optional<std::pair<uint64_t, std::function<ReturnType()>>> work{};
+
+        if (stop) {
+            std::lock_guard lk(cv_input_item_m);
+            if (inputQueue.size() == 0)
+                break;
+        }
 
         {
             std::lock_guard lk(cv_input_item_m);

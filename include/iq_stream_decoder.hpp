@@ -37,13 +37,13 @@ class IQStreamDecoder {
 
     void upperMacWorker();
 
-    std::complex<float> hard_decision(std::complex<float> symbol);
+    static std::complex<float> hard_decision(std::complex<float> const& symbol);
 
     template <class iterator_type>
-    static void symbols_to_bitstream(iterator_type it, std::vector<uint8_t>& bits, std::size_t len);
+    static void symbols_to_bitstream(iterator_type it, uint8_t* const bits, const std::size_t len);
 
-    void abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA, const std::complex<float>* itb,
-                                  const std::size_t len, float* res);
+    static void abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
+                                         const std::complex<float>* itb, const std::size_t len, float* res);
 
     std::vector<std::complex<float>> channel_estimation(std::vector<std::complex<float>> const& stream,
                                                         std::vector<std::complex<float>> const& pilots);
