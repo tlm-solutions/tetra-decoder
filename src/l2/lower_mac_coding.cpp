@@ -22,27 +22,41 @@
  * @brief Fibonacci LFSR descrambling - 8.2.5
  *
  */
+static void xor_kernel(uint8_t* const res, const uint8_t* const data, const uint8_t* const table,
+                       const std::size_t len) {
+    for (std::size_t i = 0; i < len; i++)
+        res[i] = data[i] ^ table[i];
+}
 
 auto LowerMac::descramble(const std::vector<uint8_t>& data, const std::size_t len,
                           const uint32_t scramblingCode) noexcept -> std::vector<uint8_t> {
-    const uint8_t poly[14] = {32, 26, 23, 22, 16, 12, 11,
-                              10, 8,  7,  5,  4,  2,  1}; // Feedback polynomial - see 8.2.5.2 (8.39)
 
+    static std::vector<uint8_t> table;
     std::vector<uint8_t> res(len);
 
-    uint32_t lfsr = scramblingCode; // linear feedback shift register initialization (=0 + 3
-                                    // for BSCH, calculated from Color code ch 19 otherwise)
-    for (std::size_t i = 0; i < len; i++) {
-        uint32_t bit = 0;
-        // apply poly (Xj + ...)
-        for (std::size_t j = 0; j < 14; j++) {
-            bit = bit ^ (lfsr >> (32 - poly[j]));
-        }
-        bit = bit & 1; // finish apply feedback polynomial (+ 1)
-        lfsr = (lfsr >> 1) | (bit << 31);
+    assert(len <= 432);
 
-        res[i] = data[i] ^ (bit & 0xff);
+    if (table.size() == 0) {
+        table.resize(432);
+        const uint8_t poly[14] = {32, 26, 23, 22, 16, 12, 11,
+                                  10, 8,  7,  5,  4,  2,  1}; // Feedback polynomial - see 8.2.5.2 (8.39)
+
+        uint32_t lfsr = scramblingCode; // linear feedback shift register initialization (=0 + 3
+                                        // for BSCH, calculated from Color code ch 19 otherwise)
+        for (std::size_t i = 0; i < 432; i++) {
+            uint32_t bit = 0;
+            // apply poly (Xj + ...)
+            for (std::size_t j = 0; j < 14; j++) {
+                bit = bit ^ (lfsr >> (32 - poly[j]));
+            }
+            bit = bit & 1; // finish apply feedback polynomial (+ 1)
+            lfsr = (lfsr >> 1) | (bit << 31);
+
+            table[i] = bit & 0xff;
+        }
     }
+
+    xor_kernel(res.data(), data.data(), table.data(), len);
 
     return res;
 }
