@@ -28,8 +28,8 @@ static void xor_kernel(uint8_t* const res, const uint8_t* const data, const uint
         res[i] = data[i] ^ table[i];
 }
 
-auto LowerMac::descramble(const std::vector<uint8_t>& data, const std::size_t len,
-                          const uint32_t scramblingCode) noexcept -> std::vector<uint8_t> {
+auto LowerMac::descramble(const uint8_t* const data, const std::size_t len, const uint32_t scramblingCode) noexcept
+    -> std::vector<uint8_t> {
 
     static std::vector<uint8_t> table;
     std::vector<uint8_t> res(len);
@@ -56,7 +56,7 @@ auto LowerMac::descramble(const std::vector<uint8_t>& data, const std::size_t le
         }
     }
 
-    xor_kernel(res.data(), data.data(), table.data(), len);
+    xor_kernel(res.data(), data, table.data(), len);
 
     return res;
 }
@@ -65,7 +65,7 @@ auto LowerMac::descramble(const std::vector<uint8_t>& data, const std::size_t le
  * @brief (K,a) block deinterleaver - 8.2.4
  *
  */
-auto LowerMac::deinterleave(const std::vector<uint8_t>& data, const std::size_t K, const std::size_t a) noexcept
+auto LowerMac::deinterleave(const uint8_t* const data, const std::size_t K, const std::size_t a) noexcept
     -> std::vector<uint8_t> {
     std::vector<uint8_t> res(K, 0); // output vector is size K
 
@@ -81,7 +81,7 @@ auto LowerMac::deinterleave(const std::vector<uint8_t>& data, const std::size_t 
  * @brief Depuncture with 2/3 rate - 8.2.3.1.3
  *
  */
-auto LowerMac::depuncture23(const std::vector<uint8_t>& data, const uint32_t len) noexcept -> std::vector<int16_t> {
+auto LowerMac::depuncture23(const uint8_t* const data, const uint32_t len) noexcept -> std::vector<int16_t> {
     const uint8_t P[] = {0, 1, 2, 5}; // 8.2.3.1.3 - P[1..t]
     std::vector<int16_t> res(4 * len * 2 / 3,
                              0); // 8.2.3.1.2 with flag 0 for erase bit in Viterbi routine
@@ -121,7 +121,7 @@ auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noex
  *
  */
 
-auto LowerMac::reed_muller_3014_decode(const std::vector<uint8_t>& data) noexcept -> std::vector<uint8_t> {
+auto LowerMac::reed_muller_3014_decode(const uint8_t* const data) noexcept -> std::vector<uint8_t> {
     uint8_t q[14][5];
     std::vector<uint8_t> res(14);
 
@@ -318,7 +318,7 @@ auto LowerMac::reed_muller_3014_decode(const std::vector<uint8_t>& data) noexcep
  * @brief Calculated CRC16 ITU-T X.25 - CCITT
  *
  */
-auto LowerMac::check_crc_16_ccitt(const std::vector<uint8_t>& data, const std::size_t len) noexcept -> bool {
+auto LowerMac::check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool {
     uint16_t crc = 0xFFFF; // CRC16-CCITT initial value
 
     for (std::size_t i = 0; i < len; i++) {

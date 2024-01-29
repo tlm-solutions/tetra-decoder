@@ -37,16 +37,14 @@ class LowerMac {
     std::shared_ptr<ViterbiCodec> viter_bi_codec_1614_{};
     std::shared_ptr<UpperMac> upper_mac_{};
 
-    [[nodiscard]] static auto descramble(const std::vector<uint8_t>& data, const std::size_t len,
+    [[nodiscard]] static auto descramble(const uint8_t* const data, const std::size_t len,
                                          const uint32_t scramblingCode) noexcept -> std::vector<uint8_t>;
-    [[nodiscard]] static auto deinterleave(const std::vector<uint8_t>& data, const std::size_t K,
-                                           const std::size_t a) noexcept -> std::vector<uint8_t>;
-    [[nodiscard]] static auto depuncture23(const std::vector<uint8_t>& data, const uint32_t len) noexcept
-        -> std::vector<int16_t>;
-    [[nodiscard]] static auto reed_muller_3014_decode(const std::vector<uint8_t>& data) noexcept
+    [[nodiscard]] static auto deinterleave(const uint8_t* const data, const std::size_t K, const std::size_t a) noexcept
         -> std::vector<uint8_t>;
-    [[nodiscard]] static auto check_crc_16_ccitt(const std::vector<uint8_t>& data, const std::size_t len) noexcept
-        -> bool;
+    [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept
+        -> std::vector<int16_t>;
+    [[nodiscard]] static auto reed_muller_3014_decode(const uint8_t* const data) noexcept -> std::vector<uint8_t>;
+    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool;
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
 };
