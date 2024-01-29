@@ -37,8 +37,8 @@ class LowerMac {
     std::shared_ptr<ViterbiCodec> viter_bi_codec_1614_{};
     std::shared_ptr<UpperMac> upper_mac_{};
 
-    [[nodiscard]] static auto descramble(const uint8_t* const data, const std::size_t len,
-                                         const uint32_t scramblingCode) noexcept -> std::vector<uint8_t>;
+    static auto descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
+                           const uint32_t scramblingCode) noexcept -> void;
     [[nodiscard]] static auto deinterleave(const uint8_t* const data, const std::size_t K, const std::size_t a) noexcept
         -> std::vector<uint8_t>;
     [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept

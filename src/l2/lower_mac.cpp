@@ -31,8 +31,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // sb contains BSCH
         // ✅ done
-        sb = descramble(frame.data() + 94, 120, 0x0003);
-        sb = deinterleave(sb.data(), 120, 11);
+        uint8_t sb_desc[120];
+        descramble(frame.data() + 94, sb_desc, 120, 0x0003);
+        sb = deinterleave(sb_desc, 120, 11);
         sb = viter_bi_decode_1614(depuncture23(sb.data(), 120));
         if (check_crc_16_ccitt(sb.data(), 76)) {
             sb = std::vector(sb.begin(), sb.begin() + 60);
@@ -41,8 +42,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // bb contains AACH
         // ✅ done
-        bb = descramble(frame.data() + 252, 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb.data());
+        uint8_t bb_desc[30];
+        descramble(frame.data() + 252, bb_desc, 30, upper_mac_->scrambling_code());
+        bb = reed_muller_3014_decode(bb_desc);
         upper_mac_->process_AACH(burst_type, bb);
 
         // bkn2 block
@@ -50,8 +52,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // any off SCH/HD, BNCH, STCH
         // see ETSI EN 300 392-2 V3.8.1 (2016-08) Figure 8.6: Error control
         // structure for π4DQPSK logical channels (part 2)
-        bkn2 = descramble(frame.data() + 282, 216, upper_mac_->scrambling_code());
-        bkn2 = deinterleave(bkn2.data(), 216, 101);
+        uint8_t bkn2_desc[216];
+        descramble(frame.data() + 282, bkn2_desc, 216, upper_mac_->scrambling_code());
+        bkn2 = deinterleave(bkn2_desc, 216, 101);
         bkn2 = viter_bi_decode_1614(depuncture23(bkn2.data(), 216));
         // if the crc does not work, then it might be a BLCH
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
@@ -67,14 +70,16 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // ✅ done
         vectorAppend(frame, bb, 230, 14);
         vectorAppend(frame, bb, 266, 16);
-        bb = descramble(bb.data(), 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb.data());
+        uint8_t bb_des[30];
+        descramble(bb.data(), bb_des, 30, upper_mac_->scrambling_code());
+        bb = reed_muller_3014_decode(bb_des);
         upper_mac_->process_AACH(burst_type, bb);
 
         // TCH or SCH/F
         vectorAppend(frame, bkn1, 14, 216);
         vectorAppend(frame, bkn1, 282, 216);
-        bkn1 = descramble(bkn1.data(), 432, upper_mac_->scrambling_code());
+        uint8_t bkn1_desc[432];
+        descramble(bkn1.data(), bkn1_desc, 432, upper_mac_->scrambling_code());
 
         if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
             // TODO: handle TCH
@@ -83,7 +88,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         } else {
             // control channel
             // ✅done
-            bkn1 = deinterleave(bkn1.data(), 432, 103);
+            bkn1 = deinterleave(bkn1_desc, 432, 103);
             bkn1 = viter_bi_decode_1614(depuncture23(bkn1.data(), 432));
             if (check_crc_16_ccitt(bkn1.data(), 284)) {
                 bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
@@ -97,17 +102,20 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // ✅ done
         vectorAppend(frame, bb, 230, 14);
         vectorAppend(frame, bb, 266, 16);
-        bb = descramble(bb.data(), 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb.data());
+        uint8_t bb_desc[30];
+        descramble(bb.data(), bb_desc, 30, upper_mac_->scrambling_code());
+        bb = reed_muller_3014_decode(bb_desc);
         upper_mac_->process_AACH(burst_type, bb);
 
         // STCH + TCH
         // STCH + STCH
-        bkn1 = descramble(frame.data() + 14, 216, upper_mac_->scrambling_code());
-        bkn2 = descramble(frame.data() + 282, 216, upper_mac_->scrambling_code());
+        uint8_t bkn1_desc[216];
+        uint8_t bkn2_desc[216];
+        descramble(frame.data() + 14, bkn1_desc, 216, upper_mac_->scrambling_code());
+        descramble(frame.data() + 282, bkn2_desc, 216, upper_mac_->scrambling_code());
 
         if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
-            bkn1 = deinterleave(bkn1.data(), 216, 101);
+            bkn1 = deinterleave(bkn1_desc, 216, 101);
             bkn1 = viter_bi_decode_1614(depuncture23(bkn1.data(), 216));
             if (check_crc_16_ccitt(bkn1.data(), 140)) {
                 bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
@@ -115,7 +123,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             }
 
             if (upper_mac_->second_slot_stolen()) {
-                bkn2 = deinterleave(bkn2.data(), 216, 101);
+                bkn2 = deinterleave(bkn2_desc, 216, 101);
                 bkn2 = viter_bi_decode_1614(depuncture23(bkn2.data(), 216));
                 if (check_crc_16_ccitt(bkn2.data(), 140)) {
                     bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
@@ -148,10 +156,11 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     } else if (burst_type == BurstType::ControlUplinkBurst) {
         vectorAppend(frame, cb, 4, 84);
         vectorAppend(frame, cb, 118, 84);
-        cb = descramble(cb.data(), 168, upper_mac_->scrambling_code());
+        uint8_t cb_desc[168];
+        descramble(cb.data(), cb_desc, 168, upper_mac_->scrambling_code());
 
         // XXX: assume to be control channel
-        cb = deinterleave(cb.data(), 168, 13);
+        cb = deinterleave(cb_desc, 168, 13);
         cb = viter_bi_decode_1614(depuncture23(cb.data(), 168));
         if (check_crc_16_ccitt(cb.data(), 108)) {
             cb = std::vector(cb.begin(), cb.begin() + 92);
@@ -160,10 +169,11 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     } else if (burst_type == BurstType::NormalUplinkBurst) {
         vectorAppend(frame, bkn1, 4, 216);
         vectorAppend(frame, bkn1, 242, 216);
-        bkn1 = descramble(bkn1.data(), 432, upper_mac_->scrambling_code());
+        uint8_t bkn1_desc[432];
+        descramble(bkn1.data(), bkn1_desc, 432, upper_mac_->scrambling_code());
 
         // XXX: assume to be control channel
-        bkn1 = deinterleave(bkn1.data(), 432, 103);
+        bkn1 = deinterleave(bkn1_desc, 432, 103);
         bkn1 = viter_bi_decode_1614(depuncture23(bkn1.data(), 432));
         if (check_crc_16_ccitt(bkn1.data(), 284)) {
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
@@ -172,10 +182,12 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         }
     } else if (burst_type == BurstType::NormalUplinkBurstSplit) {
         // TODO: finish NormalUplinkBurstSplit implementation
-        bkn1 = descramble(frame.data() + 4, 216, upper_mac_->scrambling_code());
-        bkn2 = descramble(frame.data() + 242, 216, upper_mac_->scrambling_code());
+        uint8_t bkn1_desc[216];
+        uint8_t bkn2_desc[216];
+        descramble(frame.data() + 4, bkn1_desc, 216, upper_mac_->scrambling_code());
+        descramble(frame.data() + 242, bkn2_desc, 216, upper_mac_->scrambling_code());
 
-        bkn1 = deinterleave(bkn1.data(), 216, 101);
+        bkn1 = deinterleave(bkn1_desc, 216, 101);
         bkn1 = viter_bi_decode_1614(depuncture23(bkn1.data(), 216));
         if (check_crc_16_ccitt(bkn1.data(), 140)) {
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
@@ -183,7 +195,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             functions.push_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
         }
 
-        bkn2 = deinterleave(bkn2.data(), 216, 101);
+        bkn2 = deinterleave(bkn2_desc, 216, 101);
         bkn2 = viter_bi_decode_1614(depuncture23(bkn2.data(), 216));
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);

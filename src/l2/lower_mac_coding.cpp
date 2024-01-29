@@ -28,11 +28,10 @@ static void xor_kernel(uint8_t* const res, const uint8_t* const data, const uint
         res[i] = data[i] ^ table[i];
 }
 
-auto LowerMac::descramble(const uint8_t* const data, const std::size_t len, const uint32_t scramblingCode) noexcept
-    -> std::vector<uint8_t> {
+auto LowerMac::descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
+                          const uint32_t scramblingCode) noexcept -> void {
 
     static std::vector<uint8_t> table;
-    std::vector<uint8_t> res(len);
 
     assert(len <= 432);
 
@@ -56,9 +55,7 @@ auto LowerMac::descramble(const uint8_t* const data, const std::size_t len, cons
         }
     }
 
-    xor_kernel(res.data(), data, table.data(), len);
-
-    return res;
+    xor_kernel(res, data, table.data(), len);
 }
 
 /**
