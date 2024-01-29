@@ -62,16 +62,12 @@ auto LowerMac::descramble(const uint8_t* const data, uint8_t* const res, const s
  * @brief (K,a) block deinterleaver - 8.2.4
  *
  */
-auto LowerMac::deinterleave(const uint8_t* const data, const std::size_t K, const std::size_t a) noexcept
-    -> std::vector<uint8_t> {
-    std::vector<uint8_t> res(K, 0); // output vector is size K
-
+auto LowerMac::deinterleave(const uint8_t* const data, uint8_t* const res, const std::size_t K,
+                            const std::size_t a) noexcept -> void {
     for (std::size_t i = 0; i < K; i++) {
         auto k = 1 + (a * (i + 1)) % K;
         res[i] = data[k - 1]; // to interleave: DataOut[i-1] = DataIn[k-1]
     }
-
-    return res;
 }
 
 /**

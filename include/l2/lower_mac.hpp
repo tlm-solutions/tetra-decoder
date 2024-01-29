@@ -39,8 +39,8 @@ class LowerMac {
 
     static auto descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
                            const uint32_t scramblingCode) noexcept -> void;
-    [[nodiscard]] static auto deinterleave(const uint8_t* const data, const std::size_t K, const std::size_t a) noexcept
-        -> std::vector<uint8_t>;
+    static auto deinterleave(const uint8_t* const data, uint8_t* const res, const std::size_t K,
+                             const std::size_t a) noexcept -> void;
     [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept
         -> std::vector<int16_t>;
     static auto reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void;
