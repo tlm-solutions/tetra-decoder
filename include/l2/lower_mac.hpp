@@ -43,7 +43,7 @@ class LowerMac {
         -> std::vector<uint8_t>;
     [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept
         -> std::vector<int16_t>;
-    [[nodiscard]] static auto reed_muller_3014_decode(const uint8_t* const data) noexcept -> std::vector<uint8_t>;
+    static auto reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void;
     [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool;
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;

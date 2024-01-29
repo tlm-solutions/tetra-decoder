@@ -118,9 +118,8 @@ auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noex
  *
  */
 
-auto LowerMac::reed_muller_3014_decode(const uint8_t* const data) noexcept -> std::vector<uint8_t> {
+auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void {
     uint8_t q[14][5];
-    std::vector<uint8_t> res(14);
 
     q[0][0] = data[0];
     q[0][1] = (data[13 + 3] + data[13 + 5] + data[13 + 6] + data[13 + 7] + data[13 + 11]) % 2;
@@ -307,8 +306,6 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data) noexcept -> st
     // print_vector(res, 14);
 
     // return vector_extract(data, 0, 14);
-
-    return res;
 }
 
 /**

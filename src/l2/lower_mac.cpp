@@ -18,7 +18,6 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     std::vector<uint8_t> sb{};
     std::vector<uint8_t> bkn1{};
     std::vector<uint8_t> bkn2{};
-    std::vector<uint8_t> bb{};
     std::vector<uint8_t> cb{};
 
     std::vector<std::function<void()>> functions{};
@@ -44,8 +43,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // ✅ done
         uint8_t bb_desc[30];
         descramble(frame.data() + 252, bb_desc, 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb_desc);
-        upper_mac_->process_AACH(burst_type, bb);
+        std::vector<uint8_t> bb_rm(14);
+        reed_muller_3014_decode(bb_desc, bb_rm.data());
+        upper_mac_->process_AACH(burst_type, bb_rm);
 
         // bkn2 block
         // ✅ done
@@ -68,12 +68,14 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // bb contains AACH
         // ✅ done
+        std::vector<uint8_t> bb{};
         vectorAppend(frame, bb, 230, 14);
         vectorAppend(frame, bb, 266, 16);
         uint8_t bb_des[30];
         descramble(bb.data(), bb_des, 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb_des);
-        upper_mac_->process_AACH(burst_type, bb);
+        std::vector<uint8_t> bb_rm(14);
+        reed_muller_3014_decode(bb_des, bb_rm.data());
+        upper_mac_->process_AACH(burst_type, bb_rm);
 
         // TCH or SCH/F
         vectorAppend(frame, bkn1, 14, 216);
@@ -100,12 +102,14 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // bb contains AACH
         // ✅ done
+        std::vector<uint8_t> bb{};
         vectorAppend(frame, bb, 230, 14);
         vectorAppend(frame, bb, 266, 16);
         uint8_t bb_desc[30];
         descramble(bb.data(), bb_desc, 30, upper_mac_->scrambling_code());
-        bb = reed_muller_3014_decode(bb_desc);
-        upper_mac_->process_AACH(burst_type, bb);
+        std::vector<uint8_t> bb_rm(14);
+        reed_muller_3014_decode(bb_desc, bb_rm.data());
+        upper_mac_->process_AACH(burst_type, bb_rm);
 
         // STCH + TCH
         // STCH + STCH
