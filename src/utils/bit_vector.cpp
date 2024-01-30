@@ -8,74 +8,96 @@
  */
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 
 #include <utils/bit_vector.hpp>
 
-auto BitVector::take_vector(const size_t numberBits) -> std::vector<uint8_t> {
+auto BitVector::compute_fcs() -> uint32_t {
+    uint32_t crc = 0xFFFFFFFF;
+    if (len_ < 32) {
+        crc <<= (32 - len_);
+    }
+
+    for (auto i = 0; i < len_; i++) {
+        uint8_t bit = (data_[read_offset_ + i] ^ (crc >> 31)) & 1;
+        crc <<= 1;
+        if (bit) {
+            crc = crc ^ 0x04C11DB7;
+        }
+    }
+    return ~crc;
+}
+
+auto BitVector::take_vector(const size_t numberBits) -> const uint8_t* const {
     if (numberBits > bits_left()) {
         throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
                                  std::to_string(bits_left()) + ")");
     }
 
-    std::vector<uint8_t> res;
-
-    std::copy_n(data_.begin(), numberBits, std::back_inserter(res));
+    auto res = data_.data() + read_offset_;
 
     // delete first n entries
-    std::vector<decltype(data_)::value_type>(data_.begin() + numberBits, data_.end()).swap(data_);
+    read_offset_ += numberBits;
+    len_ -= numberBits;
 
     return res;
 }
 
-auto BitVector::take_last_vector(const size_t numberBits) -> std::vector<uint8_t> {
+auto BitVector::take_last_vector(const size_t numberBits) -> const uint8_t* const {
     if (numberBits > bits_left()) {
         throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
                                  std::to_string(bits_left()) + ")");
     }
 
-    std::vector<uint8_t> res;
+    auto res = data_.data() + bits_left() - numberBits;
 
-    auto start = data_.begin();
-    // advance to position of last N elements
-    std::advance(start, bits_left() - numberBits);
-
-    std::copy_n(start, numberBits, std::back_inserter(res));
-
-    // delete last n entries
-    std::vector<decltype(data_)::value_type>(data_.begin(), data_.begin() + bits_left() - numberBits).swap(data_);
+    // take from the back
+    len_ -= numberBits;
 
     return res;
 }
 
-void BitVector::append(std::vector<uint8_t> bits) { data_.insert(data_.end(), bits.begin(), bits.end()); }
+void BitVector::append(const BitVector& other) {
+    // actually need to do a copy here!
+    if (read_offset_ > 0) {
+        // copy to front
+        std::memcpy(data_.data(), data_.data() + read_offset_, sizeof(uint8_t) * len_);
+        read_offset_ = 0;
+    }
+    // shrink the size
+    data_.resize(len_);
+
+    // copy in other
+    data_.resize(len_ + other.len_);
+    std::memcpy(data_.data() + len_, other.data_.data() + other.read_offset_, sizeof(uint8_t) * other.len_);
+    len_ += other.len_;
+}
 
 auto BitVector::take(const size_t numberBits) -> uint64_t {
-    std::vector<uint8_t> bits = take_vector(numberBits);
+    auto bits = take_vector(numberBits);
 
     uint64_t ret = 0;
 
-    for (auto it = bits.begin(); it != bits.end(); it++) {
-        if (it != bits.begin()) {
+    for (auto i = 0; i < numberBits; i++) {
+        if (i != 0)
             ret <<= 1;
-        }
-        ret |= (*it & 0x1);
+        ret |= (bits[i] & 0x1);
     }
 
     return ret;
 }
 
 auto BitVector::take_last(const size_t numberBits) -> uint64_t {
-    std::vector<uint8_t> bits = take_last_vector(numberBits);
+    auto bits = take_last_vector(numberBits);
 
     uint64_t ret = 0;
 
-    for (auto it = bits.begin(); it != bits.end(); it++) {
-        if (it != bits.begin()) {
+    for (auto i = 0; i < numberBits; i++) {
+        if (i != 0)
             ret <<= 1;
-        }
-        ret |= (*it & 0x1);
+        ret |= (bits[i] & 0x1);
     }
 
     return ret;
@@ -86,20 +108,20 @@ auto BitVector::take_last() -> uint8_t {
         throw std::runtime_error("1 bit not left in BitVec (" + std::to_string(bits_left()) + ")");
     }
 
-    auto last = data_.back();
-    data_.pop_back();
+    len_ -= 1;
 
-    return last;
+    return data_[read_offset_ + len_];
 }
 
 auto BitVector::is_mac_padding() const noexcept -> bool {
-    auto it = data_.begin();
-
-    if (*it++ != 1)
+    if (len_ == 0)
         return false;
 
-    for (; it != data_.end(); it++) {
-        if (*it != 0)
+    if (data_[read_offset_] != 1)
+        return false;
+
+    for (auto i = 1; i < len_; i++) {
+        if (data_[read_offset_ + i] != 0)
             return false;
     }
 
@@ -108,8 +130,8 @@ auto BitVector::is_mac_padding() const noexcept -> bool {
 
 auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream& {
     stream << "BitVec: ";
-    for (unsigned char it : vec.data_) {
-        stream << std::to_string(it);
+    for (auto i = 0; i < vec.len_; i++) {
+        stream << std::to_string(vec.data_[vec.read_offset_ + i]);
     }
 
     return stream;

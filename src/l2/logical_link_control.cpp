@@ -3,28 +3,11 @@
 
 #include <l2/logical_link_control.hpp>
 
-auto LogicalLinkControl::compute_fcs(std::vector<uint8_t> const& data) -> uint32_t {
-    uint32_t crc = 0xFFFFFFFF;
-    if (data.size() < 32) {
-        crc <<= (32 - data.size());
-    }
-
-    for (auto it = data.cbegin(); it != data.cend(); it++) {
-        uint8_t bit = (*it ^ (crc >> 31)) & 1;
-        crc <<= 1;
-        if (bit) {
-            crc = crc ^ 0x04C11DB7;
-        }
-    }
-    return ~crc;
-}
-
 auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
     // remove last 32 bits
     auto fcs = vec.take_last(32);
-    auto bits = BitVector(vec).take_vector(vec.bits_left());
 
-    auto computed_fcs = LogicalLinkControl::compute_fcs(bits);
+    auto computed_fcs = vec.compute_fcs();
 
     if (fcs != computed_fcs) {
         std::cout << "  FCS error" << std::endl;
