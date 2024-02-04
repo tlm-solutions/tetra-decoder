@@ -25,7 +25,7 @@ void UpperMac::incrementTn() {
         multi_frame_number_ = 1;
     }
 
-    std::cout << "TN: " << time_slot_ << " FN: " << frame_number_ << " MN: " << multi_frame_number_ << std::endl;
+    std::cout << "[TIME] TN: " << time_slot_ << " FN: " << frame_number_ << " MN: " << multi_frame_number_ << std::endl;
 }
 
 /**
@@ -70,7 +70,7 @@ void UpperMac::process_AACH(const BurstType burst_type, const std::vector<uint8_
         }
     }
 
-    std::cout << "AACH downlink_usage: " << downlink_usage_
+    std::cout << "[Channel] AACH downlink_usage: " << downlink_usage_
               << " downlinkUsageTrafficMarker: " << downlink_traffic_usage_marker_ << std::endl;
 }
 
@@ -110,7 +110,7 @@ void UpperMac::process_BSCH(const BurstType burst_type, const std::vector<uint8_
 void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(burst_type.is_downlink_burst());
 
-    std::cout << "SCH_HD" << std::endl;
+    std::cout << "[Channel] SCH_HD" << std::endl;
     process_signalling_channel(burst_type, data, true, false);
 }
 
@@ -124,7 +124,7 @@ void UpperMac::process_SCH_HU(const BurstType burst_type, const std::vector<uint
 
         auto vec = BitVector(data);
 
-        std::cout << "SCH_HU" << std::endl;
+        std::cout << "[Channel] SCH_HU" << std::endl;
 
         auto pduType = vec.take(1);
         auto fill_bit_indication = vec.take(1);
@@ -147,12 +147,12 @@ void UpperMac::process_SCH_HU(const BurstType burst_type, const std::vector<uint
 }
 
 void UpperMac::process_SCH_F(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    std::cout << "SCH_F" << std::endl;
+    std::cout << "[Channel] SCH_F" << std::endl;
     process_signalling_channel(burst_type, data, false, false);
 }
 
 void UpperMac::process_STCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    std::cout << "STCH" << std::endl;
+    std::cout << "[Channel] STCH" << std::endl;
 
     second_slot_stolen_ = false;
 
