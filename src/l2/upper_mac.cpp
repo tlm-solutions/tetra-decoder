@@ -893,7 +893,9 @@ void UpperMac::process_mac_end_hu(BitVector& vec) {
     auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     // XXX: implement combination of uplink and downlink
-    std::cout << "  Last fragment sent on reserved subslot. Cannot process!" << std::endl;
+    std::cout << "  Last fragment sent on reserved subslot. Cannot process! Taking the last MAC-ACCESS or MAC-DATA as "
+                 "the first half."
+              << std::endl;
 
     // XXX: This just takes the last plausible MAC-DATA or MAC-ACCESS as start of fragmentation. this will be buggy, but
     // at least a start to avoid having to deal with the combination of uplink and downlink processing
