@@ -31,11 +31,12 @@ static void xor_kernel(uint8_t* const res, const uint8_t* const data, const uint
 auto LowerMac::descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
                           const uint32_t scramblingCode) noexcept -> void {
 
-    static std::vector<uint8_t> table;
+    static std::map<uint32_t, std::vector<uint8_t>> tableByScramblingCode;
 
     assert(len <= 432);
 
-    if (table.size() == 0) {
+    if (tableByScramblingCode.count(scramblingCode) == 0) {
+        auto& table = tableByScramblingCode[scramblingCode];
         table.resize(432);
         const uint8_t poly[14] = {32, 26, 23, 22, 16, 12, 11,
                                   10, 8,  7,  5,  4,  2,  1}; // Feedback polynomial - see 8.2.5.2 (8.39)
@@ -55,7 +56,7 @@ auto LowerMac::descramble(const uint8_t* const data, uint8_t* const res, const s
         }
     }
 
-    xor_kernel(res, data, table.data(), len);
+    xor_kernel(res, data, tableByScramblingCode[scramblingCode].data(), len);
 }
 
 /**
