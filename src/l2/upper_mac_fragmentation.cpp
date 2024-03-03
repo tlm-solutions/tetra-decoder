@@ -40,13 +40,12 @@ void UpperMac::fragmentation_end_burst() {
 
         fragment_list_.clear();
 
-        auto tm_sdu = BitVector({});
+        auto tm_sdu = BitVector();
 
         // combine to tm_sdu
         for (auto it = fragment_map_[last_address_type_end_hu_].begin();
              it != fragment_map_[last_address_type_end_hu_].end(); it++) {
-            auto bit_vec = *it;
-            tm_sdu.append(bit_vec.take_vector(bit_vec.bits_left()));
+            tm_sdu.append(*it);
         }
 
         // remove key from the map
@@ -72,12 +71,11 @@ void UpperMac::fragmentation_end_burst() {
 
     // frag end received. send to logical link control.
     if (fragment_end_received_) {
-        auto tm_sdu = BitVector({});
+        auto tm_sdu = BitVector();
 
         // combine to tm_sdu
         for (auto it = fragment_map_[last_address_type_].begin(); it != fragment_map_[last_address_type_].end(); it++) {
-            auto bit_vec = *it;
-            tm_sdu.append(bit_vec.take_vector(bit_vec.bits_left()));
+            tm_sdu.append(*it);
         }
 
         // remove key from the map

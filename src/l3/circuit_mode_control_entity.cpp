@@ -74,7 +74,7 @@ void CircuitModeControlEntity::process_d_sds_data(const AddressType to_address, 
         auto length_identifier = vec.take(11);
         std::cout << "  length_identifier: " << length_identifier << std::endl;
         std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        auto sds = BitVector(vec.take_vector(length_identifier));
+        auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
         sds_->process(to_address, from_address, sds);
     } else {
         // XXX: we should take the length_identifier into account...
@@ -107,7 +107,7 @@ void CircuitModeControlEntity::process_u_sds_data(const AddressType from_address
         auto length_identifier = vec.take(11);
         std::cout << "  length_identifier: " << length_identifier << std::endl;
         std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        auto sds = BitVector(vec.take_vector(length_identifier));
+        auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
         sds_->process(to_address, from_address, sds);
     } else {
         // XXX: we should take the length_identifier into account...

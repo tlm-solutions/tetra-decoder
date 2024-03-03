@@ -21,9 +21,8 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
 
     {
-        auto vec_data = vec.take_vector(vec.bits_left());
-        vec = BitVector(vec_data);
-        auto vec_copy = BitVector(vec);
+        auto vec_copy = BitVector();
+        vec_copy.append(vec);
 
         message_["data"] = nlohmann::json::array();
 
