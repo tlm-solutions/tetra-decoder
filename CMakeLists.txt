@@ -8,6 +8,9 @@ add_executable(tetra-decoder
                src/main.cpp
                src/reporter.cpp
         src/decoder.cpp
+        src/streaming_ordered_output_thread_pool_executor.cpp
+        src/bit_stream_decoder.cpp
+        src/iq_stream_decoder.cpp
         src/l2/lower_mac.cpp
         src/l2/lower_mac_coding.cpp
         src/l2/upper_mac.cpp
@@ -21,7 +24,18 @@ add_executable(tetra-decoder
         src/utils/bit_vector.cpp
         src/utils/viter_bi_codec.cpp)
 
-target_compile_options(tetra-decoder PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+add_executable(tetra-puncturing
+               src/examples/tetra_puncturing.cpp)
+
+add_executable(tetra-viterbi
+               src/examples/viter_bi_codec.cpp
+               src/examples/tetra_viterbi.cpp)
+
+target_compile_options(tetra-decoder PUBLIC -std=c++17 -Wall -Wno-unused-variable -msse4.1 -O3)
+target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+target_compile_options(tetra-viterbi PUBLIC -std=c++17 -Wall -Wno-unused-variable)
+
+include(lib/ViterbiDecoderCpp/viterbi-config.cmake)
 
 include_directories(src)
 
@@ -32,6 +46,9 @@ find_package(nlohmann_json REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json)
+target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi)
+target_link_libraries(tetra-viterbi viterbi)
 
 install(TARGETS tetra-decoder DESTINATION bin)
+install(TARGETS tetra-puncturing DESTINATION bin)
+install(TARGETS tetra-viterbi DESTINATION bin)

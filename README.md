@@ -1,11 +1,12 @@
 # Tetra Decoder
 
-Decodes downlink TETRA stream.
-Use with [tetra-receiver](https://github.com/marenz2569/tetra-receiver).
+This TETRA decoder support decoding signals of Conventional Access π/4-DQPSK.
+Only continuous downlink transmittion and uplink transmittion is supported (no discontinuous downlink transmittion).
+Use it together with [tetra-receiver](https://github.com/marenz2569/tetra-receiver).
 
 ## Usage
 ```
-Decodes TETRA downstream traffic
+Decodes TETRA Conventional Access π/4-DQPSK traffic
 Usage:
   tetra-decoder [OPTION...]
 
@@ -17,6 +18,7 @@ Usage:
                      with -i option)
   -d arg             <level> print debug information (default: 0)
   -P, --packed       pack rx data (1 byte = 8 bits)
+      --iq           Receive IQ instead of bitstream
       --uplink arg   <scrambling code> enable uplink parsing with
                      predefined scrambilng code
 ```

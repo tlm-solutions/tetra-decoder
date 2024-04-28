@@ -1,0 +1,3 @@
+[submodule "lib/ViterbiDecoderCpp"]
+	path = lib/ViterbiDecoderCpp
+	url = https://github.com/FiendChain/ViterbiDecoderCpp.git
