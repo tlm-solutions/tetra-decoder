@@ -156,6 +156,8 @@ in {
           exec ${pythonScript} &
         '';
 
+        environment = { "PYTHONUNBUFFERED" = "1"; };
+
         serviceConfig = {
           Type = "forking";
           User = cfg.user;
