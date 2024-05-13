@@ -113,7 +113,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         auto bkn1_crc = check_crc_16_ccitt(bkn1.data(), 284);
         bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
 
-        functions.push_back([this, &burst_type, &bkn1, &bkn1_crc]() {
+        functions.push_back([this, burst_type, bkn1, bkn1_crc]() {
             if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
                 // TODO: handle TCH
                 std::cout << "AACH indicated traffic with usagemarker: "
@@ -163,7 +163,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         if (check_crc_16_ccitt(bkn1.data(), 140)) {
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
-            functions.push_back([this, &burst_type, &bkn1]() {
+            functions.push_back([this, burst_type, bkn1]() {
                 if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
                     upper_mac_->process_STCH(burst_type, bkn1);
                 } else {
@@ -177,7 +177,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-            functions.push_back([this, &burst_type, &bkn2]() {
+            functions.push_back([this, burst_type, bkn2]() {
                 if (upper_mac_->downlink_usage() == DownlinkUsage::Traffic && upper_mac_->time_slot() <= 17) {
                     if (upper_mac_->second_slot_stolen()) {
                         upper_mac_->process_STCH(burst_type, bkn2);
@@ -242,7 +242,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn2 = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-            functions.push_back([this, &burst_type, &bkn2]() {
+            functions.push_back([this, burst_type, bkn2]() {
                 if (upper_mac_->second_slot_stolen()) {
                     // fmt::print("NUB_S 2 Burst crc good\n");
                     upper_mac_->process_STCH(burst_type, bkn2);
