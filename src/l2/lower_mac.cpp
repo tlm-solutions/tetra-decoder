@@ -242,10 +242,12 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         bkn2 = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-            if (upper_mac_->second_slot_stolen()) {
-                // fmt::print("NUB_S 2 Burst crc good\n");
-                functions.push_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn2));
-            }
+            functions.push_back([this, &burst_type, &bkn2]() {
+                if (upper_mac_->second_slot_stolen()) {
+                    // fmt::print("NUB_S 2 Burst crc good\n");
+                    upper_mac_->process_STCH(burst_type, bkn2);
+                }
+            });
         }
     } else {
         throw std::runtime_error("LowerMac does not implement the burst type supplied");
