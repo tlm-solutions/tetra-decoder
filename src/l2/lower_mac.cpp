@@ -22,6 +22,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
     std::vector<std::function<void()>> functions{};
 
+    fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
+
     // The BLCH may be mapped onto block 2 of the downlink slots, when a SCH/HD,
     // SCH-P8/HD or a BSCH is mapped onto block 1. The number of BLCH occurrences
     // on one carrier shall not exceed one per 4 multiframe periods.

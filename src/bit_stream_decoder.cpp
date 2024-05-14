@@ -86,7 +86,6 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
         }
 
         if (score_ssn <= 4) {
-            //					fmt::print("Processing burst type: {}\n", ControlUplinkBurst);
             auto funcs = lower_mac_->process(frame_, burstType);
             for (auto func : funcs) {
                 func();
@@ -98,7 +97,6 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
                 frame_.erase(frame_.begin());
         } else if (minimum_score <= 2) {
             // valid burst found, send it to lower MAC
-            //				fmt::print("Processing burst type: {}\n", burstType);
             auto funcs = lower_mac_->process(frame_, burstType);
             for (auto func : funcs) {
                 func();
@@ -137,7 +135,6 @@ void BitStreamDecoder::process_downlink_frame() noexcept {
 
     if (minimum_score <= 5) {
         // valid burst found, send it to lower MAC
-        fmt::print("Processing burst type: {}\n", burstType);
         auto funcs = lower_mac_->process(frame_, burstType);
         for (auto func : funcs) {
             func();

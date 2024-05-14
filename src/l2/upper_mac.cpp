@@ -104,7 +104,8 @@ void UpperMac::process_BSCH(const BurstType burst_type, const std::vector<uint8_
 
     sync_received_ = true;
 
-    std::cout << *this;
+    // std::cout << *this;
+    std::cout << "[Channel] BSCH" << std::endl;
 }
 
 void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
