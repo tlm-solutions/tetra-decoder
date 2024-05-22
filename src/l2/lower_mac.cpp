@@ -3,10 +3,14 @@
 #include <fmt/color.h>
 #include <fmt/core.h>
 
-LowerMac::LowerMac(std::shared_ptr<Reporter> reporter)
+LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : reporter_(reporter) {
     viter_bi_codec_1614_ = std::make_shared<ViterbiCodec>();
     upper_mac_ = std::make_shared<UpperMac>(reporter_);
+
+    if (prometheus_exporter) {
+        metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
+    }
 }
 
 static auto vectorAppend(const std::vector<uint8_t>& vec, std::vector<uint8_t>& res, std::size_t pos,
@@ -23,6 +27,11 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     std::vector<std::function<void()>> functions{};
 
     fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
+
+    // Update the received burst type metrics
+    if (metrics_) {
+        metrics_->increment(burst_type);
+    }
 
     // The BLCH may be mapped onto block 2 of the downlink slots, when a SCH/HD,
     // SCH-P8/HD or a BSCH is mapped onto block 1. The number of BLCH occurrences

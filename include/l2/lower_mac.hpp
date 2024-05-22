@@ -15,12 +15,39 @@
 
 #include <burst_type.hpp>
 #include <l2/upper_mac.hpp>
+#include <prometheus.h>
 #include <reporter.hpp>
 #include <utils/viter_bi_codec.hpp>
 
+class LowerMacPrometheusCounters {
+  private:
+    prometheus::Family<prometheus::Counter>& family_;
+    prometheus::Counter& synchronization_burst_received_count_;
+    prometheus::Counter& normal_downlink_burst_received_count_;
+    prometheus::Counter& normal_downlink_burst_split_received_count_;
+
+  public:
+    LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : family_(prometheus_exporter->burst_received_count())
+        , synchronization_burst_received_count_(family_.Add({{"burst_type", "SynchronizationBurst"}}))
+        , normal_downlink_burst_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurst"}}))
+        , normal_downlink_burst_split_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}})){};
+
+    void increment(BurstType burst_type) {
+        if (burst_type == BurstType::SynchronizationBurst) {
+            synchronization_burst_received_count_.Increment();
+        } else if (burst_type == BurstType::NormalDownlinkBurst) {
+            normal_downlink_burst_received_count_.Increment();
+        } else if (burst_type == BurstType::NormalDownlinkBurstSplit) {
+            normal_downlink_burst_split_received_count_.Increment();
+        }
+    }
+};
+
 class LowerMac {
   public:
-    explicit LowerMac(std::shared_ptr<Reporter> reporter);
+    LowerMac() = delete;
+    LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~LowerMac() = default;
 
     // does the signal processing and then returns a list of function that need to be executed for data to be passed to
@@ -36,12 +63,16 @@ class LowerMac {
     std::shared_ptr<ViterbiCodec> viter_bi_codec_1614_{};
     std::shared_ptr<UpperMac> upper_mac_{};
 
-    static auto descramble(const uint8_t* data, uint8_t* res, std::size_t len, uint32_t scramblingCode) noexcept
-        -> void;
-    static auto deinterleave(const uint8_t* data, uint8_t* res, std::size_t K, std::size_t a) noexcept -> void;
-    [[nodiscard]] static auto depuncture23(const uint8_t* data, uint32_t len) noexcept -> std::vector<int16_t>;
-    static auto reed_muller_3014_decode(const uint8_t* data, uint8_t* res) noexcept -> void;
-    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* data, std::size_t len) noexcept -> bool;
+    std::unique_ptr<LowerMacPrometheusCounters> metrics_;
+
+    static auto descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
+                           const uint32_t scramblingCode) noexcept -> void;
+    static auto deinterleave(const uint8_t* const data, uint8_t* const res, const std::size_t K,
+                             const std::size_t a) noexcept -> void;
+    [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept
+        -> std::vector<int16_t>;
+    static auto reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void;
+    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool;
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
 };

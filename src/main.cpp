@@ -20,6 +20,9 @@ auto main(int argc, char** argv) -> int {
     bool packed, iq_or_bit_stream;
     std::optional<std::string> input_file, output_file;
     std::optional<unsigned> uplink_scrambling_code;
+    std::optional<std::string> prometheus_address;
+
+    std::shared_ptr<PrometheusExporter> prometheus_exporter;
 
     struct sigaction signal_action {};
     signal_action.sa_handler = sigint_handler;
@@ -38,6 +41,7 @@ auto main(int argc, char** argv) -> int {
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
 		("iq", "Receive IQ instead of bitstream", cxxopts::value<bool>()->default_value("false"))
 		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
+		("prometheus-address", "<prometheus-address> on which ip and port the webserver for prometheus should listen. example: 127.0.0.1:9010", cxxopts::value<std::optional<std::string>>(prometheus_address))
 		;
     // clang-format on
 
@@ -55,13 +59,17 @@ auto main(int argc, char** argv) -> int {
         debug_level = result["d"].as<unsigned>();
         packed = result["packed"].as<bool>();
         iq_or_bit_stream = result["iq"].as<bool>();
+
+        if (prometheus_address) {
+            prometheus_exporter = std::make_shared<PrometheusExporter>(*prometheus_address);
+        }
     } catch (std::exception& e) {
         std::cout << "error parsing options: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
     auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, input_file, output_file, iq_or_bit_stream,
-                                             uplink_scrambling_code);
+                                             uplink_scrambling_code, prometheus_exporter);
 
     if (input_file.has_value()) {
         std::cout << "Reading from input file " << *input_file << std::endl;
