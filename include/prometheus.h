@@ -11,9 +11,10 @@ class PrometheusExporter {
   private:
     std::shared_ptr<prometheus::Registry> registry_;
     std::unique_ptr<prometheus::Exposer> exposer_;
+    const std::string prometheus_name_;
 
   public:
-    PrometheusExporter(const std::string& host) noexcept;
+    PrometheusExporter(const std::string& prometheus_host, const std::string& prometheus_name) noexcept;
     ~PrometheusExporter() noexcept = default;
 
     auto burst_received_count() noexcept -> prometheus::Family<prometheus::Counter>&;

@@ -21,6 +21,7 @@ auto main(int argc, char** argv) -> int {
     std::optional<std::string> input_file, output_file;
     std::optional<unsigned> uplink_scrambling_code;
     std::optional<std::string> prometheus_address;
+    std::optional<std::string> prometheus_name;
 
     std::shared_ptr<PrometheusExporter> prometheus_exporter;
 
@@ -42,6 +43,7 @@ auto main(int argc, char** argv) -> int {
 		("iq", "Receive IQ instead of bitstream", cxxopts::value<bool>()->default_value("false"))
 		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
 		("prometheus-address", "<prometheus-address> on which ip and port the webserver for prometheus should listen. example: 127.0.0.1:9010", cxxopts::value<std::optional<std::string>>(prometheus_address))
+		("prometheus-name", "<prometheus-name> the name which is included in the prometheus metrics", cxxopts::value<std::optional<std::string>>(prometheus_name))
 		;
     // clang-format on
 
@@ -61,7 +63,8 @@ auto main(int argc, char** argv) -> int {
         iq_or_bit_stream = result["iq"].as<bool>();
 
         if (prometheus_address) {
-            prometheus_exporter = std::make_shared<PrometheusExporter>(*prometheus_address);
+            prometheus_exporter = std::make_shared<PrometheusExporter>(
+                *prometheus_address, prometheus_name.value_or("Unnamed Tetra Decoder"));
         }
     } catch (std::exception& e) {
         std::cout << "error parsing options: " << e.what() << std::endl;
