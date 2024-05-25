@@ -19,11 +19,16 @@
 #include <reporter.hpp>
 #include <utils/viter_bi_codec.hpp>
 
+/// The class to provide prometheus metrics to the lower mac
 class LowerMacPrometheusCounters {
   private:
+    /// The family of counters
     prometheus::Family<prometheus::Counter>& family_;
+    /// The counter for the received SynchronizationBurst
     prometheus::Counter& synchronization_burst_received_count_;
+    /// The counter for the received NormalDownlinkBurst
     prometheus::Counter& normal_downlink_burst_received_count_;
+    /// The counter for the received NormalDownlinkBurstSplit
     prometheus::Counter& normal_downlink_burst_split_received_count_;
 
   public:
@@ -33,7 +38,9 @@ class LowerMacPrometheusCounters {
         , normal_downlink_burst_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurst"}}))
         , normal_downlink_burst_split_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}})){};
 
-    void increment(BurstType burst_type) {
+    /// This function is called for every burst. It increments the counter associated to the burst type.
+    /// \param burst_type the type of the burst for which to increment the counter
+    auto increment(BurstType burst_type) -> void {
         if (burst_type == BurstType::SynchronizationBurst) {
             synchronization_burst_received_count_.Increment();
         } else if (burst_type == BurstType::NormalDownlinkBurst) {
