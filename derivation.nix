@@ -15,5 +15,7 @@ clangStdenv.mkDerivation {
   nativeBuildInputs = [ cmake pkg-config fmt ];
   buildInputs = [ cxxopts zlib nlohmann_json ];
 
+  cmakeFlags = [ "-DNIX_BUILD=ON" ];
+
   enableParallelBuilding = true;
 }

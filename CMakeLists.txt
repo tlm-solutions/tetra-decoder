@@ -3,6 +3,7 @@ project(tetra-decoder)
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 17)
 
+option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
 add_executable(tetra-decoder
                src/main.cpp
@@ -45,6 +46,10 @@ find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
+
+if (NOT NIX_BUILD)
+	target_link_libraries(tetra-decoder cxxopts::cxxopts)
+endif()
 
 target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi)
 target_link_libraries(tetra-viterbi viterbi)
