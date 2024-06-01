@@ -12,7 +12,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include <bit_stream_decoder.hpp>
 #include <iq_stream_decoder.hpp>

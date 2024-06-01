@@ -1,8 +1,7 @@
 #pragma once
 
 #include <deque>
-#include <iostream>
-#include <queue>
+#include <stdexcept>
 
 template <typename T, int MaxLen, typename Container = std::deque<T>> class FixedQueue {
   private:

@@ -12,8 +12,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-#include <utility>
-#include <vector>
 
 #include <l3/circuit_mode_control_entity.hpp>
 #include <l3/mobile_management.hpp>
