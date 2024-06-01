@@ -46,34 +46,33 @@ class BurstType {
     Value value_{};
 };
 
-template <> struct fmt::formatter<BurstType>: formatter<std::string_view> {
-  auto format(BurstType burstType, format_context& ctx) const {
-		std::string_view name = "unknown";
+template <> struct fmt::formatter<BurstType> : formatter<std::string_view> {
+    auto format(BurstType burstType, format_context& ctx) const {
+        std::string_view name = "unknown";
 
-    switch (burstType) {
-    case BurstType::ControlUplinkBurst:
-      name = "ControlUplinkBurst";
-      break;
-    case BurstType::NormalUplinkBurst:
-      name = "NormalUplinkBurst";
-      break;
-    case BurstType::NormalUplinkBurstSplit:
-      name = "NormalUplinkBurstSplit";
-      break;
-    case BurstType::NormalDownlinkBurst:
-      name = "NormalDownlinkBurst";
-      break;
-    case BurstType::NormalDownlinkBurstSplit:
-      name = "NormalDownlinkBurstSplit";
-      break;
-    case BurstType::SynchronizationBurst:
-      name = "SynchronizationBurst";
-      break;
-    }
+        switch (burstType) {
+        case BurstType::ControlUplinkBurst:
+            name = "ControlUplinkBurst";
+            break;
+        case BurstType::NormalUplinkBurst:
+            name = "NormalUplinkBurst";
+            break;
+        case BurstType::NormalUplinkBurstSplit:
+            name = "NormalUplinkBurstSplit";
+            break;
+        case BurstType::NormalDownlinkBurst:
+            name = "NormalDownlinkBurst";
+            break;
+        case BurstType::NormalDownlinkBurstSplit:
+            name = "NormalDownlinkBurstSplit";
+            break;
+        case BurstType::SynchronizationBurst:
+            name = "SynchronizationBurst";
+            break;
+        }
 
-    return formatter<std::string_view>::format(name, ctx);
-	};
+        return formatter<std::string_view>::format(name, ctx);
+    };
 };
-
 
 #endif // TETRA_DECODER_BURSTTYPE_HPP

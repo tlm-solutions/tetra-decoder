@@ -11,7 +11,7 @@
 #define TETRA_DECODER_UTILS_BIT_VECTOR_HPP
 
 #include <cstdint>
-#include <utility>
+#include <ostream>
 #include <vector>
 
 class BitVector {
@@ -46,6 +46,7 @@ class BitVector {
     [[nodiscard]] auto compute_fcs() -> uint32_t;
 
     [[nodiscard]] auto take_vector(const std::size_t numberBits) -> const uint8_t* const;
+
   private:
     [[nodiscard]] auto take_last_vector(const std::size_t numberBits) -> const uint8_t* const;
 
