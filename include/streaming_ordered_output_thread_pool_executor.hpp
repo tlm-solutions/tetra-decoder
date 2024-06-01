@@ -15,7 +15,6 @@
 #include <map>
 #include <mutex>
 #include <thread>
-#include <type_traits>
 #include <vector>
 
 #include <signal_handler.hpp>
@@ -24,11 +23,11 @@
 template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
 
   public:
-    StreamingOrderedOutputThreadPoolExecutor(int numWorkers);
+    StreamingOrderedOutputThreadPoolExecutor(int num_workers);
     ~StreamingOrderedOutputThreadPoolExecutor();
 
     // append work to the queue
-    void queueWork(std::function<ReturnType()> work);
+    void queue_work(std::function<ReturnType()> work);
 
     // wait and get a finished item
     ReturnType get();
@@ -37,22 +36,22 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
     void worker();
 
     // locks for input to worker threads
-    std::condition_variable cv_input_item;
-    std::mutex cv_input_item_m;
+    std::condition_variable cv_input_item_;
+    std::mutex cv_input_item_m_;
 
     // locks for output (get)
-    std::condition_variable cv_output_item;
-    std::mutex cv_output_item_m;
+    std::condition_variable cv_output_item_;
+    std::mutex cv_output_item_m_;
 
     // queue of work with and incrementing index
-    std::deque<std::pair<uint64_t, std::function<ReturnType()>>> inputQueue{};
+    std::deque<std::pair<uint64_t, std::function<ReturnType()>>> input_queue_{};
     // output queue. this is a map so we can do a lookup on the current index for ordered output
-    std::map<uint64_t, ReturnType> outputMap{};
+    std::map<uint64_t, ReturnType> output_map_{};
 
     // contains the value of the next input item
-    uint64_t inputCounter = 0;
+    uint64_t input_counter_ = 0;
     // contains the index of the next output item
-    uint64_t outputCounter = 0;
+    uint64_t output_counter_ = 0;
 
-    std::vector<std::thread> workers;
+    std::vector<std::thread> workers_;
 };
