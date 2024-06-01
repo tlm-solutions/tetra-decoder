@@ -34,7 +34,7 @@ void UpperMac::incrementTn() {
  */
 void UpperMac::process_AACH(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 14);
-    assert(burst_type.is_downlink_burst());
+    assert(is_downlink_burst(burst_type));
 
     auto vec = BitVector(data);
 
@@ -80,7 +80,7 @@ void UpperMac::process_AACH(const BurstType burst_type, const std::vector<uint8_
  */
 void UpperMac::process_BSCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 60);
-    assert(burst_type.is_downlink_burst());
+    assert(is_downlink_burst(burst_type));
 
     auto vec = BitVector(data);
 
@@ -109,7 +109,7 @@ void UpperMac::process_BSCH(const BurstType burst_type, const std::vector<uint8_
 }
 
 void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    assert(burst_type.is_downlink_burst());
+    assert(is_downlink_burst(burst_type));
 
     std::cout << "[Channel] SCH_HD" << std::endl;
     process_signalling_channel(burst_type, data, true, false);
@@ -117,7 +117,7 @@ void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint
 
 void UpperMac::process_SCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(data.size() == 92);
-    assert(burst_type.is_uplink_burst());
+    assert(is_uplink_burst(burst_type));
 
     try {
         fragmentation_start_burst();
@@ -181,7 +181,7 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
     if (pduType == 0b00) {
         // MAC-RESOURCE (downlink) or MAC-DATA (uplink)
         // TMA-SAP
-        if (burst_type.is_downlink_burst()) {
+        if (is_downlink_burst(burst_type)) {
             process_mac_resource(vec);
         } else {
             process_mac_data(vec);
@@ -191,13 +191,13 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
         // TMA-SAP
         auto subtype = vec.take(1);
         if (subtype == 0b0) {
-            if (burst_type.is_downlink_burst()) {
+            if (is_downlink_burst(burst_type)) {
                 process_mac_frag_downlink(vec);
             } else {
                 process_mac_frag_uplink(vec);
             }
         } else if (subtype == 0b1) {
-            if (burst_type.is_downlink_burst()) {
+            if (is_downlink_burst(burst_type)) {
                 process_mac_end_downlink(vec);
             } else {
                 process_mac_end_uplink(vec);
@@ -207,7 +207,7 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
         // Broadcast
         // TMB-SAP
         // ✅ done
-        if (burst_type.is_uplink_burst()) {
+        if (is_uplink_burst(burst_type)) {
             throw std::runtime_error("Uplink Burst Type may not send broadcast packets");
         }
         process_broadcast(vec);
@@ -266,7 +266,7 @@ void UpperMac::process_supplementary_mac_pdu(const BurstType burst_type, BitVect
 
     switch (subtype) {
     case 0b0:
-        if (burst_type.is_downlink_burst()) {
+        if (is_downlink_burst(burst_type)) {
             process_mac_d_blck(vec);
         } else {
             process_mac_u_blck(vec);

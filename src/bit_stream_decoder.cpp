@@ -73,20 +73,20 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
         auto score_nub_split = pattern_at_position_score(frame_, kNORMAL_TRAINING_SEQ_2, 220);
 
         auto minimum_score = score_ssn;
-        BurstType burstType = BurstType::ControlUplinkBurst;
+        auto burst_type = BurstType::ControlUplinkBurst;
 
         if (score_nub < minimum_score) {
             minimum_score = score_nub;
-            burstType = BurstType::NormalUplinkBurst;
+            burst_type = BurstType::NormalUplinkBurst;
         }
 
         if (score_nub_split < minimum_score) {
             minimum_score = score_nub_split;
-            burstType = BurstType::NormalUplinkBurstSplit;
+            burst_type = BurstType::NormalUplinkBurstSplit;
         }
 
         if (score_ssn <= 4) {
-            auto funcs = lower_mac_->process(frame_, burstType);
+            auto funcs = lower_mac_->process(frame_, burst_type);
             for (auto func : funcs) {
                 func();
             }
@@ -97,7 +97,7 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
                 frame_.erase(frame_.begin());
         } else if (minimum_score <= 2) {
             // valid burst found, send it to lower MAC
-            auto funcs = lower_mac_->process(frame_, burstType);
+            auto funcs = lower_mac_->process(frame_, burst_type);
             for (auto func : funcs) {
                 func();
             }
@@ -121,21 +121,21 @@ void BitStreamDecoder::process_downlink_frame() noexcept {
     auto score_ndb_split = pattern_at_position_score(frame_, kNORMAL_TRAINING_SEQ_2, 244);
 
     auto minimum_score = score_sb;
-    BurstType burstType = BurstType::SynchronizationBurst;
+    auto burst_type = BurstType::SynchronizationBurst;
 
     if (score_ndb < minimum_score) {
         minimum_score = score_ndb;
-        burstType = BurstType::NormalDownlinkBurst;
+        burst_type = BurstType::NormalDownlinkBurst;
     }
 
     if (score_ndb_split < minimum_score) {
         minimum_score = score_ndb_split;
-        burstType = BurstType::NormalDownlinkBurstSplit;
+        burst_type = BurstType::NormalDownlinkBurstSplit;
     }
 
     if (minimum_score <= 5) {
         // valid burst found, send it to lower MAC
-        auto funcs = lower_mac_->process(frame_, burstType);
+        auto funcs = lower_mac_->process(frame_, burst_type);
         for (auto func : funcs) {
             func();
         }
