@@ -7,8 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef L2_LOWERMAC_HPP
-#define L2_LOWERMAC_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -48,5 +47,3 @@ class LowerMac {
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
 };
-
-#endif

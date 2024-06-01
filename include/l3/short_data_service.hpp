@@ -6,8 +6,7 @@
  *   Marenz Schmidl
  */
 
-#ifndef L3_SDS_HPP
-#define L3_SDS_HPP
+#pragma once
 
 #include <reporter.hpp>
 #include <utils/address_type.hpp>
@@ -30,5 +29,3 @@ class ShortDataService {
     nlohmann::json message_;
     std::shared_ptr<Reporter> reporter_{};
 };
-
-#endif

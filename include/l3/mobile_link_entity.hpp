@@ -7,8 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef L3_MLE_HPP
-#define L3_MLE_HPP
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -74,5 +73,3 @@ class MobileLinkEntity {
 };
 
 auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream&;
-
-#endif

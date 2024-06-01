@@ -7,8 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef TETRA_DECODER_BURSTTYPE_HPP
-#define TETRA_DECODER_BURSTTYPE_HPP
+#pragma once
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -74,5 +73,3 @@ template <> struct fmt::formatter<BurstType> : formatter<std::string_view> {
         return formatter<std::string_view>::format(name, ctx);
     };
 };
-
-#endif // TETRA_DECODER_BURSTTYPE_HPP

@@ -6,8 +6,7 @@
  *   Marenz Schmidl
  */
 
-#ifndef L2_LLC_HPP
-#define L2_LLC_HPP
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -55,5 +54,3 @@ class LogicalLinkControl {
 };
 
 std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);
-
-#endif

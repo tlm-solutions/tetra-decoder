@@ -7,8 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef TETRA_DECODER_UTILS_BIT_VECTOR_HPP
-#define TETRA_DECODER_UTILS_BIT_VECTOR_HPP
+#pragma once
 
 #include <cstdint>
 #include <ostream>
@@ -60,5 +59,3 @@ class BitVector {
 };
 
 auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
-
-#endif // TETRA_DECODER_UTILS_BIT_VECTOR_HPP

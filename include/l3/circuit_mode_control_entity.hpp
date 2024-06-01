@@ -6,8 +6,7 @@
  *   Marenz Schmidl
  */
 
-#ifndef L3_CMCE_HPP
-#define L3_CMCE_HPP
+#pragma once
 
 #include <memory>
 
@@ -32,5 +31,3 @@ class CircuitModeControlEntity {
     std::shared_ptr<Reporter> reporter_{};
     std::unique_ptr<ShortDataService> sds_{};
 };
-
-#endif

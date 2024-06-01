@@ -19,8 +19,9 @@
  * limitations under the License.
  *
  */
-#ifndef VITERBI2_H
-#define VITERBI2_H
+
+#pragma once
+
 #include <ostream>
 #include <string>
 #include <utility>
@@ -99,5 +100,3 @@ class ViterbiCodec {
 };
 
 auto operator<<(std::ostream& os, const ViterbiCodec& codec) -> std::ostream&;
-
-#endif /* VITERBI2_H */

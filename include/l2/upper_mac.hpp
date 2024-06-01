@@ -7,8 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef L2_UPPERMAC_HPP
-#define L2_UPPERMAC_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -191,5 +190,3 @@ class UpperMac {
 };
 
 std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);
-
-#endif
