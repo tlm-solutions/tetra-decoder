@@ -24,7 +24,7 @@ class BurstType {
     };
 
     BurstType() = default;
-    constexpr BurstType(Value value)
+    constexpr explicit BurstType(Value value)
         : value_(value) {}
 
     constexpr operator Value() const { return value_; }

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <l3/circuit_mode_control_entity.hpp>
@@ -21,8 +22,8 @@
 
 class MobileLinkEntity {
   public:
-    MobileLinkEntity(std::shared_ptr<Reporter> reporter)
-        : reporter_(reporter)
+    explicit MobileLinkEntity(std::shared_ptr<Reporter> reporter)
+        : reporter_(std::move(reporter))
         , cmce_(std::make_unique<CircuitModeControlEntity>(reporter_))
         , mm_(std::make_unique<MobileManagement>()){};
     ~MobileLinkEntity() noexcept = default;
@@ -33,12 +34,12 @@ class MobileLinkEntity {
     void service_DMle_sync(BitVector& vec);
     void service_DMle_system_info(BitVector& vec);
 
-    void service_user_pdu(const AddressType address, BitVector& vec);
+    void service_user_pdu(AddressType address, BitVector& vec);
 
     friend auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream&;
 
   private:
-    void service_data_pdu(const AddressType address, BitVector& vec);
+    void service_data_pdu(AddressType address, BitVector& vec);
     void service_d_network_broadcast(const AddressType address, BitVector& vec);
 
     bool sync_received_ = false;

@@ -37,15 +37,16 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
 
     // locks for input to worker threads
     std::condition_variable cv_input_item_;
-    std::mutex cv_input_item_m_;
+    std::mutex cv_input_item_mutex_;
 
     // locks for output (get)
     std::condition_variable cv_output_item_;
-    std::mutex cv_output_item_m_;
+    std::mutex cv_output_item_mutex_;
 
-    // queue of work with and incrementing index
+    // queue_ of work with and incrementing index
     std::deque<std::pair<uint64_t, std::function<ReturnType()>>> input_queue_{};
-    // output queue. this is a map so we can do a lookup on the current index for ordered output
+    
+    // output queue_. this is a map so we can do a lookup on the current index for ordered output
     std::map<uint64_t, ReturnType> output_map_{};
 
     // contains the value of the next input item

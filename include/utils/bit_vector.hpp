@@ -24,7 +24,7 @@ class BitVector {
         : data_()
         , len_(0)
         , read_offset_(0){};
-    BitVector(const std::vector<uint8_t>& vec)
+    explicit BitVector(const std::vector<uint8_t>& vec)
         : data_(vec)
         , len_(vec.size())
         , read_offset_(0){};
@@ -41,16 +41,16 @@ class BitVector {
     ~BitVector() noexcept = default;
 
     auto append(const BitVector& other) -> void;
-    [[nodiscard]] auto take(const std::size_t numberBits) -> uint64_t;
+    [[nodiscard]] auto take(std::size_t numberBits) -> uint64_t;
     [[nodiscard]] auto compute_fcs() -> uint32_t;
 
-    [[nodiscard]] auto take_vector(const std::size_t numberBits) -> const uint8_t* const;
+    [[nodiscard]] auto take_vector(std::size_t numberBits) -> const uint8_t* const;
 
   private:
-    [[nodiscard]] auto take_last_vector(const std::size_t numberBits) -> const uint8_t* const;
+    [[nodiscard]] auto take_last_vector(std::size_t numberBits) -> const uint8_t* const;
 
   public:
-    [[nodiscard]] auto take_last(const std::size_t numberBits) -> uint64_t;
+    [[nodiscard]] auto take_last(std::size_t numberBits) -> uint64_t;
     [[nodiscard]] auto take_last() -> uint8_t;
     [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return len_; };
     [[nodiscard]] auto is_mac_padding() const noexcept -> bool;

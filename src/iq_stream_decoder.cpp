@@ -26,29 +26,29 @@ IQStreamDecoder::IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac,
     std::transform(training_seq_x_.crbegin(), training_seq_x_.crend(),
                    std::back_inserter(training_seq_x_reversed_conj_), [](auto v) { return std::conj(v); });
 
-    threadPool_ = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>>(4);
+    thread_pool_ = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>>(4);
 
-    upperMacWorkerThread_ = std::thread(&IQStreamDecoder::upperMacWorker, this);
+    upper_mac_worker_thread_ = std::thread(&IQStreamDecoder::upperMacWorker, this);
 
 #if defined(__linux__)
-    auto handle = upperMacWorkerThread_.native_handle();
+    auto handle = upper_mac_worker_thread_.native_handle();
     pthread_setname_np(handle, "UpperMacWorker");
 #endif
 }
 
 IQStreamDecoder::~IQStreamDecoder() {
     // the last work packet has been passed into the StreamingOrderedOutputThreadPoolExecutor.
-    // wait until the work is finished and its input and output queue is drained.
+    // wait until the work is finished and its input and output queue_ is drained.
     //
     // TODO: replace this crude hack that keeps the StreamingOrderedOutputThreadPoolExecutor<...> get function from
     // blocking on programm stop
-    threadPool_->queue_work([]() { return std::vector<std::function<void()>>({std::function<void()>()}); });
-    upperMacWorkerThread_.join();
+    thread_pool_->queueWork([]() { return std::vector<std::function<void()>>({std::function<void()>()}); });
+    upper_mac_worker_thread_.join();
 }
 
 void IQStreamDecoder::upperMacWorker() {
     for (;;) {
-        auto work_funcs = threadPool_->get();
+        auto work_funcs = thread_pool_->get();
         for (auto func : work_funcs) {
             // exit when we get the special zero work exit function
             if (!func)
@@ -161,7 +161,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
 
             auto lower_mac_process_cub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst);
-            threadPool_->queue_work(lower_mac_process_cub);
+            thread_pool_->queueWork(lower_mac_process_cub);
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -175,7 +175,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
 
             auto lower_mac_process_nubs =
                 std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
-            threadPool_->queue_work(lower_mac_process_nubs);
+            thread_pool_->queueWork(lower_mac_process_nubs);
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
@@ -188,7 +188,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
 
             auto lower_mac_process_nub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst);
-            threadPool_->queue_work(lower_mac_process_nub);
+            thread_pool_->queueWork(lower_mac_process_nub);
         }
     } else {
         // TODO: this path needs to change!

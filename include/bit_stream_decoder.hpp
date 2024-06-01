@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <l2/lower_mac.hpp>
@@ -37,7 +38,7 @@
 class BitStreamDecoder {
   public:
     BitStreamDecoder(std::shared_ptr<LowerMac> lower_mac, bool is_uplink)
-        : lower_mac_(lower_mac)
+        : lower_mac_(std::move(lower_mac))
         , is_uplink_(is_uplink){};
     ~BitStreamDecoder() = default;
 

@@ -39,11 +39,10 @@ class IQStreamDecoder {
 
     static std::complex<float> hard_decision(std::complex<float> const& symbol);
 
-    template <class iterator_type>
-    static void symbols_to_bitstream(iterator_type it, uint8_t* const bits, const std::size_t len);
+    template <class iterator_type> static void symbols_to_bitstream(iterator_type it, uint8_t* bits, std::size_t len);
 
-    static void abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
-                                         const std::complex<float>* itb, const std::size_t len, float* res);
+    static void abs_convolve_same_length(const QueueT& queueA, std::size_t offsetA, const std::complex<float>* itb,
+                                         std::size_t len, float* res);
 
     std::vector<std::complex<float>> channel_estimation(std::vector<std::complex<float>> const& stream,
                                                         std::vector<std::complex<float>> const& pilots);
@@ -72,7 +71,7 @@ class IQStreamDecoder {
 
     bool is_uplink_{};
 
-    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>> threadPool_;
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>> thread_pool_;
 
-    std::thread upperMacWorkerThread_;
+    std::thread upper_mac_worker_thread_;
 };

@@ -36,7 +36,7 @@ target_compile_options(tetra-decoder PUBLIC -std=c++17 -Wall -Wno-unused-variabl
 target_compile_options(tetra-puncturing PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 target_compile_options(tetra-viterbi PUBLIC -std=c++17 -Wall -Wno-unused-variable)
 
-include(lib/ViterbiDecoderCpp/viterbi-config.cmake)
+#include(lib/ViterbiDecoderCpp/viterbi-config.cmake)
 
 include_directories(src)
 

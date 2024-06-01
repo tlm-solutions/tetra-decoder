@@ -43,7 +43,7 @@ template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<Ret
         std::optional<std::pair<uint64_t, std::function<ReturnType()>>> work{};
 
         {
-            std::lock_guard lk(cv_input_item_m_);
+            std::lock_guard lk(cv_input_item_mutex_);
             if (!input_queue_.empty()) {
                 work = input_queue_.front();
                 input_queue_.pop_front();
@@ -52,7 +52,7 @@ template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<Ret
         }
 
         if (!work.has_value()) {
-            std::unique_lock<std::mutex> lk(cv_input_item_m_);
+            std::unique_lock<std::mutex> lk(cv_input_item_mutex_);
             cv_input_item_.wait_for(lk, 10ms, [&] {
                 if (!input_queue_.empty()) {
                     work = input_queue_.front();
@@ -71,7 +71,7 @@ template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<Ret
             auto result = work->second();
 
             {
-                std::lock_guard<std::mutex> lock(cv_output_item_m_);
+                std::lock_guard<std::mutex> lock(cv_output_item_mutex_);
                 output_map_[index] = result;
             }
             cv_output_item_.notify_all();
@@ -82,7 +82,7 @@ template <typename ReturnType> void StreamingOrderedOutputThreadPoolExecutor<Ret
 template <typename ReturnType>
 void StreamingOrderedOutputThreadPoolExecutor<ReturnType>::queue_work(std::function<ReturnType()> work) {
     {
-        std::lock_guard<std::mutex> lock(cv_input_item_m_);
+        std::lock_guard<std::mutex> lock(cv_input_item_mutex_);
         input_queue_.push_back(std::make_pair(input_counter_++, work));
     }
     cv_input_item_.notify_one();
@@ -93,7 +93,7 @@ template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecut
         std::optional<ReturnType> result{};
 
         {
-            std::lock_guard<std::mutex> lk(cv_output_item_m_);
+            std::lock_guard<std::mutex> lk(cv_output_item_mutex_);
 
             if (auto search = output_map_.find(output_counter_); search != output_map_.end()) {
                 result = search->second;
@@ -103,7 +103,8 @@ template <typename ReturnType> ReturnType StreamingOrderedOutputThreadPoolExecut
         }
 
         if (!result.has_value()) {
-            std::unique_lock<std::mutex> lk(cv_output_item_m_);
+            std::unique_lock<std::mutex> lk(cv_output_item_mutex_);
+
             auto res = cv_output_item_.wait_for(lk, 10ms, [&] {
                 // find the output item and if found set outputCounter_ to the next item
                 if (auto search = output_map_.find(output_counter_); search != output_map_.end()) {
