@@ -15,4 +15,4 @@ jobs:
       - name: Analyze
         run: |
           clang-format --dry-run --Werror -style=file $(find ./ -name '*.cpp' -print)
-          clang-format --dry-run --Werror -style=file $(find ./ -name '*.h' -print)
+          clang-format --dry-run --Werror -style=file $(find ./ -name '*.hpp' -print)
