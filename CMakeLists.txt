@@ -13,6 +13,7 @@ add_executable(tetra-decoder
         src/bit_stream_decoder.cpp
         src/iq_stream_decoder.cpp
         src/prometheus.cpp
+        src/l2/access_assignment_channel.cpp
         src/l2/broadcast_synchronization_channel.cpp
         src/l2/logical_link_control.cpp
         src/l2/lower_mac.cpp

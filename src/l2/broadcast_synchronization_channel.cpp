@@ -58,7 +58,7 @@ BroadcastSynchronizationChannel::BroadcastSynchronizationChannel(const BurstType
 }
 
 auto operator<<(std::ostream& stream, const BroadcastSynchronizationChannel& bsc) -> std::ostream& {
-    stream << "SYNC:" << std::endl;
+    stream << "[Channel] BSCH SYNC:" << std::endl;
     stream << "  System code: 0b" << std::bitset<4>(bsc.system_code) << std::endl;
     stream << "  Color code: " << std::to_string(bsc.color_code) << std::endl;
     stream << "  " << bsc.time << std::endl;
@@ -75,7 +75,7 @@ auto operator<<(std::ostream& stream, const BroadcastSynchronizationChannel& bsc
            << std::endl;
     stream << "  " << (bsc.frame_18_extension ? "Frame 18 extension allowed" : "No frame 18 extension") << std::endl;
 
-    stream << "D-MLE-SYNC:" << std::endl;
+    stream << "[Channel] BSCH D-MLE-SYNC:" << std::endl;
     stream << "  MCC: " << bsc.mobile_country_code << std::endl;
     stream << "  MNC: " << bsc.mobile_network_code << std::endl;
     stream << "  Neighbour cell broadcast: "

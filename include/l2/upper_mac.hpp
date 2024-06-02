@@ -22,8 +22,6 @@
 #include <reporter.hpp>
 #include <utils/address_type.hpp>
 
-enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
-
 class UpperMac {
   public:
     UpperMac(std::shared_ptr<Reporter> reporter)
@@ -33,8 +31,6 @@ class UpperMac {
     ~UpperMac() noexcept = default;
     ;
 
-    // Access Assignment Channel
-    void process_AACH(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Downlink
     void process_SCH_HD(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Uplink
@@ -46,8 +42,6 @@ class UpperMac {
 
     [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t { return downlink_frequency_; }
     [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t { return uplink_frequency_; }
-    [[nodiscard]] auto downlink_usage() const noexcept -> DownlinkUsage { return downlink_usage_; }
-    [[nodiscard]] auto downlink_traffic_usage_marker() const noexcept -> int { return downlink_traffic_usage_marker_; }
     [[nodiscard]] auto second_slot_stolen() const noexcept -> bool { return second_slot_stolen_; }
 
     friend auto operator<<(std::ostream& stream, const UpperMac& upperMac) -> std::ostream&;
@@ -140,10 +134,6 @@ class UpperMac {
         uint8_t service_100Qam_ = 0;
         uint8_t service_150Qam_ = 0;
     } extended_service_broadcast_;
-
-    // AACH
-    enum DownlinkUsage downlink_usage_;
-    int downlink_traffic_usage_marker_{};
 
     // STCH
     bool second_slot_stolen_{};

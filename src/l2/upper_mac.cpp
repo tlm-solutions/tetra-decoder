@@ -4,52 +4,6 @@
 #include <l2/upper_mac.hpp>
 #include <utils/bit_vector.hpp>
 
-/**
- * @brief Process ACCESS-ASSIGN - see 21.4.7.2
- *
- */
-void UpperMac::process_AACH(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    assert(data.size() == 14);
-    assert(is_downlink_burst(burst_type));
-
-    auto vec = BitVector(data);
-
-    auto header = vec.take(2);
-    auto field1 = vec.take(6);
-    auto _field2 = vec.take(6);
-
-    // TODO: parse uplink marker and some other things relevant for the uplink
-    if (frame_number_ == 18) {
-        downlink_usage_ = DownlinkUsage::CommonControl;
-    } else {
-        if (header == 0b00) {
-            downlink_usage_ = DownlinkUsage::CommonControl;
-        } else {
-            switch (field1) {
-            case 0b00000:
-                downlink_usage_ = DownlinkUsage::Unallocated;
-                break;
-            case 0b00001:
-                downlink_usage_ = DownlinkUsage::AssignedControl;
-                break;
-            case 0b00010:
-                downlink_usage_ = DownlinkUsage::CommonControl;
-                break;
-            case 0b00011:
-                downlink_usage_ = DownlinkUsage::CommonAndAssignedControl;
-                break;
-            default:
-                downlink_usage_ = DownlinkUsage::Traffic;
-                downlink_traffic_usage_marker_ = field1;
-                break;
-            }
-        }
-    }
-
-    std::cout << "[Channel] AACH downlink_usage: " << downlink_usage_
-              << " downlinkUsageTrafficMarker: " << downlink_traffic_usage_marker_ << std::endl;
-}
-
 void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
     assert(is_downlink_burst(burst_type));
 
