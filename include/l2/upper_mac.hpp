@@ -33,13 +33,8 @@ class UpperMac {
     ~UpperMac() noexcept = default;
     ;
 
-    void incrementTn();
-    void set_scrambling_code(unsigned int scrambling_code) { scrambling_code_ = scrambling_code; };
-
     // Access Assignment Channel
     void process_AACH(BurstType burst_type, const std::vector<uint8_t>& data);
-    // Broadcast Synchronization Channel
-    void process_BSCH(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Downlink
     void process_SCH_HD(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Uplink
@@ -49,17 +44,11 @@ class UpperMac {
     // STealing CHannel
     void process_STCH(BurstType burst_type, const std::vector<uint8_t>& data);
 
-    [[nodiscard]] auto scrambling_code() const noexcept -> uint32_t { return scrambling_code_; }
-    [[nodiscard]] auto color_code() const noexcept -> uint16_t { return color_code_; }
     [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t { return downlink_frequency_; }
     [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t { return uplink_frequency_; }
     [[nodiscard]] auto downlink_usage() const noexcept -> DownlinkUsage { return downlink_usage_; }
     [[nodiscard]] auto downlink_traffic_usage_marker() const noexcept -> int { return downlink_traffic_usage_marker_; }
     [[nodiscard]] auto second_slot_stolen() const noexcept -> bool { return second_slot_stolen_; }
-
-    [[nodiscard]] auto time_slot() const noexcept -> uint16_t { return time_slot_; }
-    [[nodiscard]] auto frame_number() const noexcept -> uint16_t { return frame_number_; }
-    [[nodiscard]] auto multi_frame_number() const noexcept -> uint16_t { return multi_frame_number_; }
 
     friend auto operator<<(std::ostream& stream, const UpperMac& upperMac) -> std::ostream&;
 
@@ -105,23 +94,6 @@ class UpperMac {
 
     void remove_fill_bits(BitVector& vec);
     bool remove_fill_bits_{};
-
-    // SYNC PDU
-    bool sync_received_ = false;
-    uint8_t system_code_{};
-    uint32_t color_code_ = 0;
-    // time slot
-    uint16_t time_slot_ = 1;
-    // frame number
-    uint16_t frame_number_ = 1;
-    // multi frame number
-    uint16_t multi_frame_number_ = 1;
-    uint8_t sharing_mode_{};
-    uint8_t time_slot_reserved_frames_{};
-    uint8_t up_lane_dtx_{};
-    uint8_t frame_18_extension_{};
-
-    uint32_t scrambling_code_ = 0;
 
     // SYSINFO PDU
     bool system_info_received_ = false;

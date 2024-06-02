@@ -3,22 +3,6 @@
 
 #include <l3/mobile_link_entity.hpp>
 
-void MobileLinkEntity::service_DMle_sync(BitVector& vec) {
-    assert(vec.bits_left() == 29);
-
-    mobile_country_code_ = vec.take(10);
-    mobile_network_code_ = vec.take(14);
-    dNwrk_broadcast_broadcast_supported_ = vec.take(1);
-    dNwrk_broadcast_enquiry_supported_ = vec.take(1);
-    cell_load_ca_ = vec.take(2);
-    late_entry_supported_ = vec.take(1);
-
-    sync_received_ = true;
-    is_downlink_ = true;
-
-    // std::cout << *this;
-}
-
 void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
     assert(vec.bits_left() == 42);
 
@@ -110,36 +94,6 @@ void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& ve
 }
 
 auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream& {
-    if (mle.sync_received_) {
-        stream << "D-MLE-SYNC:" << std::endl;
-        stream << "  MCC: " << mle.mobile_country_code_ << std::endl;
-        stream << "  MNC: " << mle.mobile_network_code_ << std::endl;
-        stream << "  Neighbour cell broadcast: "
-               << (mle.dNwrk_broadcast_broadcast_supported_ ? "supported" : "not supported") << std::endl;
-        stream << "  Neighbour cell enquiry: "
-               << (mle.dNwrk_broadcast_enquiry_supported_ ? "supported" : "not supported") << std::endl;
-        stream << "  Cell load CA: ";
-        switch (mle.cell_load_ca_) {
-        case 0b00:
-            stream << "Cell load unknown";
-            break;
-        case 0b01:
-            stream << "Low cell load";
-            break;
-        case 0b10:
-            stream << "Medium cell load";
-            break;
-        case 0b11:
-            stream << "High cell load";
-            break;
-        default:
-            break;
-        }
-        stream << std::endl;
-        stream << "  Late entry supported: "
-               << (mle.late_entry_supported_ ? "Late entry available" : "Late entry not supported") << std::endl;
-    }
-
     if (mle.system_info_received_) {
         stream << "D-MLE-SYSINFO:" << std::endl;
         stream << "  Location Area (LA): " << mle.location_area_ << std::endl;

@@ -4,30 +4,6 @@
 #include <l2/upper_mac.hpp>
 #include <utils/bit_vector.hpp>
 
-void UpperMac::incrementTn() {
-    time_slot_++;
-
-    // TODO: remove magic numbers
-    // time slot
-    if (time_slot_ > 4) {
-        frame_number_++;
-        time_slot_ = 1;
-    }
-
-    // frame number
-    if (frame_number_ > 18) {
-        multi_frame_number_++;
-        frame_number_ = 1;
-    }
-
-    // multi-frame number
-    if (multi_frame_number_ > 60) {
-        multi_frame_number_ = 1;
-    }
-
-    std::cout << "[TIME] TN: " << time_slot_ << " FN: " << frame_number_ << " MN: " << multi_frame_number_ << std::endl;
-}
-
 /**
  * @brief Process ACCESS-ASSIGN - see 21.4.7.2
  *
@@ -72,40 +48,6 @@ void UpperMac::process_AACH(const BurstType burst_type, const std::vector<uint8_
 
     std::cout << "[Channel] AACH downlink_usage: " << downlink_usage_
               << " downlinkUsageTrafficMarker: " << downlink_traffic_usage_marker_ << std::endl;
-}
-
-/**
- * @brief Process SYNC - see 21.4.4.2
- *
- */
-void UpperMac::process_BSCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    assert(data.size() == 60);
-    assert(is_downlink_burst(burst_type));
-
-    auto vec = BitVector(data);
-
-    assert(vec.bits_left() == 60);
-
-    system_code_ = vec.take(4);
-    color_code_ = vec.take(6);
-    time_slot_ = vec.take(2) + 1;
-    frame_number_ = vec.take(5);
-    multi_frame_number_ = vec.take(6);
-    sharing_mode_ = vec.take(2);
-    time_slot_reserved_frames_ = vec.take(3);
-    up_lane_dtx_ = vec.take(1);
-    frame_18_extension_ = vec.take(1);
-    auto _reserved = vec.take(1);
-
-    assert(vec.bits_left() == 29);
-
-    mobile_link_entity_->service_DMle_sync(vec);
-    update_scrambling_code();
-
-    sync_received_ = true;
-
-    // std::cout << *this;
-    std::cout << "[Channel] BSCH" << std::endl;
 }
 
 void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
@@ -911,43 +853,7 @@ void UpperMac::remove_fill_bits(BitVector& vec) {
     remove_fill_bits_ = false;
 }
 
-void UpperMac::update_scrambling_code() {
-    // 10 MSB of MCC
-    uint16_t lmcc = mobile_link_entity_->mobile_country_code() & 0x03ff;
-    // 14 MSB of MNC
-    uint16_t lmnc = mobile_link_entity_->mobile_network_code() & 0x3fff;
-    // 6 MSB of ColorCode
-    uint16_t lcolor_code = color_code_ & 0x003f;
-
-    // 30 MSB bits
-    scrambling_code_ = lcolor_code | (lmnc << 6) | (lmcc << 20);
-    // scrambling initialized to 1 on bits 31-32 - 8.2.5.2 (54)
-    scrambling_code_ = (scrambling_code_ << 2) | 0x0003;
-}
-
 auto operator<<(std::ostream& stream, const UpperMac& upperMac) -> std::ostream& {
-    if (upperMac.sync_received_) {
-        stream << "SYNC:" << std::endl;
-        stream << "  System code: 0b" << std::bitset<4>(upperMac.system_code_) << std::endl;
-        stream << "  Color code: " << std::to_string(upperMac.color_code_) << std::endl;
-        stream << "  TN/FN/MN: " << std::to_string(upperMac.time_slot_) << "/" << std::to_string(upperMac.frame_number_)
-               << "/" << std::to_string(upperMac.multi_frame_number_) << std::endl;
-        stream << "  Scrambling code: " << std::to_string(upperMac.scrambling_code_) << std::endl;
-        std::string sharing_mode_map[] = {"Continuous transmission", "Carrier sharing", "MCCH sharing",
-                                          "Traffic carrier sharing"};
-        stream << "  Sharing mode: " << sharing_mode_map[upperMac.sharing_mode_] << std::endl;
-        uint8_t ts_reserved_frames_map[] = {1, 2, 3, 4, 6, 9, 12, 18};
-        stream << "  TS reserved frames: "
-               << std::to_string(ts_reserved_frames_map[upperMac.time_slot_reserved_frames_])
-               << " frames reserved per 2 multiframes" << std::endl;
-        stream << "  "
-               << (upperMac.up_lane_dtx_ ? "Discontinuous U-plane transmission is allowed"
-                                         : "Discontinuous U-plane transmission is not allowed")
-               << std::endl;
-        stream << "  " << (upperMac.frame_18_extension_ ? "Frame 18 extension allowed" : "No frame 18 extension")
-               << std::endl;
-    }
-
     if (upperMac.system_info_received_) {
         stream << "SYSINFO:" << std::endl;
         stream << "  DL " << std::to_string(upperMac.downlink_frequency_) << "Hz UL "

@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "l2/broadcast_synchronization_channel.hpp"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -135,10 +136,14 @@ class LowerMac {
     LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~LowerMac() = default;
 
-    // does the signal processing and then returns a list of function that need to be executed for data to be passed to
-    // upper mac sequentially.
-    // TODO: this is currently only done for uplink bursts
-    // Downlink burst get processed and passed to upper mac directly
+    // does the signal processing and then returns a list of function that need to be executed for data to be passed
+    // to upper mac sequentially.
+    [[nodiscard]] auto processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
+                                       const BroadcastSynchronizationChannel& bsc)
+        -> std::vector<std::function<void()>>;
+
+    /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
+    /// channels. keeps track of the current network time
     [[nodiscard]] auto process(const std::vector<uint8_t>& frame, BurstType burst_type)
         -> std::vector<std::function<void()>>;
     void set_scrambling_code(unsigned int scrambling_code) { upper_mac_->set_scrambling_code(scrambling_code); };
