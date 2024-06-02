@@ -45,7 +45,7 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
 
     // queue_ of work with and incrementing index
     std::deque<std::pair<uint64_t, std::function<ReturnType()>>> input_queue_{};
-    
+
     // output queue_. this is a map so we can do a lookup on the current index for ordered output
     std::map<uint64_t, ReturnType> output_map_{};
 
