@@ -17,8 +17,10 @@ class PrometheusExporter {
     PrometheusExporter(const std::string& prometheus_host, const std::string& prometheus_name) noexcept;
     ~PrometheusExporter() noexcept = default;
 
+    /// The family of counters for received bursts
     auto burst_received_count() noexcept -> prometheus::Family<prometheus::Counter>&;
-    auto burst_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+    /// The family of counters for decoding errors on received bursts in the lower MAC
+    auto burst_lower_mac_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H

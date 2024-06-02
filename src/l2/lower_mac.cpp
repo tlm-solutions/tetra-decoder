@@ -26,12 +26,13 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
     std::vector<std::function<void()>> functions{};
 
-    fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
+    // This value is set to true if there was a crc error.
+    // In the NormalDownlinkBurst we cannot set this value since the AACH channel has not been decoded yet.
+    // TODO: We need some code restructuring and split away the relevant parts from the lower mac from the upper
+    // mac.
+    bool decode_error = false;
 
-    // Update the received burst type metrics
-    if (metrics_) {
-        metrics_->increment(burst_type);
-    }
+    fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
 
     // The BLCH may be mapped onto block 2 of the downlink slots, when a SCH/HD,
     // SCH-P8/HD or a BSCH is mapped onto block 1. The number of BLCH occurrences
@@ -56,6 +57,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         if (check_crc_16_ccitt(sb.data(), 76)) {
             sb = std::vector(sb.begin(), sb.begin() + 60);
             functions.push_back(std::bind(&UpperMac::process_BSCH, upper_mac_, burst_type, sb));
+        } else {
+            decode_error = true;
         }
 
         // bb contains AACH
@@ -90,6 +93,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
             // SCH/HD or BNCH mapped
             functions.push_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
+        } else {
+            decode_error = true;
         }
     } else if (burst_type == BurstType::NormalDownlinkBurst) {
         upper_mac_->incrementTn();
@@ -184,6 +189,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
                     upper_mac_->process_SCH_HD(burst_type, bkn1);
                 }
             });
+        } else {
+            decode_error = true;
         }
 
         if (check_crc_16_ccitt(bkn2.data(), 140)) {
@@ -202,6 +209,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
                     upper_mac_->process_SCH_HD(burst_type, bkn2);
                 }
             });
+        } else {
+            decode_error = true;
         }
     } else if (burst_type == BurstType::ControlUplinkBurst) {
         vectorAppend(frame, cb, 4, 84);
@@ -216,6 +225,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         if (check_crc_16_ccitt(cb.data(), 108)) {
             cb = std::vector(cb.begin(), cb.begin() + 92);
             functions.push_back(std::bind(&UpperMac::process_SCH_HU, upper_mac_, burst_type, cb));
+        } else {
+            decode_error = true;
         }
     } else if (burst_type == BurstType::NormalUplinkBurst) {
         vectorAppend(frame, bkn1, 4, 216);
@@ -231,6 +242,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
             // fmt::print("NUB Burst crc good\n");
             functions.push_back(std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, bkn1));
+        } else {
+            decode_error = true;
         }
     } else if (burst_type == BurstType::NormalUplinkBurstSplit) {
         // TODO: finish NormalUplinkBurstSplit implementation
@@ -246,6 +259,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
             // fmt::print("NUB_S 1 Burst crc good\n");
             functions.push_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
+        } else {
+            decode_error = true;
         }
 
         uint8_t bkn2_dei[216];
@@ -259,9 +274,16 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
                     upper_mac_->process_STCH(burst_type, bkn2);
                 }
             });
+        } else {
+            decode_error = true;
         }
     } else {
         throw std::runtime_error("LowerMac does not implement the burst type supplied");
+    }
+
+    // Update the received burst type metrics
+    if (metrics_) {
+        metrics_->increment(burst_type, decode_error);
     }
 
     return functions;

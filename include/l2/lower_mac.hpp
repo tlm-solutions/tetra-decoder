@@ -22,8 +22,8 @@
 /// The class to provide prometheus metrics to the lower mac
 class LowerMacPrometheusCounters {
   private:
-    /// The family of counters
-    prometheus::Family<prometheus::Counter>& family_;
+    /// The family of counters for received bursts
+    prometheus::Family<prometheus::Counter>& burst_received_count_family_;
     /// The counter for the received ControlUplinkBurst
     prometheus::Counter& control_uplink_burst_received_count_;
     /// The counter for the received NormalUplinkBurst
@@ -37,19 +37,52 @@ class LowerMacPrometheusCounters {
     /// The counter for the received SynchronizationBurst
     prometheus::Counter& synchronization_burst_received_count_;
 
+    /// The family of counters for decoding errors on received bursts in the lower MAC
+    prometheus::Family<prometheus::Counter>& burst_lower_mac_decode_error_count_family_;
+    /// The counter for the received ControlUplinkBurst with decode errors
+    prometheus::Counter& control_uplink_burst_lower_mac_decode_error_count_;
+    /// The counter for the received NormalUplinkBurst with decode errors
+    prometheus::Counter& normal_uplink_burst_lower_mac_decode_error_count_;
+    /// The counter for the received NormalUplinkBurstSplit with decode errors
+    prometheus::Counter& normal_uplink_burst_split_lower_mac_decode_error_count_;
+    /// The counter for the received NormalDownlinkBurst with decode errors
+    prometheus::Counter& normal_downlink_burst_lower_mac_decode_error_count_;
+    /// The counter for the received NormalDownlinkBurstSplit with decode errors
+    prometheus::Counter& normal_downlink_burst_split_lower_mac_decode_error_count_;
+    /// The counter for the received SynchronizationBurst with decode errors
+    prometheus::Counter& synchronization_burst_lower_mac_decode_error_count_;
+
   public:
     LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : family_(prometheus_exporter->burst_received_count())
-        , control_uplink_burst_received_count_(family_.Add({{"burst_type", "ControlUplinkBurst"}}))
-        , normal_uplink_burst_received_count_(family_.Add({{"burst_type", "NormalUplinkBurst"}}))
-        , normal_uplink_burst_split_received_count_(family_.Add({{"burst_type", "NormalUplinkBurstSplit"}}))
-        , normal_downlink_burst_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurst"}}))
-        , normal_downlink_burst_split_received_count_(family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
-        , synchronization_burst_received_count_(family_.Add({{"burst_type", "SynchronizationBurst"}})){};
+        : burst_received_count_family_(prometheus_exporter->burst_received_count())
+        , control_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "ControlUplinkBurst"}}))
+        , normal_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "NormalUplinkBurst"}}))
+        , normal_uplink_burst_split_received_count_(
+              burst_received_count_family_.Add({{"burst_type", "NormalUplinkBurstSplit"}}))
+        , normal_downlink_burst_received_count_(
+              burst_received_count_family_.Add({{"burst_type", "NormalDownlinkBurst"}}))
+        , normal_downlink_burst_split_received_count_(
+              burst_received_count_family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
+        , synchronization_burst_received_count_(
+              burst_received_count_family_.Add({{"burst_type", "SynchronizationBurst"}}))
+        , burst_lower_mac_decode_error_count_family_(prometheus_exporter->burst_lower_mac_decode_error_count())
+        , control_uplink_burst_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "ControlUplinkBurst"}}))
+        , normal_uplink_burst_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalUplinkBurst"}}))
+        , normal_uplink_burst_split_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalUplinkBurstSplit"}}))
+        , normal_downlink_burst_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalDownlinkBurst"}}))
+        , normal_downlink_burst_split_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
+        , synchronization_burst_lower_mac_decode_error_count_(
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "SynchronizationBurst"}})){};
 
     /// This function is called for every burst. It increments the counter associated to the burst type.
     /// \param burst_type the type of the burst for which to increment the counter
-    auto increment(BurstType burst_type) -> void {
+    /// \param decode_error true if there was an error decoding the packets on the lower mac (crc16)
+    auto increment(BurstType burst_type, bool decode_error) -> void {
         switch (burst_type) {
         case BurstType::ControlUplinkBurst:
             control_uplink_burst_received_count_.Increment();
@@ -69,6 +102,29 @@ class LowerMacPrometheusCounters {
         case BurstType::SynchronizationBurst:
             synchronization_burst_received_count_.Increment();
             break;
+        }
+
+        if (decode_error) {
+            switch (burst_type) {
+            case BurstType::ControlUplinkBurst:
+                control_uplink_burst_lower_mac_decode_error_count_.Increment();
+                break;
+            case BurstType::NormalUplinkBurst:
+                normal_uplink_burst_lower_mac_decode_error_count_.Increment();
+                break;
+            case BurstType::NormalUplinkBurstSplit:
+                normal_uplink_burst_split_lower_mac_decode_error_count_.Increment();
+                break;
+            case BurstType::NormalDownlinkBurst:
+                normal_downlink_burst_lower_mac_decode_error_count_.Increment();
+                break;
+            case BurstType::NormalDownlinkBurstSplit:
+                normal_downlink_burst_split_lower_mac_decode_error_count_.Increment();
+                break;
+            case BurstType::SynchronizationBurst:
+                synchronization_burst_lower_mac_decode_error_count_.Increment();
+                break;
+            }
         }
     }
 };

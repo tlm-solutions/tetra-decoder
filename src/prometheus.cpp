@@ -16,10 +16,10 @@ auto PrometheusExporter::burst_received_count() noexcept -> prometheus::Family<p
         .Register(*registry_);
 }
 
-auto PrometheusExporter::burst_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+auto PrometheusExporter::burst_lower_mac_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>& {
     return prometheus::BuildCounter()
-        .Name("burst_decode_error_count")
-        .Help("Incrementing counter of the decoding errors on received bursts")
+        .Name("burst_lower_mac_decode_error_count")
+        .Help("Incrementing counter of the decoding errors on received bursts in the lower MAC")
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
