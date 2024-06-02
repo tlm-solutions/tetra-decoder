@@ -16,7 +16,7 @@ void MobileLinkEntity::service_DMle_sync(BitVector& vec) {
     sync_received_ = true;
     is_downlink_ = true;
 
-    std::cout << *this;
+    // std::cout << *this;
 }
 
 void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
@@ -41,7 +41,7 @@ void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
 
     system_info_received_ = true;
 
-    std::cout << *this;
+    // std::cout << *this;
 }
 
 void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& vec) {
@@ -104,6 +104,9 @@ void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& ve
     };
 
     auto pdu_type = vec.take(3);
+
+    std::cout << "  " << mle_uplink_pdu_type[pdu_type] << " or " << mle_downlink_pdu_type[pdu_type] << std::endl;
+    std::cout << "  " << vec << std::endl;
 }
 
 auto operator<<(std::ostream& stream, const MobileLinkEntity& mle) -> std::ostream& {

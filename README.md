@@ -8,7 +8,7 @@ Use it together with [tetra-receiver](https://github.com/marenz2569/tetra-receiv
 ```
 Decodes TETRA Conventional Access π/4-DQPSK traffic
 Usage:
-  tetra-impl [OPTION...]
+  tetra-decoder [OPTION...]
 
   -h, --help         Print usage
   -r, --rx arg       <UDP socket> receiving from phy (default: 42000)
@@ -18,6 +18,7 @@ Usage:
                      with -i option)
   -d arg             <level> print debug information (default: 0)
   -P, --packed       pack rx data (1 byte = 8 bits)
+      --iq           Receive IQ instead of bitstream
       --uplink arg   <scrambling code> enable uplink parsing with
                      predefined scrambilng code
 ```

@@ -19,7 +19,7 @@ class MobileManagement {
     MobileManagement(){};
     ~MobileManagement() noexcept = default;
 
-    void process(bool is_downlink, const AddressType address, BitVector& vec);
+    void process(bool is_downlink, AddressType address, BitVector& vec);
 
   private:
 };

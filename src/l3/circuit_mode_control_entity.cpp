@@ -73,9 +73,12 @@ void CircuitModeControlEntity::process_d_sds_data(const AddressType to_address, 
     if (short_data_type_identifier == 3) {
         auto length_identifier = vec.take(11);
         std::cout << "  length_identifier: " << length_identifier << std::endl;
+        /// XXX: we do not account for the length identifier. External subscriber number or DM-MS address could be
+        /// present here. The problem is that the fragmentation is somehow broken, we do not know the reason yet.
+        // auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
         std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        auto sds = BitVector(vec.take_vector(length_identifier));
-        sds_->process(to_address, from_address, sds);
+        // sds_->process(to_address, from_address, sds);
+        sds_->process(to_address, from_address, vec);
     } else {
         // XXX: we should take the length_identifier into account...
         sds_->process(to_address, from_address, vec);
@@ -106,9 +109,12 @@ void CircuitModeControlEntity::process_u_sds_data(const AddressType from_address
     if (short_data_type_identifier == 3) {
         auto length_identifier = vec.take(11);
         std::cout << "  length_identifier: " << length_identifier << std::endl;
+        /// XXX: we do not account for the length identifier. External subscriber number or DM-MS address could be
+        /// present here. The problem is that the fragmentation is somehow broken, we do not know the reason yet.
+        // auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
         std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        auto sds = BitVector(vec.take_vector(length_identifier));
-        sds_->process(to_address, from_address, sds);
+        // sds_->process(to_address, from_address, sds);
+        sds_->process(to_address, from_address, vec);
     } else {
         // XXX: we should take the length_identifier into account...
         sds_->process(to_address, from_address, vec);

@@ -8,10 +8,10 @@
 Reporter::Reporter(unsigned send_port) {
     // output file descriptor for the udp socket
     // there goes our nice json
-    std::memset(&destination, 0, sizeof(struct sockaddr_in));
-    destination.sin_family = AF_INET;
-    destination.sin_port = htons(send_port);
-    destination.sin_addr.s_addr = inet_addr("127.0.0.1");
+    std::memset(&destination_, 0, sizeof(struct sockaddr_in));
+    destination_.sin_family = AF_INET;
+    destination_.sin_port = htons(send_port);
+    destination_.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     output_socket_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -36,7 +36,7 @@ void Reporter::emit_report(nlohmann::json& message) {
     std::string message_str = message.dump() + "\n";
 
     int n_bytes = sendto(output_socket_fd_, message_str.c_str(), message_str.length(), 0,
-                         reinterpret_cast<struct sockaddr*>(&(this->destination)), sizeof(destination));
+                         reinterpret_cast<struct sockaddr*>(&(this->destination_)), sizeof(destination_));
 
     if (n_bytes < 0) {
         fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "[ERROR] could not send data over UDP socket");

@@ -19,12 +19,12 @@
 
 class Reporter {
   public:
-    Reporter(unsigned send_port);
+    explicit Reporter(unsigned send_port);
     ~Reporter();
 
     void emit_report(nlohmann::json& message);
 
   private:
     int output_socket_fd_ = 0;
-    struct sockaddr_in destination {};
+    struct sockaddr_in destination_ {};
 };

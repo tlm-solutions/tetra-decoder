@@ -5,8 +5,9 @@
 #include <stdio.h>
 
 #include <decoder.hpp>
+#include <signal_handler.hpp>
 
-static bool stop = false;
+volatile bool stop = false;
 
 void sigint_handler(int s) {
     (void)s;
@@ -16,7 +17,7 @@ void sigint_handler(int s) {
 
 auto main(int argc, char** argv) -> int {
     unsigned int receive_port, send_port, debug_level;
-    bool packed;
+    bool packed, iq_or_bit_stream;
     std::optional<std::string> input_file, output_file;
     std::optional<unsigned> uplink_scrambling_code;
 
@@ -24,7 +25,7 @@ auto main(int argc, char** argv) -> int {
     signal_action.sa_handler = sigint_handler;
     sigaction(SIGINT, &signal_action, 0);
 
-    cxxopts::Options options("tetra-impl", "Decodes TETRA Conventional Access π/4-DQPSK traffic");
+    cxxopts::Options options("tetra-decoder", "Decodes TETRA downstream traffic");
 
     // clang-format off
 	options.add_options()
@@ -35,6 +36,7 @@ auto main(int argc, char** argv) -> int {
 		("o,outfile", "<file> record data to binary file (can be replayed with -i option)", cxxopts::value<std::optional<std::string>>(output_file))
 		("d", "<level> print debug information", cxxopts::value<unsigned>()->default_value("0"))
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
+		("iq", "Receive IQ instead of bitstream", cxxopts::value<bool>()->default_value("false"))
 		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
 		;
     // clang-format on
@@ -52,13 +54,14 @@ auto main(int argc, char** argv) -> int {
 
         debug_level = result["d"].as<unsigned>();
         packed = result["packed"].as<bool>();
+        iq_or_bit_stream = result["iq"].as<bool>();
     } catch (std::exception& e) {
         std::cout << "error parsing options: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
-    auto decoder =
-        std::make_unique<Decoder>(receive_port, send_port, packed, input_file, output_file, uplink_scrambling_code);
+    auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, input_file, output_file, iq_or_bit_stream,
+                                             uplink_scrambling_code);
 
     if (input_file.has_value()) {
         std::cout << "Reading from input file " << *input_file << std::endl;

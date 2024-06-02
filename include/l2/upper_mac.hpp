@@ -7,13 +7,13 @@
  *   Tassilo Tanneberger
  */
 
-#ifndef L2_UPPERMAC_HPP
-#define L2_UPPERMAC_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <burst_type.hpp>
@@ -27,7 +27,7 @@ enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssig
 class UpperMac {
   public:
     UpperMac(std::shared_ptr<Reporter> reporter)
-        : reporter_(reporter)
+        : reporter_(std::move(reporter))
         , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_))
         , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
@@ -37,17 +37,17 @@ class UpperMac {
     void set_scrambling_code(unsigned int scrambling_code) { scrambling_code_ = scrambling_code; };
 
     // Access Assignment Channel
-    void process_AACH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_AACH(BurstType burst_type, const std::vector<uint8_t>& data);
     // Broadcast Synchronization Channel
-    void process_BSCH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_BSCH(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Downlink
-    void process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_HD(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Half-bursts on the Uplink
-    void process_SCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_HU(BurstType burst_type, const std::vector<uint8_t>& data);
     // Signalling CHannel for mapping onto Full bursts
-    void process_SCH_F(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_F(BurstType burst_type, const std::vector<uint8_t>& data);
     // STealing CHannel
-    void process_STCH(const BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_STCH(BurstType burst_type, const std::vector<uint8_t>& data);
 
     [[nodiscard]] auto scrambling_code() const noexcept -> uint32_t { return scrambling_code_; }
     [[nodiscard]] auto color_code() const noexcept -> uint16_t { return color_code_; }
@@ -66,15 +66,14 @@ class UpperMac {
   private:
     std::shared_ptr<Reporter> reporter_{};
 
-    void process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
+    void process_signalling_channel(BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
                                     bool isStolenChannel);
-    void process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
-                                    bool isStolenChannel);
+    void process_signalling_channel(BurstType burst_type, BitVector& vec, bool isHalfChannel, bool isStolenChannel);
 
     void update_scrambling_code();
 
     void process_broadcast(BitVector& vec);
-    void process_supplementary_mac_pdu(const BurstType burst_type, BitVector& vec);
+    void process_supplementary_mac_pdu(BurstType burst_type, BitVector& vec);
 
     // TMA-SAP Uplink
     void process_mac_access(BitVector& vec);
@@ -191,5 +190,3 @@ class UpperMac {
 };
 
 std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);
-
-#endif
