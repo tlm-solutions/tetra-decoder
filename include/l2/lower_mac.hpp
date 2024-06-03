@@ -161,14 +161,12 @@ class LowerMac {
     /// uplink processing, as we decouple it from the downlink for data/control packets.
     std::optional<BroadcastSynchronizationChannel> sync_;
 
-    static auto descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
-                           const uint32_t scramblingCode) noexcept -> void;
-    static auto deinterleave(const uint8_t* const data, uint8_t* const res, const std::size_t K,
-                             const std::size_t a) noexcept -> void;
-    [[nodiscard]] static auto depuncture23(const uint8_t* const data, const uint32_t len) noexcept
-        -> std::vector<int16_t>;
-    static auto reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void;
-    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool;
+    static auto descramble(const uint8_t* data, uint8_t* res, std::size_t len, uint32_t scramblingCode) noexcept
+        -> void;
+    static auto deinterleave(const uint8_t* data, uint8_t* res, std::size_t K, std::size_t a) noexcept -> void;
+    [[nodiscard]] static auto depuncture23(const uint8_t* data, uint32_t len) noexcept -> std::vector<int16_t>;
+    static auto reed_muller_3014_decode(const uint8_t* data, uint8_t* res) noexcept -> void;
+    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* data, std::size_t len) noexcept -> bool;
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
 };
