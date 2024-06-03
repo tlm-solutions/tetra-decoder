@@ -6,13 +6,21 @@
 #include <fmt/color.h>
 #include <fmt/core.h>
 
-LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+                   std::optional<uint32_t> scrambling_code)
     : reporter_(reporter) {
     viter_bi_codec_1614_ = std::make_shared<ViterbiCodec>();
     upper_mac_ = std::make_shared<UpperMac>(reporter_);
 
     if (prometheus_exporter) {
         metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
+    }
+
+    // For decoupled uplink processing we need to inject a scrambling code. Inject it into the correct place that would
+    // normally be filled by a Synchronization Burst
+    if (scrambling_code.has_value()) {
+        sync_ = BroadcastSynchronizationChannel();
+        sync_->scrambling_code = *scrambling_code;
     }
 }
 
@@ -245,8 +253,10 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
     fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
 
-    if (last_sync && is_downlink_burst(burst_type)) {
-        last_sync->time.increment();
+    // Once we received the Synchronization on the downlink, increment the time counter for every received burst.
+    // We do not have any time handling for uplink processing.
+    if (sync_ && is_downlink_burst(burst_type)) {
+        sync_->time.increment();
     }
 
     if (burst_type == BurstType::SynchronizationBurst) {
@@ -270,11 +280,11 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             // We did not receive the correct number of bursts!
             // TODO: Increment the dropped bursts counter
         }
-        last_sync = current_sync;
+        sync_ = current_sync;
     }
 
     std::vector<std::function<void()>> callbacks{};
-    if (last_sync) {
+    if (sync_) {
         callbacks = processChannels(frame, burst_type, *last_sync);
         // We assume to encountered an error decoding in the lower MAC if we do not get any callbacks back.
         // TODO: check if this assumption holds true

@@ -29,7 +29,6 @@ class UpperMac {
         , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_))
         , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
-    ;
 
     // Signalling CHannel for mapping onto Half-bursts on the Downlink
     void process_SCH_HD(BurstType burst_type, const std::vector<uint8_t>& data);
@@ -52,8 +51,6 @@ class UpperMac {
     void process_signalling_channel(BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
                                     bool isStolenChannel);
     void process_signalling_channel(BurstType burst_type, BitVector& vec, bool isHalfChannel, bool isStolenChannel);
-
-    void update_scrambling_code();
 
     void process_broadcast(BitVector& vec);
     void process_supplementary_mac_pdu(BurstType burst_type, BitVector& vec);

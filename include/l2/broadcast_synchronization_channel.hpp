@@ -32,7 +32,7 @@ class BroadcastSynchronizationChannel {
     uint8_t cell_load_ca = 0;
     uint8_t late_entry_supported = 0;
 
-    BroadcastSynchronizationChannel() = delete;
+    BroadcastSynchronizationChannel() = default;
     BroadcastSynchronizationChannel(const BurstType burst_type, const std::vector<uint8_t>& data);
 
     friend auto operator<<(std::ostream& stream, const BroadcastSynchronizationChannel& bsc) -> std::ostream&;

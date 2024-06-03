@@ -6,8 +6,6 @@
  *   Marenz Schmidl
  */
 
-#pragma once
-
 #include "l2/broadcast_synchronization_channel.hpp"
 #include "l2/timebase_counter.hpp"
 #include "utils/bit_vector.hpp"

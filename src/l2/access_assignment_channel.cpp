@@ -53,4 +53,5 @@ AccessAssignmentChannel::AccessAssignmentChannel(const BurstType burst_type, con
 auto operator<<(std::ostream& stream, const AccessAssignmentChannel& aac) -> std::ostream& {
     stream << "[Channel] AACH downlink_usage: " << aac.downlink_usage
            << " downlinkUsageTrafficMarker: " << aac.downlink_traffic_usage_marker << std::endl;
+    return stream;
 }

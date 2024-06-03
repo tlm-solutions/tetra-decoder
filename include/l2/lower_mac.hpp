@@ -12,6 +12,7 @@
 #include "l2/broadcast_synchronization_channel.hpp"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <burst_type.hpp>
@@ -133,7 +134,8 @@ class LowerMacPrometheusCounters {
 class LowerMac {
   public:
     LowerMac() = delete;
-    LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter);
+    LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+             std::optional<uint32_t> scrambling_code = std::nullopt);
     ~LowerMac() = default;
 
     // does the signal processing and then returns a list of function that need to be executed for data to be passed
@@ -146,7 +148,6 @@ class LowerMac {
     /// channels. keeps track of the current network time
     [[nodiscard]] auto process(const std::vector<uint8_t>& frame, BurstType burst_type)
         -> std::vector<std::function<void()>>;
-    void set_scrambling_code(unsigned int scrambling_code) { upper_mac_->set_scrambling_code(scrambling_code); };
 
   private:
     std::shared_ptr<Reporter> reporter_{};
@@ -154,6 +155,11 @@ class LowerMac {
     std::shared_ptr<UpperMac> upper_mac_{};
 
     std::unique_ptr<LowerMacPrometheusCounters> metrics_;
+
+    /// The last received synchronization burst.
+    /// This include the current scrambling code. Set by Synchronization Burst on downlink or injected from the side for
+    /// uplink processing, as we decouple it from the downlink for data/control packets.
+    std::optional<BroadcastSynchronizationChannel> sync_;
 
     static auto descramble(const uint8_t* const data, uint8_t* const res, const std::size_t len,
                            const uint32_t scramblingCode) noexcept -> void;
