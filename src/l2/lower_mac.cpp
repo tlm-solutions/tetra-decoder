@@ -64,7 +64,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
 
             // SCH/HD or BNCH mapped
-            functions.push_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
+            functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
         }
     } else if (burst_type == BurstType::NormalDownlinkBurst) {
         // bb contains AACH
@@ -88,22 +88,21 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         uint8_t bkn1_dei[432];
         deinterleave(bkn1_desc, bkn1_dei, 432, 103);
         bkn1 = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
-        auto bkn1_crc = check_crc_16_ccitt(bkn1.data(), 284);
-        bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
 
-        functions.push_back([this, burst_type, aach, bkn1, bkn1_crc]() {
-            if (aach.downlink_usage == DownlinkUsage::Traffic) {
-                // TODO: handle TCH
+        if (aach.downlink_usage == DownlinkUsage::Traffic) {
+            // TODO: handle TCH
+            functions.emplace_back([aach]() {
                 std::cout << "AACH indicated traffic with usagemarker: "
                           << std::to_string(aach.downlink_traffic_usage_marker) << std::endl;
-            } else {
-                // control channel
-                // ✅done
-                if (bkn1_crc) {
-                    upper_mac_->process_SCH_F(burst_type, bkn1);
-                }
+            });
+        } else {
+            // control channel
+            // ✅done
+            if (check_crc_16_ccitt(bkn1.data(), 284)) {
+                bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
+                functions.emplace_back(std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, bkn1));
             }
-        });
+        }
     } else if (burst_type == BurstType::NormalDownlinkBurstSplit) {
         // bb contains AACH
         // ✅ done
@@ -133,31 +132,34 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         if (check_crc_16_ccitt(bkn1.data(), 140)) {
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
-            functions.push_back([this, burst_type, aach, bkn1]() {
-                if (aach.downlink_usage == DownlinkUsage::Traffic) {
-                    upper_mac_->process_STCH(burst_type, bkn1);
-                } else {
-                    // SCH/HD + SCH/HD
-                    // SCH/HD + BNCH
-                    // ✅done
-                    upper_mac_->process_SCH_HD(burst_type, bkn1);
-                }
-            });
+            if (aach.downlink_usage == DownlinkUsage::Traffic) {
+                functions.emplace_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
+            } else {
+                // SCH/HD + SCH/HD
+                // SCH/HD + BNCH
+                // ✅done
+                functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn1));
+            }
         }
 
-        if (check_crc_16_ccitt(bkn2.data(), 140)) {
-            bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-            functions.push_back([this, burst_type, aach, bkn2]() {
-                if (aach.downlink_usage == DownlinkUsage::Traffic) {
-                    if (upper_mac_->second_slot_stolen()) {
+        auto bkn2_crc = check_crc_16_ccitt(bkn2.data(), 140);
+        bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
+        if (aach.downlink_usage == DownlinkUsage::Traffic) {
+            functions.emplace_back([this, burst_type, aach, bkn2, bkn2_crc]() {
+                if (upper_mac_->second_slot_stolen()) {
+                    if (bkn2_crc) {
                         upper_mac_->process_STCH(burst_type, bkn2);
-                    } else {
-                        // TODO: handle this TCH
-                        std::cout << "AACH indicated traffic with usagemarker: "
-                                  << std::to_string(aach.downlink_traffic_usage_marker) << std::endl;
                     }
                 } else {
-                    // control channel
+                    // TODO: handle this TCH
+                    std::cout << "AACH indicated traffic with usagemarker: "
+                              << std::to_string(aach.downlink_traffic_usage_marker) << std::endl;
+                }
+            });
+        } else {
+            // control channel
+            functions.emplace_back([this, burst_type, bkn2, bkn2_crc]() {
+                if (bkn2_crc) {
                     upper_mac_->process_SCH_HD(burst_type, bkn2);
                 }
             });
