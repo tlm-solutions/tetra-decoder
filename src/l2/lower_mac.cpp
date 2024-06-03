@@ -240,13 +240,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) -> std::vector<std::function<void()>> {
     std::vector<uint8_t> sb{};
 
-    static std::optional<BroadcastSynchronizationChannel> last_sync{};
-
-    // This value is set to true if there was a crc error.
-    // In the NormalDownlinkBurst we cannot set this value since the AACH channel has not been decoded yet.
-    // TODO: We need some code restructuring and split away the relevant parts from the lower mac from the upper
-    // mac.
-    // TODO: also the handling of the traffic channel is broken
+    // Set to true if there was some decoding error in the lower MAC
     bool decode_error = false;
 
     fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
@@ -271,12 +265,12 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             sb = std::vector(sb.begin(), sb.begin() + 60);
             current_sync = BroadcastSynchronizationChannel(burst_type, sb);
         } else {
-            decode_error = true;
+            decode_error |= true;
         }
 
-        if (current_sync && last_sync && current_sync->time != last_sync->time) {
-            // We did not receive the correct number of bursts!
-            // TODO: Increment the dropped bursts counter
+        // Update the mismatching received number of bursts metrics
+        if (current_sync && sync_ && metrics_) {
+            metrics_->increment(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
         }
         sync_ = current_sync;
     }
@@ -284,7 +278,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     std::vector<std::function<void()>> callbacks{};
     // We got a sync, continue with further processing of channels
     if (sync_) {
-        callbacks = processChannels(frame, burst_type, *last_sync);
+        callbacks = processChannels(frame, burst_type, *sync_);
 
         // We assume to encountered an error decoding in the lower MAC if we do not get the correct number of callbacks
         // back. For normal channels this is one. For split channels this is two.
@@ -302,7 +296,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             break;
         }
 
-        decode_error = callbacks.size() != correct_number_of_callbacks;
+        decode_error |= callbacks.size() != correct_number_of_callbacks;
     }
 
     // Update the received burst type metrics

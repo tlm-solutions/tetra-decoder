@@ -28,6 +28,10 @@ class TimebaseCounter {
     [[nodiscard]] auto time_slot() const noexcept -> uint16_t { return time_slot_; };
     [[nodiscard]] auto frame_number() const noexcept -> uint16_t { return frame_number_; };
     [[nodiscard]] auto multi_frame_number() const noexcept -> uint16_t { return multi_frame_number_; };
+    /// convert the slot and frame numbers into a single value
+    [[nodiscard]] auto count() const noexcept -> unsigned {
+        return (time_slot_ - 1) + 4 * (frame_number_ - 1) + 4 * 18 * (multi_frame_number_ - 1);
+    }
 
     [[nodiscard]] auto operator==(const TimebaseCounter& other) const noexcept -> bool {
         return std::tie(time_slot_, frame_number_, multi_frame_number_) ==

@@ -21,6 +21,8 @@ class PrometheusExporter {
     auto burst_received_count() noexcept -> prometheus::Family<prometheus::Counter>&;
     /// The family of counters for decoding errors on received bursts in the lower MAC
     auto burst_lower_mac_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+    /// The family of counters for mismatched number of bursts in the downlink lower MAC
+    auto burst_lower_mac_mismatch_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H

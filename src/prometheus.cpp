@@ -23,3 +23,11 @@ auto PrometheusExporter::burst_lower_mac_decode_error_count() noexcept -> promet
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::burst_lower_mac_mismatch_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("burst_lower_mac_mismatch_count")
+        .Help("Incrementing counter of the number of mismatched bursts in the lower MAC on downlink")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

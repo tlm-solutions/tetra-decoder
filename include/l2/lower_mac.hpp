@@ -10,6 +10,7 @@
 #pragma once
 
 #include "l2/broadcast_synchronization_channel.hpp"
+#include "l2/timebase_counter.hpp"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -54,6 +55,13 @@ class LowerMacPrometheusCounters {
     /// The counter for the received SynchronizationBurst with decode errors
     prometheus::Counter& synchronization_burst_lower_mac_decode_error_count_;
 
+    /// The family of counters for mismatched number of bursts in the downlink lower MAC
+    prometheus::Family<prometheus::Counter>& burst_lower_mac_mismatch_count_family_;
+    /// The counter for the skipped bursts (lost bursts) in the downlink lower MAC
+    prometheus::Counter& lower_mac_burst_skipped_count_;
+    /// The counter for the too many bursts in the downlink lower MAC
+    prometheus::Counter& lower_mac_burst_too_many_count_;
+
   public:
     LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
         : burst_received_count_family_(prometheus_exporter->burst_received_count())
@@ -79,7 +87,11 @@ class LowerMacPrometheusCounters {
         , normal_downlink_burst_split_lower_mac_decode_error_count_(
               burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
         , synchronization_burst_lower_mac_decode_error_count_(
-              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "SynchronizationBurst"}})){};
+              burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "SynchronizationBurst"}}))
+        , burst_lower_mac_mismatch_count_family_(prometheus_exporter->burst_lower_mac_mismatch_count())
+        , lower_mac_burst_skipped_count_(burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Skipped"}}))
+        , lower_mac_burst_too_many_count_(
+              burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Too many"}})){};
 
     /// This function is called for every burst. It increments the counter associated to the burst type.
     /// \param burst_type the type of the burst for which to increment the counter
@@ -127,6 +139,23 @@ class LowerMacPrometheusCounters {
                 synchronization_burst_lower_mac_decode_error_count_.Increment();
                 break;
             }
+        }
+    }
+
+    /// This function is called for Synchronization Bursts. It increments the counters for the missmatched received
+    /// burst counts.
+    /// \param current_timestamp the current timestamp of the synchronization burst
+    /// \param expected_timestamp the predicted timestamp of the synchronization burst
+    auto increment(const TimebaseCounter current_timestamp, const TimebaseCounter expected_timestamp) {
+        auto current_timestamp_count = current_timestamp.count();
+        auto expected_timestamp_count = expected_timestamp.count();
+
+        if (current_timestamp_count > expected_timestamp_count) {
+            auto missed_bursts = current_timestamp_count - expected_timestamp_count;
+            lower_mac_burst_skipped_count_.Increment(missed_bursts);
+        } else if (expected_timestamp_count > current_timestamp_count) {
+            auto too_many_bursts = expected_timestamp_count - current_timestamp_count;
+            lower_mac_burst_too_many_count_.Increment(too_many_bursts);
         }
     }
 };
