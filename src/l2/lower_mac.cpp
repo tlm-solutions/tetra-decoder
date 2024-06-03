@@ -163,11 +163,9 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             });
         } else {
             // control channel
-            functions.emplace_back([this, burst_type, bkn2, bkn2_crc]() {
-                if (bkn2_crc) {
-                    upper_mac_->process_SCH_HD(burst_type, bkn2);
-                }
-            });
+            if (bkn2_crc) {
+                functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
+            }
         }
     } else if (burst_type == BurstType::ControlUplinkBurst) {
         vectorAppend(frame, cb, 4, 84);
@@ -284,11 +282,27 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     }
 
     std::vector<std::function<void()>> callbacks{};
+    // We got a sync, continue with further processing of channels
     if (sync_) {
         callbacks = processChannels(frame, burst_type, *last_sync);
-        // We assume to encountered an error decoding in the lower MAC if we do not get any callbacks back.
-        // TODO: check if this assumption holds true
-        decode_error = callbacks.empty();
+
+        // We assume to encountered an error decoding in the lower MAC if we do not get the correct number of callbacks
+        // back. For normal channels this is one. For split channels this is two.
+        std::size_t correct_number_of_callbacks;
+        switch (burst_type) {
+        case BurstType::ControlUplinkBurst:
+        case BurstType::NormalUplinkBurst:
+        case BurstType::NormalDownlinkBurst:
+        case BurstType::SynchronizationBurst:
+            correct_number_of_callbacks = 1;
+            break;
+        case BurstType::NormalDownlinkBurstSplit:
+        case BurstType::NormalUplinkBurstSplit:
+            correct_number_of_callbacks = 2;
+            break;
+        }
+
+        decode_error = callbacks.size() != correct_number_of_callbacks;
     }
 
     // Update the received burst type metrics
