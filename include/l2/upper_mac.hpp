@@ -24,9 +24,10 @@
 
 class UpperMac {
   public:
-    UpperMac(std::shared_ptr<Reporter> reporter)
+    UpperMac() = delete;
+    UpperMac(std::shared_ptr<Reporter> reporter, bool is_downlink)
         : reporter_(std::move(reporter))
-        , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_))
+        , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_, is_downlink))
         , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
 

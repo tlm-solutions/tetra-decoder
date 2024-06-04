@@ -10,17 +10,18 @@ LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<Prometheu
                    std::optional<uint32_t> scrambling_code)
     : reporter_(reporter) {
     viter_bi_codec_1614_ = std::make_shared<ViterbiCodec>();
-    upper_mac_ = std::make_shared<UpperMac>(reporter_);
-
-    if (prometheus_exporter) {
-        metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
-    }
 
     // For decoupled uplink processing we need to inject a scrambling code. Inject it into the correct place that would
     // normally be filled by a Synchronization Burst
     if (scrambling_code.has_value()) {
         sync_ = BroadcastSynchronizationChannel();
         sync_->scrambling_code = *scrambling_code;
+    }
+
+    upper_mac_ = std::make_shared<UpperMac>(reporter_, /*is_downlink=*/!scrambling_code.has_value());
+
+    if (prometheus_exporter) {
+        metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
     }
 }
 
