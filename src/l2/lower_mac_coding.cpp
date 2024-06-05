@@ -17,6 +17,7 @@
  *
  */
 #include <l2/lower_mac.hpp>
+#include <vector>
 
 /**
  * @brief Fibonacci LFSR descrambling - 8.2.5
@@ -98,9 +99,9 @@ auto LowerMac::depuncture23(const uint8_t* const data, const uint32_t len) noexc
  * - 8.2.3.1.1
  *
  */
-auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t> {
+auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<bool> {
     auto decoded = viter_bi_codec_1614_->Decode(data);
-    std::vector<std::uint8_t> out(decoded.size() * 8);
+    std::vector<bool> out(decoded.size() * 8);
     for (auto i = 0; i < decoded.size(); i++)
         for (auto j = 0; j < 8; j++)
             out[i * 8 + j] = (decoded[i] & (1 << (7 - j))) ? 1 : 0;
@@ -115,7 +116,7 @@ auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noex
  *
  */
 
-auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, uint8_t* const res) noexcept -> void {
+auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) noexcept -> void {
     uint8_t q[14][5];
 
     q[0][0] = data[0];
@@ -309,7 +310,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, uint8_t* const
  * @brief Calculated CRC16 ITU-T X.25 - CCITT
  *
  */
-auto LowerMac::check_crc_16_ccitt(const uint8_t* const data, const std::size_t len) noexcept -> bool {
+auto LowerMac::check_crc_16_ccitt(const std::vector<bool>& data, const std::size_t len) noexcept -> bool {
     uint16_t crc = 0xFFFF; // CRC16-CCITT initial value
 
     for (std::size_t i = 0; i < len; i++) {

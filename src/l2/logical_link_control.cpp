@@ -5,14 +5,14 @@
 
 auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
     // remove last 32 bits
-    auto fcs = vec.take_last(32);
+    std::bitset<32> fcs = vec.take_last<32>();
 
-    auto computed_fcs = vec.compute_fcs();
+    std::bitset<32> computed_fcs = vec.compute_fcs();
 
     if (fcs != computed_fcs) {
         std::cout << "  FCS error" << std::endl;
-        std::cout << "    FCS           0b" << std::bitset<32>(fcs) << std::endl;
-        std::cout << "    computed FCS: 0b" << std::bitset<32>(computed_fcs) << std::endl;
+        std::cout << "    FCS           0b" << fcs << std::endl;
+        std::cout << "    computed FCS: 0b" << computed_fcs << std::endl;
         return false;
     } else {
         std::cout << "  FCS good" << std::endl;

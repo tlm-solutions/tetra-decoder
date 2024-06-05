@@ -12,14 +12,9 @@
 #include <bitset>
 #include <cassert>
 
-BroadcastSynchronizationChannel::BroadcastSynchronizationChannel(const BurstType burst_type,
-                                                                 const std::vector<uint8_t>& data) {
-    assert(data.size() == 60);
-    assert(is_downlink_burst(burst_type));
-
-    auto vec = BitVector(data);
-
+BroadcastSynchronizationChannel::BroadcastSynchronizationChannel(const BurstType burst_type, BitVector&& vec) {
     assert(vec.bits_left() == 60);
+    assert(is_downlink_burst(burst_type));
 
     system_code = vec.take<4>();
     color_code = vec.take<6>();

@@ -10,10 +10,9 @@
 
 #include "burst_type.hpp"
 #include "l2/timebase_counter.hpp"
-#include <cstdint>
+#include "utils/bit_vector.hpp"
 #include <optional>
 #include <ostream>
-#include <vector>
 
 enum DownlinkUsage { CommonControl, Unallocated, AssignedControl, CommonAndAssignedControl, Traffic };
 
@@ -22,7 +21,8 @@ struct AccessAssignmentChannel {
     std::optional<int> downlink_traffic_usage_marker;
 
     AccessAssignmentChannel() = delete;
-    AccessAssignmentChannel(BurstType burst_type, const TimebaseCounter& time, const std::vector<uint8_t>& data);
+
+    AccessAssignmentChannel(BurstType burst_type, const TimebaseCounter& time, BitVector&& vec);
 
     friend auto operator<<(std::ostream& stream, const AccessAssignmentChannel& aac) -> std::ostream&;
 };

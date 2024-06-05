@@ -1,6 +1,7 @@
 #include "burst_type.hpp"
 #include "l2/access_assignment_channel.hpp"
 #include "l2/broadcast_synchronization_channel.hpp"
+#include "utils/bit_vector.hpp"
 #include <l2/lower_mac.hpp>
 
 #include <fmt/color.h>
@@ -54,9 +55,9 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // ✅ done
         uint8_t bb_desc[30];
         descramble(frame.data() + 252, bb_desc, 30, bsc.scrambling_code);
-        std::vector<uint8_t> bb_rm(14);
-        reed_muller_3014_decode(bb_desc, bb_rm.data());
-        auto _aach = AccessAssignmentChannel(burst_type, bsc.time, bb_rm);
+        bool bb_rm[14];
+        reed_muller_3014_decode(bb_desc, bb_rm);
+        auto _aach = AccessAssignmentChannel(burst_type, bsc.time, BitVector(bb_rm, 14));
 
         // bkn2 block
         // ✅ done
@@ -67,12 +68,11 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         descramble(frame.data() + 282, bkn2_desc, 216, bsc.scrambling_code);
         uint8_t bkn2_dei[216];
         deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        bkn2 = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
-        if (check_crc_16_ccitt(bkn2.data(), 140)) {
-            bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-
+        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
+        if (check_crc_16_ccitt(bkn2_bits, 140)) {
             // SCH/HD or BNCH mapped
-            functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
+            auto bkn2_bv = BitVector(bkn2_bits.cbegin(), 124);
+            functions.push_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2_bv));
         }
     } else if (burst_type == BurstType::NormalDownlinkBurst) {
         // bb contains AACH
@@ -80,11 +80,11 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         std::vector<uint8_t> bb{};
         vectorAppend(frame, bb, 230, 14);
         vectorAppend(frame, bb, 266, 16);
-        uint8_t bb_des[30];
-        descramble(bb.data(), bb_des, 30, bsc.scrambling_code);
-        std::vector<uint8_t> bb_rm(14);
-        reed_muller_3014_decode(bb_des, bb_rm.data());
-        auto aach = AccessAssignmentChannel(burst_type, bsc.time, bb_rm);
+        uint8_t bb_desc[30];
+        descramble(bb.data(), bb_desc, 30, bsc.scrambling_code);
+        bool bb_rm[14];
+        reed_muller_3014_decode(bb_desc, bb_rm);
+        auto aach = AccessAssignmentChannel(burst_type, bsc.time, BitVector(bb_rm, 14));
 
         // TCH or SCH/F
         vectorAppend(frame, bkn1, 14, 216);
@@ -93,7 +93,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         descramble(bkn1.data(), bkn1_desc, 432, bsc.scrambling_code);
         uint8_t bkn1_dei[432];
         deinterleave(bkn1_desc, bkn1_dei, 432, 103);
-        bkn1 = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
+        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
 
         if (aach.downlink_usage == DownlinkUsage::Traffic) {
             // TODO: handle TCH
@@ -104,9 +104,9 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         } else {
             // control channel
             // ✅done
-            if (check_crc_16_ccitt(bkn1.data(), 284)) {
-                bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
-                functions.emplace_back(std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, bkn1));
+            if (check_crc_16_ccitt(bkn1_bits, 284)) {
+                functions.emplace_back(
+                    std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, BitVector(bkn1_bits.cbegin(), 268)));
             }
         }
     } else if (burst_type == BurstType::NormalDownlinkBurstSplit) {
@@ -117,9 +117,9 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         vectorAppend(frame, bb, 266, 16);
         uint8_t bb_desc[30];
         descramble(bb.data(), bb_desc, 30, bsc.scrambling_code);
-        std::vector<uint8_t> bb_rm(14);
-        reed_muller_3014_decode(bb_desc, bb_rm.data());
-        auto aach = AccessAssignmentChannel(burst_type, bsc.time, bb_rm);
+        bool bb_rm[14];
+        reed_muller_3014_decode(bb_desc, bb_rm);
+        auto aach = AccessAssignmentChannel(burst_type, bsc.time, BitVector(bb_rm, 14));
 
         uint8_t bkn1_desc[216];
         uint8_t bkn2_desc[216];
@@ -129,32 +129,33 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // We precompute as much as possible. Only when all computations are done we schedule the task.
         uint8_t bkn1_dei[216];
         deinterleave(bkn1_desc, bkn1_dei, 216, 101);
-        bkn1 = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+        auto bkn1_bv = BitVector(bkn1_bits.cbegin(), 124);
+
         uint8_t bkn2_dei[216];
         deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        bkn2 = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
+        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
 
-        if (check_crc_16_ccitt(bkn1.data(), 140)) {
-            bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
+        if (check_crc_16_ccitt(bkn1_bits, 140)) {
             if (aach.downlink_usage == DownlinkUsage::Traffic) {
                 // STCH + TCH
                 // STCH + STCH
-                functions.emplace_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
+                functions.emplace_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1_bv));
             } else {
                 // SCH/HD + SCH/HD
                 // SCH/HD + BNCH
                 // ✅done
-                functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn1));
+                functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn1_bv));
             }
         }
 
-        auto bkn2_crc = check_crc_16_ccitt(bkn2.data(), 140);
-        bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
+        auto bkn2_crc = check_crc_16_ccitt(bkn2_bits, 140);
         if (aach.downlink_usage == DownlinkUsage::Traffic) {
-            functions.emplace_back([this, burst_type, aach, bkn2, bkn2_crc]() {
+            functions.emplace_back([this, burst_type, aach, bkn2_bits, bkn2_crc]() {
                 if (upper_mac_->second_slot_stolen()) {
                     if (bkn2_crc) {
-                        upper_mac_->process_STCH(burst_type, bkn2);
+                        auto bkn2_bv = BitVector(bkn2_bits.cbegin(), 124);
+                        upper_mac_->process_STCH(burst_type, bkn2_bv);
                     }
                 } else {
                     // TODO: handle this TCH
@@ -165,7 +166,8 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         } else {
             // control channel
             if (bkn2_crc) {
-                functions.emplace_back(std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, bkn2));
+                functions.emplace_back(
+                    std::bind(&UpperMac::process_SCH_HD, upper_mac_, burst_type, BitVector(bkn2_bits.cbegin(), 124)));
             }
         }
     } else if (burst_type == BurstType::ControlUplinkBurst) {
@@ -177,10 +179,10 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // XXX: assume to be control channel
         uint8_t cb_dei[168];
         deinterleave(cb_desc, cb_dei, 168, 13);
-        cb = viter_bi_decode_1614(depuncture23(cb_dei, 168));
-        if (check_crc_16_ccitt(cb.data(), 108)) {
-            cb = std::vector(cb.begin(), cb.begin() + 92);
-            functions.emplace_back(std::bind(&UpperMac::process_SCH_HU, upper_mac_, burst_type, cb));
+        auto cb_bits = viter_bi_decode_1614(depuncture23(cb_dei, 168));
+        if (check_crc_16_ccitt(cb_bits, 108)) {
+            functions.emplace_back(
+                std::bind(&UpperMac::process_SCH_HU, upper_mac_, burst_type, BitVector(cb_bits.cbegin(), 92)));
         }
     } else if (burst_type == BurstType::NormalUplinkBurst) {
         vectorAppend(frame, bkn1, 4, 216);
@@ -192,11 +194,11 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // and downlink processing are seperated. We assume a SCH_H here.
         uint8_t bkn1_dei[432];
         deinterleave(bkn1_desc, bkn1_dei, 432, 103);
-        bkn1 = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
-        if (check_crc_16_ccitt(bkn1.data(), 284)) {
-            bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 268);
+        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
+        if (check_crc_16_ccitt(bkn1_bits, 284)) {
             // fmt::print("NUB Burst crc good\n");
-            functions.emplace_back(std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, bkn1));
+            functions.emplace_back(
+                std::bind(&UpperMac::process_SCH_F, upper_mac_, burst_type, BitVector(bkn1_bits.cbegin(), 268)));
         } else {
             // Either we have a faulty burst or a TCH here.
         }
@@ -208,28 +210,31 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         uint8_t bkn1_dei[216];
         deinterleave(bkn1_desc, bkn1_dei, 216, 101);
-        bkn1 = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+
         // STCH + TCH
         // STCH + STCH
-        if (check_crc_16_ccitt(bkn1.data(), 140)) {
+        if (check_crc_16_ccitt(bkn1_bits, 140)) {
             bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
             // fmt::print("NUB_S 1 Burst crc good\n");
-            functions.emplace_back(std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, bkn1));
+            functions.emplace_back(
+                std::bind(&UpperMac::process_STCH, upper_mac_, burst_type, BitVector(bkn1_bits.cbegin(), 124)));
         }
 
         uint8_t bkn2_dei[216];
         deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        bkn2 = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
-        if (check_crc_16_ccitt(bkn2.data(), 140)) {
+        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
+        if (check_crc_16_ccitt(bkn2_bits, 140)) {
             bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
-            functions.emplace_back([this, burst_type, bkn2]() {
+            functions.emplace_back([this, burst_type, bkn2_bits]() {
                 if (upper_mac_->second_slot_stolen()) {
                     // fmt::print("NUB_S 2 Burst crc good\n");
-                    upper_mac_->process_STCH(burst_type, bkn2);
-                } else {
-                    // TODO: handle this TCH
+                    auto bkn2_bv = BitVector(bkn2_bits.cbegin(), 124);
+                    upper_mac_->process_STCH(burst_type, bkn2_bv);
                 }
             });
+        } else {
+            // Either we have a faulty burst or a TCH here.
         }
     } else {
         throw std::runtime_error("LowerMac does not implement the burst type supplied");
@@ -261,10 +266,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         descramble(frame.data() + 94, sb_desc, 120, 0x0003);
         uint8_t sb_dei[120];
         deinterleave(sb_desc, sb_dei, 120, 11);
-        sb = viter_bi_decode_1614(depuncture23(sb_dei, 120));
-        if (check_crc_16_ccitt(sb.data(), 76)) {
-            sb = std::vector(sb.begin(), sb.begin() + 60);
-            current_sync = BroadcastSynchronizationChannel(burst_type, sb);
+        auto sb_bits = viter_bi_decode_1614(depuncture23(sb_dei, 120));
+        if (check_crc_16_ccitt(sb_bits, 76)) {
+            current_sync = BroadcastSynchronizationChannel(burst_type, BitVector(sb_bits.cbegin(), 60));
         } else {
             decode_error |= true;
         }

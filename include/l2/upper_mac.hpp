@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "utils/bit_vector.hpp"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -32,13 +33,13 @@ class UpperMac {
     ~UpperMac() noexcept = default;
 
     // Signalling CHannel for mapping onto Half-bursts on the Downlink
-    void process_SCH_HD(BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_HD(BurstType burst_type, BitVector& vec);
     // Signalling CHannel for mapping onto Half-bursts on the Uplink
-    void process_SCH_HU(BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_HU(BurstType burst_type, BitVector& vec);
     // Signalling CHannel for mapping onto Full bursts
-    void process_SCH_F(BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_SCH_F(BurstType burst_type, BitVector& vec);
     // STealing CHannel
-    void process_STCH(BurstType burst_type, const std::vector<uint8_t>& data);
+    void process_STCH(BurstType burst_type, BitVector& vec);
 
     [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t { return downlink_frequency_; }
     [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t { return uplink_frequency_; }
@@ -49,9 +50,9 @@ class UpperMac {
   private:
     std::shared_ptr<Reporter> reporter_{};
 
-    void process_signalling_channel(BurstType burst_type, const std::vector<uint8_t>& data, bool isHalfChannel,
-                                    bool isStolenChannel);
     void process_signalling_channel(BurstType burst_type, BitVector& vec, bool isHalfChannel, bool isStolenChannel);
+    void process_signalling_channel_internal(BurstType burst_type, BitVector& vec, bool isHalfChannel,
+                                             bool isStolenChannel);
 
     void process_broadcast(BitVector& vec);
     void process_supplementary_mac_pdu(BurstType burst_type, BitVector& vec);

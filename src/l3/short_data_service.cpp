@@ -13,16 +13,15 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     message_["to"] = to_address;
     message_["from"] = from_address;
 
-    auto protocol_identifier = vec.take<8>();
+    uint8_t protocol_identifier = vec.take<8>();
 
-    message_["protocol_identifier"] = static_cast<unsigned>(protocol_identifier);
+    message_["protocol_identifier"] = protocol_identifier;
 
     std::cout << "SDS " << std::bitset<8>(protocol_identifier) << std::endl;
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
 
     {
-        auto vec_copy = BitVector();
-        vec_copy.append(vec);
+        auto vec_copy = BitVector(vec);
 
         message_["data"] = nlohmann::json::array();
 
@@ -32,7 +31,7 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
         }
 
         message_["bits_in_last_byte"] = vec_copy.bits_left();
-        message_["data"].push_back(static_cast<unsigned>(vec_copy.take_last(vec_copy.bits_left())));
+        message_["data"].push_back(vec_copy.take_all());
     }
 
     switch (protocol_identifier) {

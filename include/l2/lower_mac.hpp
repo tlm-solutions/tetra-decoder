@@ -11,6 +11,7 @@
 
 #include "l2/broadcast_synchronization_channel.hpp"
 #include "l2/timebase_counter.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -194,8 +195,8 @@ class LowerMac {
         -> void;
     static auto deinterleave(const uint8_t* data, uint8_t* res, std::size_t K, std::size_t a) noexcept -> void;
     [[nodiscard]] static auto depuncture23(const uint8_t* data, uint32_t len) noexcept -> std::vector<int16_t>;
-    static auto reed_muller_3014_decode(const uint8_t* data, uint8_t* res) noexcept -> void;
-    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* data, std::size_t len) noexcept -> bool;
+    static auto reed_muller_3014_decode(const uint8_t* data, bool res[14]) noexcept -> void;
+    [[nodiscard]] static auto check_crc_16_ccitt(const std::vector<bool>& data, std::size_t len) noexcept -> bool;
 
-    [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
+    [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<bool>;
 };

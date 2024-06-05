@@ -11,11 +11,9 @@
 #include <cassert>
 
 AccessAssignmentChannel::AccessAssignmentChannel(const BurstType burst_type, const TimebaseCounter& time,
-                                                 const std::vector<uint8_t>& data) {
-    assert(data.size() == 14);
+                                                 BitVector&& vec) {
+    assert(vec.bits_left() == 14);
     assert(is_downlink_burst(burst_type));
-
-    auto vec = BitVector(data);
 
     auto header = vec.take<2>();
     auto field1 = vec.take<6>();
