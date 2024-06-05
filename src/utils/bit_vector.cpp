@@ -8,6 +8,8 @@
  */
 
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -30,31 +32,31 @@ auto BitVector::compute_fcs() -> uint32_t {
     return ~crc;
 }
 
-auto BitVector::take_vector(const size_t numberBits) -> const uint8_t* const {
-    if (numberBits > bits_left()) {
-        throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
+auto BitVector::take_vector(const size_t number_bits) -> const uint8_t* const {
+    if (number_bits > bits_left()) {
+        throw std::runtime_error(std::to_string(number_bits) + " bits not left in BitVec (" +
                                  std::to_string(bits_left()) + ")");
     }
 
     auto res = data_.data() + read_offset_;
 
     // delete first n entries
-    read_offset_ += numberBits;
-    len_ -= numberBits;
+    read_offset_ += number_bits;
+    len_ -= number_bits;
 
     return res;
 }
 
-auto BitVector::take_last_vector(const size_t numberBits) -> const uint8_t* const {
-    if (numberBits > bits_left()) {
-        throw std::runtime_error(std::to_string(numberBits) + " bits not left in BitVec (" +
+auto BitVector::take_last_vector(const size_t number_bits) -> const uint8_t* const {
+    if (number_bits > bits_left()) {
+        throw std::runtime_error(std::to_string(number_bits) + " bits not left in BitVec (" +
                                  std::to_string(bits_left()) + ")");
     }
 
-    auto res = data_.data() + bits_left() - numberBits;
+    auto res = data_.data() + bits_left() - number_bits;
 
     // take from the back
-    len_ -= numberBits;
+    len_ -= number_bits;
 
     return res;
 }
@@ -75,12 +77,13 @@ void BitVector::append(const BitVector& other) {
     len_ += other.len_;
 }
 
-auto BitVector::take(const size_t numberBits) -> uint64_t {
-    auto bits = take_vector(numberBits);
+auto BitVector::take_last(const size_t number_bits) -> uint64_t {
+    assert(number_bits <= 64 && "Number of bits may not be bigger than 64.");
+    auto bits = take_last_vector(number_bits);
 
     uint64_t ret = 0;
 
-    for (auto i = 0; i < numberBits; i++) {
+    for (auto i = 0; i < number_bits; i++) {
         if (i != 0)
             ret <<= 1;
         ret |= (bits[i] & 0x1);
@@ -89,21 +92,7 @@ auto BitVector::take(const size_t numberBits) -> uint64_t {
     return ret;
 }
 
-auto BitVector::take_last(const size_t numberBits) -> uint64_t {
-    auto bits = take_last_vector(numberBits);
-
-    uint64_t ret = 0;
-
-    for (auto i = 0; i < numberBits; i++) {
-        if (i != 0)
-            ret <<= 1;
-        ret |= (bits[i] & 0x1);
-    }
-
-    return ret;
-}
-
-auto BitVector::take_last() -> uint8_t {
+auto BitVector::take_last() -> unsigned _BitInt(1) {
     if (1 > bits_left()) {
         throw std::runtime_error("1 bit not left in BitVec (" + std::to_string(bits_left()) + ")");
     }

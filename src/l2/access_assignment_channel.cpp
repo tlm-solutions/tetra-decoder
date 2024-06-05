@@ -17,9 +17,9 @@ AccessAssignmentChannel::AccessAssignmentChannel(const BurstType burst_type, con
 
     auto vec = BitVector(data);
 
-    auto header = vec.take(2);
-    auto field1 = vec.take(6);
-    auto _field2 = vec.take(6);
+    auto header = vec.take<2>();
+    auto field1 = vec.take<6>();
+    auto _field2 = vec.take<6>();
 
     // TODO: parse uplink marker and some other things relevant for the uplink
     if (time.frame_number() == 18) {

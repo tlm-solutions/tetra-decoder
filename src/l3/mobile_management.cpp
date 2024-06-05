@@ -38,7 +38,7 @@ void MobileManagement::process(bool is_downlink, const AddressType address, BitV
                                    "Reserved",
                                    "MM PDU/FUNCTION NOT SUPPORTED"};
 
-    auto pdu_type = vec.take(4);
+    auto pdu_type = vec.take<4>();
 
     if (is_downlink) {
         std::cout << "MM " << mm_downlink_pdu[pdu_type] << std::endl;

@@ -29,7 +29,7 @@ struct BroadcastSynchronizationChannel {
     uint32_t mobile_network_code = 0;
     uint8_t dNwrk_broadcast_broadcast_supported = 0;
     uint8_t dNwrk_broadcast_enquiry_supported = 0;
-    uint8_t cell_load_ca = 0;
+    unsigned _BitInt(2) cell_load_ca = 0;
     uint8_t late_entry_supported = 0;
 
     BroadcastSynchronizationChannel() = default;

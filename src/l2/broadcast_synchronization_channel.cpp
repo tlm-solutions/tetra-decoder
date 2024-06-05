@@ -21,26 +21,26 @@ BroadcastSynchronizationChannel::BroadcastSynchronizationChannel(const BurstType
 
     assert(vec.bits_left() == 60);
 
-    system_code = vec.take(4);
-    color_code = vec.take(6);
-    auto time_slot = vec.take(2) + 1;
-    auto frame_number = vec.take(5);
-    auto multi_frame_number = vec.take(6);
+    system_code = vec.take<4>();
+    color_code = vec.take<6>();
+    auto time_slot = vec.take<2>() + 1u;
+    auto frame_number = vec.take<5>();
+    auto multi_frame_number = vec.take<6>();
     time = TimebaseCounter(time_slot, frame_number, multi_frame_number);
-    sharing_mode = vec.take(2);
-    time_slot_reserved_frames = vec.take(3);
-    up_lane_dtx = vec.take(1);
-    frame_18_extension = vec.take(1);
-    auto _reserved = vec.take(1);
+    sharing_mode = vec.take<2>();
+    time_slot_reserved_frames = vec.take<3>();
+    up_lane_dtx = vec.take<1>();
+    frame_18_extension = vec.take<1>();
+    auto _reserved = vec.take<1>();
 
     assert(vec.bits_left() == 29);
 
-    mobile_country_code = vec.take(10);
-    mobile_network_code = vec.take(14);
-    dNwrk_broadcast_broadcast_supported = vec.take(1);
-    dNwrk_broadcast_enquiry_supported = vec.take(1);
-    cell_load_ca = vec.take(2);
-    late_entry_supported = vec.take(1);
+    mobile_country_code = vec.take<10>();
+    mobile_network_code = vec.take<14>();
+    dNwrk_broadcast_broadcast_supported = vec.take<1>();
+    dNwrk_broadcast_enquiry_supported = vec.take<1>();
+    cell_load_ca = vec.take<2>();
+    late_entry_supported = vec.take<1>();
 
     // 10 MSB of MCC
     uint16_t lmcc = mobile_country_code & 0x03ff;
@@ -93,8 +93,6 @@ auto operator<<(std::ostream& stream, const BroadcastSynchronizationChannel& bsc
         break;
     case 0b11:
         stream << "High cell load";
-        break;
-    default:
         break;
     }
     stream << std::endl;

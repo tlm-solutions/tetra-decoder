@@ -41,17 +41,36 @@ class BitVector {
     ~BitVector() noexcept = default;
 
     auto append(const BitVector& other) -> void;
-    [[nodiscard]] auto take(std::size_t numberBits) -> uint64_t;
+
+    /// Take N unsigned bits from the start. N is known at compile time
+    template <std::size_t N> [[nodiscard]] auto take() -> unsigned _BitInt(N) {
+        auto bits = take_vector(N);
+
+        unsigned _BitInt(N) ret = (bits[0] & 0x1);
+
+        // This condition is implicitly there on the first iteation of the loop, but not detected by some compilers
+        // leading to a false warning: shift count >= width of type [-Wshift-count-overflow] with N == 1
+        if (N > 1) {
+            for (std::size_t i = 1; i < N; i++) {
+                ret <<= 1;
+                ret |= (bits[i] & 0x1);
+            }
+        }
+
+        return ret;
+    };
+
     [[nodiscard]] auto compute_fcs() -> uint32_t;
 
-    [[nodiscard]] auto take_vector(std::size_t numberBits) -> const uint8_t* const;
+    [[nodiscard]] auto take_vector(std::size_t number_bits) -> const uint8_t* const;
 
   private:
-    [[nodiscard]] auto take_last_vector(std::size_t numberBits) -> const uint8_t* const;
+    [[nodiscard]] auto take_last_vector(std::size_t number_bits) -> const uint8_t* const;
 
   public:
-    [[nodiscard]] auto take_last(std::size_t numberBits) -> uint64_t;
-    [[nodiscard]] auto take_last() -> uint8_t;
+    /// Take a dynamic number of bits from the back. the size is not known at compile time
+    [[nodiscard]] auto take_last(std::size_t number_bits) -> uint64_t;
+    [[nodiscard]] auto take_last() -> unsigned _BitInt(1);
     [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return len_; };
     [[nodiscard]] auto is_mac_padding() const noexcept -> bool;
 
