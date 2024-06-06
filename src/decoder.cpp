@@ -25,21 +25,17 @@
 
 Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
                  std::optional<std::string> output_file, bool iq_or_bit_stream,
-                 std::optional<unsigned int> uplink_scrambling_code)
+                 std::optional<unsigned int> uplink_scrambling_code,
+                 std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : reporter_(std::make_shared<Reporter>(send_port))
     , packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code)
     , iq_or_bit_stream_(iq_or_bit_stream) {
 
-    lower_mac_ = std::make_shared<LowerMac>(reporter_);
+    lower_mac_ = std::make_shared<LowerMac>(reporter_, prometheus_exporter, uplink_scrambling_code);
     bit_stream_decoder_ = std::make_shared<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
     iq_stream_decoder_ =
         std::make_unique<IQStreamDecoder>(lower_mac_, bit_stream_decoder_, uplink_scrambling_code_.has_value());
-
-    if (uplink_scrambling_code_.has_value()) {
-        // set scrambling_code for uplink
-        lower_mac_->set_scrambling_code(uplink_scrambling_code_.value());
-    }
 
     // read input file from file or from socket
     if (input_file.has_value()) {

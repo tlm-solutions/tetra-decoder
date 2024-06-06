@@ -5,6 +5,8 @@
 , zlib
 , fmt
 , nlohmann_json
+, prometheus-cpp
+, curlFull
 }:
 clangStdenv.mkDerivation {
   name = "tetra-decoder";
@@ -13,7 +15,13 @@ clangStdenv.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ cmake pkg-config fmt ];
-  buildInputs = [ cxxopts zlib nlohmann_json ];
+  buildInputs = [
+    cxxopts
+    zlib
+    nlohmann_json
+    curlFull
+    prometheus-cpp
+  ];
 
   cmakeFlags = [ "-DNIX_BUILD=ON" ];
 

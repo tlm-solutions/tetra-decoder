@@ -40,7 +40,8 @@ class Decoder {
   public:
     Decoder(unsigned int receive_port, unsigned int send_port, bool packed, std::optional<std::string> input_file,
             std::optional<std::string> output_file, bool iq_or_bit_stream,
-            std::optional<unsigned int> uplink_scrambling_code);
+            std::optional<unsigned int> uplink_scrambling_code,
+            std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~Decoder();
 
     void main_loop();
