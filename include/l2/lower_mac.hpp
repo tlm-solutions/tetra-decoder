@@ -195,7 +195,7 @@ class LowerMac {
         -> void;
     static auto deinterleave(const uint8_t* data, uint8_t* res, std::size_t K, std::size_t a) noexcept -> void;
     [[nodiscard]] static auto depuncture23(const uint8_t* data, uint32_t len) noexcept -> std::vector<int16_t>;
-    static auto reed_muller_3014_decode(const uint8_t* data, bool res[14]) noexcept -> void;
+    static auto reed_muller_3014_decode(const uint8_t* data, std::array<bool, 14>& res) noexcept -> void;
     [[nodiscard]] static auto check_crc_16_ccitt(const std::vector<bool>& data, std::size_t len) noexcept -> bool;
 
     [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<bool>;

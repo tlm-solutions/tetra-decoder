@@ -116,7 +116,7 @@ auto LowerMac::viter_bi_decode_1614(const std::vector<int16_t>& data) const noex
  *
  */
 
-auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) noexcept -> void {
+auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, std::array<bool, 14>& res) noexcept -> void {
     uint8_t q[14][5];
 
     q[0][0] = data[0];
@@ -125,7 +125,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[0][3] = (data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 5] + data[13 + 9] + data[13 + 10]) % 2;
     q[0][4] =
         (data[13 + 1] + data[13 + 4] + data[13 + 5] + data[13 + 7] + data[13 + 8] + data[13 + 10] + data[13 + 11]) % 2;
-    res[0] = (q[0][0] + q[0][1] + q[0][2] + q[0][3] + q[0][4]) >= 3 ? 1 : 0;
+    res[0] = (q[0][0] + q[0][1] + q[0][2] + q[0][3] + q[0][4]) >= 3;
 
     q[1][0] = data[1];
     q[1][1] = (data[13 + 1] + data[13 + 4] + data[13 + 5] + data[13 + 9] + data[13 + 11]) % 2;
@@ -133,7 +133,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[1][3] = (data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 5] + data[13 + 7] + data[13 + 8]) % 2;
     q[1][4] =
         (data[13 + 3] + data[13 + 5] + data[13 + 6] + data[13 + 8] + data[13 + 9] + data[13 + 10] + data[13 + 11]) % 2;
-    res[1] = (q[1][0] + q[1][1] + q[1][2] + q[1][3] + q[1][4]) >= 3 ? 1 : 0;
+    res[1] = (q[1][0] + q[1][1] + q[1][2] + q[1][3] + q[1][4]) >= 3;
 
     q[2][0] = data[2];
     q[2][1] = (data[13 + 2] + data[13 + 5] + data[13 + 8] + data[13 + 10] + data[13 + 11]) % 2;
@@ -141,7 +141,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[2][3] = (data[13 + 4] + data[13 + 5] + data[13 + 6] + data[13 + 7] + data[13 + 8] + data[13 + 9]) % 2;
     q[2][4] =
         (data[13 + 1] + data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 5] + data[13 + 6] + data[13 + 11]) % 2;
-    res[2] = (q[2][0] + q[2][1] + q[2][2] + q[2][3] + q[2][4]) >= 3 ? 1 : 0;
+    res[2] = (q[2][0] + q[2][1] + q[2][2] + q[2][3] + q[2][4]) >= 3;
 
     q[3][0] = data[3];
     q[3][1] = (data[13 + 7] + data[13 + 8] + data[13 + 9] + data[13 + 12] + data[13 + 13] + data[13 + 14]) % 2;
@@ -154,7 +154,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[3][4] = (data[13 + 1] + data[13 + 3] + data[13 + 4] + data[13 + 6] + data[13 + 7] + data[13 + 9] + data[13 + 10] +
                data[13 + 12] + data[13 + 13] + data[13 + 14]) %
               2;
-    res[3] = (q[3][0] + q[3][1] + q[3][2] + q[3][3] + q[3][4]) >= 3 ? 1 : 0;
+    res[3] = (q[3][0] + q[3][1] + q[3][2] + q[3][3] + q[3][4]) >= 3;
 
     q[4][0] = data[4];
     q[4][1] =
@@ -169,7 +169,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[4][4] = (data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 5] + data[13 + 7] + data[13 + 8] + data[13 + 9] +
                data[13 + 12] + data[13 + 13] + data[13 + 15]) %
               2;
-    res[4] = (q[4][0] + q[4][1] + q[4][2] + q[4][3] + q[4][4]) >= 3 ? 1 : 0;
+    res[4] = (q[4][0] + q[4][1] + q[4][2] + q[4][3] + q[4][4]) >= 3;
 
     q[5][0] = data[5];
     q[5][1] = (data[13 + 7] + data[13 + 9] + data[13 + 10] + data[13 + 12] + data[13 + 14] + data[13 + 15]) % 2;
@@ -182,7 +182,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[5][4] = (data[13 + 1] + data[13 + 3] + data[13 + 4] + data[13 + 6] + data[13 + 7] + data[13 + 8] + data[13 + 9] +
                data[13 + 12] + data[13 + 14] + data[13 + 15]) %
               2;
-    res[5] = (q[5][0] + q[5][1] + q[5][2] + q[5][3] + q[5][4]) >= 3 ? 1 : 0;
+    res[5] = (q[5][0] + q[5][1] + q[5][2] + q[5][3] + q[5][4]) >= 3;
 
     q[6][0] = data[6];
     q[6][1] =
@@ -197,7 +197,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[6][4] = (data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 5] + data[13 + 7] + data[13 + 9] + data[13 + 10] +
                data[13 + 13] + data[13 + 14] + data[13 + 15]) %
               2;
-    res[6] = (q[6][0] + q[6][1] + q[6][2] + q[6][3] + q[6][4]) >= 3 ? 1 : 0;
+    res[6] = (q[6][0] + q[6][1] + q[6][2] + q[6][3] + q[6][4]) >= 3;
 
     q[7][0] = data[7];
     q[7][1] = (data[13 + 2] + data[13 + 5] + data[13 + 7] + data[13 + 9] + data[13 + 12] + data[13 + 13] +
@@ -213,7 +213,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
                data[13 + 8] + data[13 + 9] + data[13 + 10] + data[13 + 12] + data[13 + 13] + data[13 + 14] +
                data[13 + 15] + data[13 + 16]) %
               2;
-    res[7] = (q[7][0] + q[7][1] + q[7][2] + q[7][3] + q[7][4]) >= 3 ? 1 : 0;
+    res[7] = (q[7][0] + q[7][1] + q[7][2] + q[7][3] + q[7][4]) >= 3;
 
     q[8][0] = data[8];
     q[8][1] = (data[13 + 2] + data[13 + 3] + data[13 + 9] + data[13 + 12] + data[13 + 13] + data[13 + 16]) % 2;
@@ -226,7 +226,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[8][4] = (data[13 + 1] + data[13 + 2] + data[13 + 4] + data[13 + 6] + data[13 + 8] + data[13 + 9] + data[13 + 10] +
                data[13 + 12] + data[13 + 13] + data[13 + 16]) %
               2;
-    res[8] = (q[8][0] + q[8][1] + q[8][2] + q[8][3] + q[8][4]) >= 3 ? 1 : 0;
+    res[8] = (q[8][0] + q[8][1] + q[8][2] + q[8][3] + q[8][4]) >= 3;
 
     q[9][0] = data[9];
     q[9][1] = (data[13 + 1] + data[13 + 3] + data[13 + 8] + data[13 + 12] + data[13 + 14] + data[13 + 16]) % 2;
@@ -237,7 +237,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[9][4] = (data[13 + 1] + data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 6] + data[13 + 7] + data[13 + 8] +
                data[13 + 9] + data[13 + 10] + data[13 + 11] + data[13 + 12] + data[13 + 14] + data[13 + 16]) %
               2;
-    res[9] = (q[9][0] + q[9][1] + q[9][2] + q[9][3] + q[9][4]) >= 3 ? 1 : 0;
+    res[9] = (q[9][0] + q[9][1] + q[9][2] + q[9][3] + q[9][4]) >= 3;
 
     q[10][0] = data[10];
     q[10][1] = (data[13 + 1] + data[13 + 2] + data[13 + 7] + data[13 + 13] + data[13 + 14] + data[13 + 16]) % 2;
@@ -250,7 +250,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[10][4] = (data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 6] + data[13 + 7] + data[13 + 8] +
                 data[13 + 10] + data[13 + 13] + data[13 + 14] + data[13 + 16]) %
                2;
-    res[10] = (q[10][0] + q[10][1] + q[10][2] + q[10][3] + q[10][4]) >= 3 ? 1 : 0;
+    res[10] = (q[10][0] + q[10][1] + q[10][2] + q[10][3] + q[10][4]) >= 3;
 
     q[11][0] = data[11];
     q[11][1] = (data[13 + 2] + data[13 + 6] + data[13 + 9] + data[13 + 12] + data[13 + 15] + data[13 + 16]) % 2;
@@ -263,7 +263,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[11][4] = (data[13 + 1] + data[13 + 2] + data[13 + 3] + data[13 + 4] + data[13 + 8] + data[13 + 9] +
                 data[13 + 10] + data[13 + 12] + data[13 + 15] + data[13 + 16]) %
                2;
-    res[11] = (q[11][0] + q[11][1] + q[11][2] + q[11][3] + q[11][4]) >= 3 ? 1 : 0;
+    res[11] = (q[11][0] + q[11][1] + q[11][2] + q[11][3] + q[11][4]) >= 3;
 
     q[12][0] = data[12];
     q[12][1] =
@@ -278,7 +278,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[12][4] = (data[13 + 2] + data[13 + 4] + data[13 + 5] + data[13 + 6] + data[13 + 7] + data[13 + 8] + data[13 + 9] +
                 data[13 + 13] + data[13 + 15] + data[13 + 16]) %
                2;
-    res[12] = (q[12][0] + q[12][1] + q[12][2] + q[12][3] + q[12][4]) >= 3 ? 1 : 0;
+    res[12] = (q[12][0] + q[12][1] + q[12][2] + q[12][3] + q[12][4]) >= 3;
 
     q[13][0] = data[13];
     q[13][1] = (data[13 + 2] + data[13 + 4] + data[13 + 7] + data[13 + 14] + data[13 + 15] + data[13 + 16]) % 2;
@@ -291,7 +291,7 @@ auto LowerMac::reed_muller_3014_decode(const uint8_t* const data, bool res[14]) 
     q[13][4] = (data[13 + 1] + data[13 + 2] + data[13 + 3] + data[13 + 6] + data[13 + 7] + data[13 + 8] +
                 data[13 + 10] + data[13 + 14] + data[13 + 15] + data[13 + 16]) %
                2;
-    res[13] = (q[13][0] + q[13][1] + q[13][2] + q[13][3] + q[13][4]) >= 3 ? 1 : 0;
+    res[13] = (q[13][0] + q[13][1] + q[13][2] + q[13][3] + q[13][4]) >= 3;
 
     // check deviation from input
     // int deviation = 0;

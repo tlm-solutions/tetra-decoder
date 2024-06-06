@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 
 #include <utils/bit_vector.hpp>
@@ -50,20 +51,24 @@ void BitVector::append(const BitVector& other) {
 
 auto BitVector::take_vector(std::size_t number_bits) -> BitVector {
     const auto bits = data_.begin() + read_offset_;
-    const auto len = bits_left();
+
+    if (number_bits > bits_left()) {
+        throw std::runtime_error(std::to_string(number_bits) + " bits not left in BitVec (" +
+                                 std::to_string(bits_left()) + ")");
+    }
 
     // delete all entries
-    read_offset_ += len;
-    len_ -= len;
+    read_offset_ += number_bits;
+    len_ -= number_bits;
 
-    return BitVector(bits, len);
+    return BitVector(std::vector<bool>(bits, bits + number_bits));
 }
 
 auto BitVector::take_all() -> uint64_t {
     const auto bits = data_.begin() + read_offset_;
     const auto len = bits_left();
 
-    if (bits_left() > 64) {
+    if (len > 64) {
         throw std::runtime_error("Can only extract 64 bits remaining bits from BitVec, but it contains " +
                                  std::to_string(len) + ".");
     }
@@ -72,11 +77,11 @@ auto BitVector::take_all() -> uint64_t {
     read_offset_ += len;
     len_ -= len;
 
-    uint64_t ret = bits[0];
+    uint64_t ret = static_cast<uint64_t>(bits[0]);
 
     for (std::size_t i = 1; i < len; i++) {
         ret <<= 1;
-        ret |= bits[i];
+        ret |= static_cast<uint64_t>(bits[i]);
     }
 
     return ret;

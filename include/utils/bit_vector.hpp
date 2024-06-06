@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <ostream>
 #include <vector>
@@ -19,7 +20,7 @@
 class BitVector {
   private:
     /// The bits we hold
-    std::vector<bool> data_{};
+    std::vector<bool> data_;
     /// The length of the currently viewed data to support taking bits from the back.
     std::size_t len_ = 0;
     /// The current read offset to support taking bits from the front.
@@ -29,23 +30,19 @@ class BitVector {
     BitVector() = default;
     explicit BitVector(const std::vector<bool>& vec)
         : data_(vec)
-        , len_(vec.size())
-        , read_offset_(0){};
-    explicit BitVector(const BitVector& other)
-        : data_()
-        , len_(0)
-        , read_offset_(0) {
-        append(other);
-    };
-    BitVector(const std::vector<bool>::const_iterator iterator, const std::size_t len)
-        : data_(iterator, iterator + len)
-        , len_(len)
-        , read_offset_(0){};
-    BitVector(const bool* const iterator, const std::size_t len)
-        : data_(iterator, iterator + len)
-        , len_(len)
-        , read_offset_(0){};
+        , len_(vec.size()){};
+    explicit BitVector(std::vector<bool>&& vec)
+        : data_(std::move(vec))
+        , len_(vec.size()){};
+
+    BitVector(const BitVector&) = default;
+    auto operator=(const BitVector&) -> BitVector& = default;
+    BitVector(BitVector&&) = default;
+    auto operator=(BitVector&&) -> BitVector& = default;
+
     ~BitVector() noexcept = default;
+
+    [[nodiscard]] inline auto bits_left() const noexcept -> auto{ return len_; };
 
     /// Append another bitvector to the current one. This will cause data to be copied.
     auto append(const BitVector& other) -> void;
@@ -91,7 +88,6 @@ class BitVector {
     /// take all the remaining bits
     [[nodiscard]] auto take_all() -> uint64_t;
 
-    [[nodiscard]] inline auto bits_left() const noexcept -> std::size_t { return len_; };
     [[nodiscard]] auto is_mac_padding() const noexcept -> bool;
 
     friend auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
@@ -104,7 +100,7 @@ class BitVector {
         // This condition is implicitly there on the first iteation of the loop, but not detected by some compilers
         // leading to a false warning: shift count >= width of type [-Wshift-count-overflow] with N == 1
         if (N > 1) {
-            for (std::size_t i = 1; i < N; i++) {
+            for (decltype(iterator)::difference_type i = 1; i < N; i++) {
                 ret <<= 1;
                 ret |= iterator[i];
             }
