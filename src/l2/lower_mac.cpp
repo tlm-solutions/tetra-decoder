@@ -99,7 +99,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // TODO: handle TCH
             functions.emplace_back([aach]() {
                 std::cout << "AACH indicated traffic with usagemarker: "
-                          << std::to_string(aach.downlink_traffic_usage_marker) << std::endl;
+                          << std::to_string(*aach.downlink_traffic_usage_marker) << std::endl;
             });
         } else {
             // control channel
@@ -159,7 +159,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
                 } else {
                     // TODO: handle this TCH
                     std::cout << "AACH indicated traffic with usagemarker: "
-                              << std::to_string(aach.downlink_traffic_usage_marker) << std::endl;
+                              << std::to_string(*aach.downlink_traffic_usage_marker) << std::endl;
                 }
             });
         } else {

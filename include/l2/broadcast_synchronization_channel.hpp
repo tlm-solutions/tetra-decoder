@@ -13,15 +13,15 @@
 #include <cstdint>
 #include <vector>
 
-class BroadcastSynchronizationChannel {
+struct BroadcastSynchronizationChannel {
   public:
-    uint8_t system_code{};
+    uint8_t system_code = 0;
     uint32_t color_code = 0;
-    TimebaseCounter time;
-    uint8_t sharing_mode{};
-    uint8_t time_slot_reserved_frames{};
-    uint8_t up_lane_dtx{};
-    uint8_t frame_18_extension{};
+    TimebaseCounter time{};
+    uint8_t sharing_mode = 0;
+    uint8_t time_slot_reserved_frames = 0;
+    uint8_t up_lane_dtx = 0;
+    uint8_t frame_18_extension = 0;
 
     uint32_t scrambling_code = 0;
 
