@@ -30,10 +30,10 @@ class BitVector {
     BitVector() = default;
     explicit BitVector(const std::vector<bool>& vec)
         : data_(vec)
-        , len_(vec.size()){};
+        , len_(data_.size()){};
     explicit BitVector(std::vector<bool>&& vec)
         : data_(std::move(vec))
-        , len_(vec.size()){};
+        , len_(data_.size()){};
 
     BitVector(const BitVector&) = default;
     auto operator=(const BitVector&) -> BitVector& = default;
