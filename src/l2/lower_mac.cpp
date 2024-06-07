@@ -82,7 +82,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // ✅
         std::array<bool, 30> bb_input{};
         for (auto i = 0; i < 30; i++) {
-            auto offset = i > 14 ? 266 : 230;
+            auto offset = i > 14 ? 266 - 14 : 230;
             bb_input[i] = frame[offset + i];
         }
 
@@ -92,7 +92,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // TCH or SCH/F
         std::array<bool, 432> bkn1_input{};
         for (auto i = 0; i < 432; i++) {
-            auto offset = i > 216 ? 282 : 14;
+            auto offset = i > 216 ? 282 - 216 : 14;
             bkn1_input[i] = frame[offset + i];
         };
 
@@ -121,7 +121,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // ✅ done
         std::array<bool, 30> bb_input{};
         for (auto i = 0; i < 30; i++) {
-            auto offset = i > 14 ? 266 : 230;
+            auto offset = i > 14 ? 266 - 14 : 230;
             bb_input[i] = frame[offset + i];
         }
 
@@ -191,7 +191,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     } else if (burst_type == BurstType::ControlUplinkBurst) {
         std::array<bool, 168> cb_input{};
         for (auto i = 0; i < 168; i++) {
-            auto offset = i > 84 ? 118 : 4;
+            auto offset = i > 84 ? 118 - 84 : 4;
             cb_input[i] = frame[offset + i];
         };
 
@@ -208,7 +208,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     } else if (burst_type == BurstType::NormalUplinkBurst) {
         std::array<bool, 432> bkn1_input{};
         for (auto i = 0; i < 432; i++) {
-            auto offset = i > 216 ? 242 : 4;
+            auto offset = i > 216 ? 242 - 216 : 4;
             bkn1_input[i] = frame[offset + i];
         }
 
