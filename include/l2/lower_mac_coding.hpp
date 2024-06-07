@@ -29,9 +29,10 @@ struct LowerMacCoding {
      *
      */
     template <std::size_t Size, typename Type>
-    static auto descramble(const std::array<Type, Size>& input, std::array<Type, Size>& output,
-                           uint32_t scrambling_code) noexcept -> void {
+    static auto descramble(const std::array<Type, Size>& input, uint32_t scrambling_code) noexcept
+        -> std::array<Type, Size> {
         static std::map<uint32_t, std::vector<Type>> table_by_scrambling_code;
+        std::array<Type, Size> output{};
 
         static_assert(Size <= 432);
 
@@ -61,6 +62,8 @@ struct LowerMacCoding {
         for (std::size_t i = 0; i < Size; i++) {
             output[i] = input[i] ^ table[i];
         }
+
+        return output;
     }
 
     /**
@@ -68,12 +71,15 @@ struct LowerMacCoding {
      *
      */
     template <std::size_t Size, typename Type>
-    static auto deinterleave(const std::array<Type, Size>& data, std::array<Type, Size>& res,
-                             const std::size_t a) noexcept -> void {
+    static auto deinterleave(const std::array<Type, Size>& data, const std::size_t a) noexcept
+        -> std::array<Type, Size> {
+        std::array<Type, Size> res{};
         for (std::size_t i = 0; i < Size; i++) {
             auto k = 1 + (a * (i + 1)) % ViterbiCodec::K;
             res[i] = data[k - 1]; // to interleave: DataOut[i-1] = DataIn[k-1]
         }
+
+        return res;
     }
 
     /**
@@ -126,8 +132,8 @@ struct LowerMacCoding {
      *
      */
 
-    static auto reed_muller_3014_decode(const std::array<bool, 30>& input, std::array<bool, 14>& output) noexcept
-        -> void {
+    static auto reed_muller_3014_decode(const std::array<bool, 30>& input) noexcept -> std::array<bool, 14> {
+        std::array<bool, 14> output;
         uint8_t q[14][5];
 
         q[0][0] = input[0];
@@ -327,6 +333,8 @@ struct LowerMacCoding {
         // print_vector(res, 14);
 
         // return vector_extract(data, 0, 14);
+
+        return output;
     }
 
     /**
