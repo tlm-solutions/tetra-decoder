@@ -100,7 +100,7 @@ class BitVector {
         // This condition is implicitly there on the first iteation of the loop, but not detected by some compilers
         // leading to a false warning: shift count >= width of type [-Wshift-count-overflow] with N == 1
         if (N > 1) {
-            for (decltype(iterator)::difference_type i = 1; i < N; i++) {
+            for (auto i = 1; i < N; i++) {
                 ret <<= 1;
                 ret |= iterator[i];
             }

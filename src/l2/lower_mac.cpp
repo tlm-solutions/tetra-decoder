@@ -1,17 +1,20 @@
 #include "burst_type.hpp"
 #include "l2/access_assignment_channel.hpp"
 #include "l2/broadcast_synchronization_channel.hpp"
+#include "l2/lower_mac_coding.hpp"
 #include "utils/bit_vector.hpp"
+#include <array>
+#include <cstdint>
+#include <cstring>
 #include <l2/lower_mac.hpp>
+#include <utility>
 
 #include <fmt/color.h>
 #include <fmt/core.h>
 
 LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter,
                    std::optional<uint32_t> scrambling_code)
-    : reporter_(reporter) {
-    viter_bi_codec_1614_ = std::make_shared<ViterbiCodec>();
-
+    : reporter_(std::move(reporter)) {
     // For decoupled uplink processing we need to inject a scrambling code. Inject it into the correct place that would
     // normally be filled by a Synchronization Burst
     if (scrambling_code.has_value()) {
@@ -26,17 +29,8 @@ LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<Prometheu
     }
 }
 
-static auto vectorAppend(const std::vector<uint8_t>& vec, std::vector<uint8_t>& res, std::size_t pos,
-                         std::size_t length) -> void {
-    std::copy(vec.begin() + pos, vec.begin() + pos + length, std::back_inserter(res));
-}
-
 auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
                                const BroadcastSynchronizationChannel& bsc) -> std::vector<std::function<void()>> {
-    std::vector<uint8_t> bkn1{};
-    std::vector<uint8_t> bkn2{};
-    std::vector<uint8_t> cb{};
-
     std::vector<std::function<void()>> functions{};
 
     // The BLCH may be mapped onto block 2 of the downlink slots, when a SCH/HD,
@@ -53,10 +47,14 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     if (burst_type == BurstType::SynchronizationBurst) {
         // bb contains AACH
         // ✅ done
-        uint8_t bb_desc[30];
-        descramble(frame.data() + 252, bb_desc, 30, bsc.scrambling_code);
-        std::array<bool, 14> bb_rm;
-        reed_muller_3014_decode(bb_desc, bb_rm);
+        std::array<bool, 30> bb_input{};
+        std::array<bool, 30> bb_desc{};
+        std::array<bool, 14> bb_rm{};
+        for (auto i = 0; i < 30; i++) {
+            bb_input[i] = frame[252 + i];
+        }
+        LowerMacCoding::descramble(bb_input, bb_desc, bsc.scrambling_code);
+        LowerMacCoding::reed_muller_3014_decode(bb_desc, bb_rm);
         auto _aach =
             AccessAssignmentChannel(burst_type, bsc.time, BitVector(std::vector(bb_rm.cbegin(), bb_rm.cend())));
 
@@ -65,12 +63,17 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // any off SCH/HD, BNCH, STCH
         // see ETSI EN 300 392-2 V3.8.1 (2016-08) Figure 8.6: Error control
         // structure for π4DQPSK logical channels (part 2)
-        uint8_t bkn2_desc[216];
-        descramble(frame.data() + 282, bkn2_desc, 216, bsc.scrambling_code);
-        uint8_t bkn2_dei[216];
-        deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
-        if (check_crc_16_ccitt(bkn2_bits, 140)) {
+        std::array<bool, 216> bkn2_input{};
+        std::array<bool, 216> bkn2_desc{};
+        std::array<bool, 216> bkn2_dei{};
+        for (auto i = 0; i < 216; i++) {
+            bkn2_input[i] = frame[282 + i];
+        }
+        LowerMacCoding::descramble(bkn2_input, bkn2_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn2_desc, bkn2_dei, 101);
+        auto bkn2_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn2_dei));
+        if (LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits)) {
             // SCH/HD or BNCH mapped
             functions.emplace_back([this, burst_type, bkn2_bits] {
                 auto bkn2_bv = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124));
@@ -79,24 +82,30 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         }
     } else if (burst_type == BurstType::NormalDownlinkBurst) {
         // bb contains AACH
-        // ✅ done
-        std::vector<uint8_t> bb{};
-        vectorAppend(frame, bb, 230, 14);
-        vectorAppend(frame, bb, 266, 16);
-        uint8_t bb_desc[30];
-        descramble(bb.data(), bb_desc, 30, bsc.scrambling_code);
-        std::array<bool, 14> bb_rm;
-        reed_muller_3014_decode(bb_desc, bb_rm);
+        // ✅
+        std::array<bool, 30> bb_input{};
+        std::array<bool, 30> bb_desc{};
+        std::array<bool, 14> bb_rm{};
+        for (auto i = 0; i < 30; i++) {
+            auto offset = i > 14 ? 266 : 230;
+            bb_input[i] = frame[offset + i];
+        }
+        LowerMacCoding::descramble(bb_input, bb_desc, bsc.scrambling_code);
+        LowerMacCoding::reed_muller_3014_decode(bb_desc, bb_rm);
         auto aach = AccessAssignmentChannel(burst_type, bsc.time, BitVector(std::vector(bb_rm.cbegin(), bb_rm.cend())));
 
         // TCH or SCH/F
-        vectorAppend(frame, bkn1, 14, 216);
-        vectorAppend(frame, bkn1, 282, 216);
-        uint8_t bkn1_desc[432];
-        descramble(bkn1.data(), bkn1_desc, 432, bsc.scrambling_code);
-        uint8_t bkn1_dei[432];
-        deinterleave(bkn1_desc, bkn1_dei, 432, 103);
-        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
+        std::array<bool, 432> bkn1_input{};
+        std::array<bool, 432> bkn1_desc{};
+        std::array<bool, 432> bkn1_dei{};
+        for (auto i = 0; i < 432; i++) {
+            auto offset = i > 216 ? 282 : 14;
+            bkn1_input[i] = frame[offset + i];
+        }
+        LowerMacCoding::descramble(bkn1_input, bkn1_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn1_desc, bkn1_dei, 103);
+        auto bkn1_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn1_dei));
 
         if (aach.downlink_usage == DownlinkUsage::Traffic) {
             // TODO: handle TCH
@@ -107,7 +116,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         } else {
             // control channel
             // ✅done
-            if (check_crc_16_ccitt(bkn1_bits, 284)) {
+            if (LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits)) {
                 functions.emplace_back([this, burst_type, bkn1_bits] {
                     auto bkn1_bv = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268));
                     upper_mac_->process_SCH_F(burst_type, bkn1_bv);
@@ -117,30 +126,40 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     } else if (burst_type == BurstType::NormalDownlinkBurstSplit) {
         // bb contains AACH
         // ✅ done
-        std::vector<uint8_t> bb{};
-        vectorAppend(frame, bb, 230, 14);
-        vectorAppend(frame, bb, 266, 16);
-        uint8_t bb_desc[30];
-        descramble(bb.data(), bb_desc, 30, bsc.scrambling_code);
-        std::array<bool, 14> bb_rm;
-        reed_muller_3014_decode(bb_desc, bb_rm);
+        std::array<bool, 30> bb_input{};
+        std::array<bool, 30> bb_desc{};
+        std::array<bool, 14> bb_rm{};
+        for (auto i = 0; i < 30; i++) {
+            auto offset = i > 14 ? 266 : 230;
+            bb_input[i] = frame[offset + i];
+        }
+        LowerMacCoding::descramble(bb_input, bb_desc, bsc.scrambling_code);
+        LowerMacCoding::reed_muller_3014_decode(bb_desc, bb_rm);
         auto aach = AccessAssignmentChannel(burst_type, bsc.time, BitVector(std::vector(bb_rm.cbegin(), bb_rm.cend())));
 
-        uint8_t bkn1_desc[216];
-        uint8_t bkn2_desc[216];
-        descramble(frame.data() + 14, bkn1_desc, 216, bsc.scrambling_code);
-        descramble(frame.data() + 282, bkn2_desc, 216, bsc.scrambling_code);
+        std::array<bool, 216> bkn1_input{};
+        std::array<bool, 216> bkn1_desc{};
+        std::array<bool, 216> bkn1_dei{};
+        for (auto i = 0; i < 216; i++) {
+            bkn1_input[i] = frame[14 + i];
+        }
+        LowerMacCoding::descramble(bkn1_input, bkn1_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn1_desc, bkn1_dei, 101);
+        auto bkn1_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn1_dei));
 
-        // We precompute as much as possible. Only when all computations are done we schedule the task.
-        uint8_t bkn1_dei[216];
-        deinterleave(bkn1_desc, bkn1_dei, 216, 101);
-        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+        std::array<bool, 216> bkn2_input{};
+        std::array<bool, 216> bkn2_desc{};
+        std::array<bool, 216> bkn2_dei{};
+        for (auto i = 0; i < 216; i++) {
+            bkn2_input[i] = frame[282 + i];
+        }
+        LowerMacCoding::descramble(bkn2_input, bkn2_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn2_desc, bkn2_dei, 101);
+        auto bkn2_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn2_dei));
 
-        uint8_t bkn2_dei[216];
-        deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
-
-        if (check_crc_16_ccitt(bkn1_bits, 140)) {
+        if (LowerMacCoding::check_crc_16_ccitt<140>(bkn1_bits)) {
             if (aach.downlink_usage == DownlinkUsage::Traffic) {
                 // STCH + TCH
                 // STCH + STCH
@@ -159,7 +178,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             }
         }
 
-        auto bkn2_crc = check_crc_16_ccitt(bkn2_bits, 140);
+        auto bkn2_crc = LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits);
         if (aach.downlink_usage == DownlinkUsage::Traffic) {
             functions.emplace_back([this, burst_type, aach, bkn2_bits, bkn2_crc]() {
                 if (upper_mac_->second_slot_stolen()) {
@@ -183,33 +202,39 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             }
         }
     } else if (burst_type == BurstType::ControlUplinkBurst) {
-        vectorAppend(frame, cb, 4, 84);
-        vectorAppend(frame, cb, 118, 84);
-        uint8_t cb_desc[168];
-        descramble(cb.data(), cb_desc, 168, bsc.scrambling_code);
+        std::array<bool, 168> cb_input{};
+        std::array<bool, 168> cb_desc{};
+        std::array<bool, 168> cb_dei{};
+        for (auto i = 0; i < 168; i++) {
+            auto offset = i > 84 ? 118 : 4;
+            cb_input[i] = frame[offset + i];
+        }
+        LowerMacCoding::descramble(cb_input, cb_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(cb_desc, cb_dei, 13);
+        auto cb_bits = LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(cb_dei));
 
-        // XXX: assume to be control channel
-        uint8_t cb_dei[168];
-        deinterleave(cb_desc, cb_dei, 168, 13);
-        auto cb_bits = viter_bi_decode_1614(depuncture23(cb_dei, 168));
-        if (check_crc_16_ccitt(cb_bits, 108)) {
+        if (LowerMacCoding::check_crc_16_ccitt<108>(cb_bits)) {
             functions.emplace_back([this, burst_type, cb_bits] {
                 auto bkn1_bv = BitVector(std::vector(cb_bits.cbegin(), cb_bits.cbegin() + 92));
                 upper_mac_->process_SCH_HU(burst_type, bkn1_bv);
             });
         }
     } else if (burst_type == BurstType::NormalUplinkBurst) {
-        vectorAppend(frame, bkn1, 4, 216);
-        vectorAppend(frame, bkn1, 242, 216);
-        uint8_t bkn1_desc[432];
-        descramble(bkn1.data(), bkn1_desc, 432, bsc.scrambling_code);
-
+        std::array<bool, 432> bkn1_input{};
+        std::array<bool, 432> bkn1_desc{};
+        std::array<bool, 432> bkn1_dei{};
+        for (auto i = 0; i < 432; i++) {
+            auto offset = i > 216 ? 242 : 4;
+            bkn1_input[i] = frame[offset + i];
+        }
+        LowerMacCoding::descramble(bkn1_input, bkn1_desc, bsc.scrambling_code);
         // TODO: this can either be a SCH_H or a TCH, depending on the uplink usage marker, but the uplink
         // and downlink processing are seperated. We assume a SCH_H here.
-        uint8_t bkn1_dei[432];
-        deinterleave(bkn1_desc, bkn1_dei, 432, 103);
-        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 432));
-        if (check_crc_16_ccitt(bkn1_bits, 284)) {
+        LowerMacCoding::deinterleave(bkn1_desc, bkn1_dei, 103);
+        auto bkn1_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn1_dei));
+
+        if (LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits)) {
             // fmt::print("NUB Burst crc good\n");
             functions.emplace_back([this, burst_type, bkn1_bits] {
                 auto bkn1_bv = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268));
@@ -219,31 +244,38 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // Either we have a faulty burst or a TCH here.
         }
     } else if (burst_type == BurstType::NormalUplinkBurstSplit) {
-        uint8_t bkn1_desc[216];
-        uint8_t bkn2_desc[216];
-        descramble(frame.data() + 4, bkn1_desc, 216, bsc.scrambling_code);
-        descramble(frame.data() + 242, bkn2_desc, 216, bsc.scrambling_code);
+        std::array<bool, 216> bkn1_input{};
+        std::array<bool, 216> bkn1_desc{};
+        std::array<bool, 216> bkn1_dei{};
+        for (auto i = 0; i < 216; i++) {
+            bkn1_input[i] = frame[4 + i];
+        }
+        LowerMacCoding::descramble(bkn1_input, bkn1_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn1_desc, bkn1_dei, 101);
+        auto bkn1_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn1_dei));
 
-        uint8_t bkn1_dei[216];
-        deinterleave(bkn1_desc, bkn1_dei, 216, 101);
-        auto bkn1_bits = viter_bi_decode_1614(depuncture23(bkn1_dei, 216));
+        std::array<bool, 216> bkn2_input{};
+        std::array<bool, 216> bkn2_desc{};
+        std::array<bool, 216> bkn2_dei{};
+        for (auto i = 0; i < 216; i++) {
+            bkn2_input[i] = frame[242 + i];
+        }
+        LowerMacCoding::descramble(bkn2_input, bkn2_desc, bsc.scrambling_code);
+        LowerMacCoding::deinterleave(bkn2_desc, bkn2_dei, 101);
+        auto bkn2_bits =
+            LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(bkn2_dei));
 
         // STCH + TCH
         // STCH + STCH
-        if (check_crc_16_ccitt(bkn1_bits, 140)) {
-            bkn1 = std::vector(bkn1.begin(), bkn1.begin() + 124);
+        if (LowerMacCoding::check_crc_16_ccitt<140>(bkn1_bits)) {
             // fmt::print("NUB_S 1 Burst crc good\n");
             functions.emplace_back([this, burst_type, bkn1_bits] {
                 auto bkn1_bv = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124));
                 upper_mac_->process_STCH(burst_type, bkn1_bv);
             });
         }
-
-        uint8_t bkn2_dei[216];
-        deinterleave(bkn2_desc, bkn2_dei, 216, 101);
-        auto bkn2_bits = viter_bi_decode_1614(depuncture23(bkn2_dei, 216));
-        if (check_crc_16_ccitt(bkn2_bits, 140)) {
-            bkn2 = std::vector(bkn2.begin(), bkn2.begin() + 124);
+        if (LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits)) {
             functions.emplace_back([this, burst_type, bkn2_bits]() {
                 if (upper_mac_->second_slot_stolen()) {
                     // fmt::print("NUB_S 2 Burst crc good\n");
@@ -262,8 +294,6 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 }
 
 auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) -> std::vector<std::function<void()>> {
-    std::vector<uint8_t> sb{};
-
     // Set to true if there was some decoding error in the lower MAC
     bool decode_error = false;
 
@@ -280,12 +310,17 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // sb contains BSCH
         // ✅ done
-        uint8_t sb_desc[120];
-        descramble(frame.data() + 94, sb_desc, 120, 0x0003);
-        uint8_t sb_dei[120];
-        deinterleave(sb_desc, sb_dei, 120, 11);
-        auto sb_bits = viter_bi_decode_1614(depuncture23(sb_dei, 120));
-        if (check_crc_16_ccitt(sb_bits, 76)) {
+        std::array<bool, 120> sb_input{};
+        std::array<bool, 120> sb_desc{};
+        std::array<bool, 120> sb_dei{};
+        for (auto i = 0; i < 30; i++) {
+            sb_input[i] = frame[94 + i];
+        }
+        LowerMacCoding::descramble(sb_input, sb_desc, 0x0003);
+        LowerMacCoding::deinterleave(sb_desc, sb_dei, 11);
+        auto sb_bits = LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_, LowerMacCoding::depuncture23(sb_dei));
+
+        if (LowerMacCoding::check_crc_16_ccitt<76>(sb_bits)) {
             current_sync = BroadcastSynchronizationChannel(
                 burst_type, BitVector(std::vector(sb_bits.cbegin(), sb_bits.cbegin() + 60)));
         } else {

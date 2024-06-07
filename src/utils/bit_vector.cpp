@@ -77,7 +77,7 @@ auto BitVector::take_all() -> uint64_t {
     read_offset_ += len;
     len_ -= len;
 
-    uint64_t ret = static_cast<uint64_t>(bits[0]);
+    auto ret = static_cast<uint64_t>(bits[0]);
 
     for (std::size_t i = 1; i < len; i++) {
         ret <<= 1;

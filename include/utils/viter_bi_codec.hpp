@@ -18,21 +18,21 @@
 #include "viterbi/x86/viterbi_decoder_sse_u16.h"
 // clang-format on
 
-constexpr size_t K = 5;
-constexpr size_t R = 4;
-
 class ViterbiCodec {
   public:
-    ViterbiCodec(){};
-    [[nodiscard]] std::vector<uint8_t> Decode(const std::vector<int16_t>& bits) const;
+    ViterbiCodec() = default;
+    [[nodiscard]] auto Decode(const std::vector<int16_t>& bits) const -> std::vector<uint8_t>;
+
+    static constexpr size_t K = 5;
+    static constexpr size_t R = 4;
 
   private:
     const std::vector<uint8_t> G = {19, 29, 23, 27};
 
     const int16_t soft_decision_high = +1;
     const int16_t soft_decision_low = -1;
-    const uint16_t max_error = uint16_t(soft_decision_high - soft_decision_low) * uint16_t(R);
-    const uint16_t error_margin = max_error * uint16_t(3u);
+    const uint16_t max_error = static_cast<uint16_t>(soft_decision_high - soft_decision_low) * static_cast<uint16_t>(R);
+    const uint16_t error_margin = max_error * static_cast<uint16_t>(3u);
 
     const ViterbiDecoder_Config<uint16_t> config = {
         .soft_decision_max_error = max_error,

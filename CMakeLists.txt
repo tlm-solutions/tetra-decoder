@@ -17,7 +17,6 @@ add_executable(tetra-decoder
         src/l2/broadcast_synchronization_channel.cpp
         src/l2/logical_link_control.cpp
         src/l2/lower_mac.cpp
-        src/l2/lower_mac_coding.cpp
         src/l2/timebase_counter.cpp
         src/l2/upper_mac.cpp
         src/l2/upper_mac_fragmentation.cpp
