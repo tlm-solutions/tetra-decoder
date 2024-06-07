@@ -75,7 +75,7 @@ struct LowerMacCoding {
         -> std::array<Type, Size> {
         std::array<Type, Size> res{};
         for (std::size_t i = 0; i < Size; i++) {
-            auto k = 1 + (a * (i + 1)) % ViterbiCodec::K;
+            auto k = 1 + (a * (i + 1)) % Size;
             res[i] = data[k - 1]; // to interleave: DataOut[i-1] = DataIn[k-1]
         }
 

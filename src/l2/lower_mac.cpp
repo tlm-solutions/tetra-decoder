@@ -291,7 +291,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // sb contains BSCH
         // ✅ done
         std::array<bool, 120> sb_input{};
-        for (auto i = 0; i < 30; i++) {
+        for (auto i = 0; i < 120; i++) {
             sb_input[i] = frame[94 + i];
         };
 
