@@ -10,6 +10,7 @@
 #pragma once
 
 #include "l2/broadcast_synchronization_channel.hpp"
+#include "l2/slot.hpp"
 #include "l2/timebase_counter.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -62,6 +63,8 @@ class LowerMacPrometheusCounters {
     prometheus::Counter& lower_mac_burst_skipped_count_;
     /// The counter for the too many bursts in the downlink lower MAC
     prometheus::Counter& lower_mac_burst_too_many_count_;
+
+    /// TODO: add gauge for the synchronization burst time
 
   public:
     LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
@@ -168,11 +171,10 @@ class LowerMac {
              std::optional<uint32_t> scrambling_code = std::nullopt);
     ~LowerMac() = default;
 
-    // does the signal processing and then returns a list of function that need to be executed for data to be passed
-    // to upper mac sequentially.
+    // does the signal processing and then returns the slots containing the correct logical channels and their
+    // associated data to be passed to the upper mac and further processed in a sequential order.
     [[nodiscard]] auto processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
-                                       const BroadcastSynchronizationChannel& bsc)
-        -> std::vector<std::function<void()>>;
+                                       const BroadcastSynchronizationChannel& bsc) -> Slots;
 
     /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
     /// channels. keeps track of the current network time

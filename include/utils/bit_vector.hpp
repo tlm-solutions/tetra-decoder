@@ -80,6 +80,18 @@ class BitVector {
         return to_bit_int<N>(bits);
     }
 
+    /// look at N bits with an offset to the bitvector
+    template <std::size_t N> [[nodiscard]] auto look(std::size_t offset) const -> unsigned _BitInt(N) {
+        if (N + offset > bits_left()) {
+            throw std::runtime_error(std::to_string(N + offset) + " bits not left in BitVec (" +
+                                     std::to_string(bits_left()) + ")");
+        }
+
+        const auto bits = data_.begin() + read_offset_ + N + offset;
+
+        return to_bit_int<N>(bits);
+    }
+
     [[nodiscard]] auto compute_fcs() -> uint32_t;
 
     /// bite of a bitvector from the current bitvector
@@ -94,7 +106,7 @@ class BitVector {
 
   private:
     template <std::size_t N>
-    [[nodiscard]] auto to_bit_int(const std::vector<bool>::const_iterator iterator) -> unsigned _BitInt(N) {
+    [[nodiscard]] auto to_bit_int(const std::vector<bool>::const_iterator iterator) const -> unsigned _BitInt(N) {
         unsigned _BitInt(N) ret = iterator[0];
 
         // This condition is implicitly there on the first iteation of the loop, but not detected by some compilers
