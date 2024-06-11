@@ -17,8 +17,10 @@ add_executable(tetra-decoder
         src/l2/broadcast_synchronization_channel.cpp
         src/l2/logical_link_control.cpp
         src/l2/lower_mac.cpp
+        src/l2/slot.cpp
         src/l2/timebase_counter.cpp
-        src/l2/upper_mac.cpp
+        src/l2/upper_mac_packet.cpp
+        src/l2/upper_mac_packet_builder.cpp
         src/l2/upper_mac_fragmentation.cpp
         src/l3/mobile_link_entity.cpp
         src/l3/mobile_management.cpp
