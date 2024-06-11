@@ -7,21 +7,21 @@ void MobileLinkEntity::service_DMle_system_info(BitVector& vec) {
     assert(vec.bits_left() == 42);
 
     // Location area (14)
-    location_area_ = vec.take(14);
+    location_area_ = vec.take<14>();
     // Subscriber class (16)
-    subscriber_class_ = vec.take(16);
+    subscriber_class_ = vec.take<16>();
     // BS service details (12)
-    registration_ = vec.take(1);
-    deregistration_ = vec.take(1);
-    priority_cell_ = vec.take(1);
-    minimum_mode_service_ = vec.take(1);
-    migration_ = vec.take(1);
-    system_wide_service_ = vec.take(1);
-    tetra_voice_service_ = vec.take(1);
-    circuit_mode_data_service_ = vec.take(1);
-    sndcp_service_ = vec.take(1);
-    air_interface_encryption_service_ = vec.take(1);
-    advanced_link_supported_ = vec.take(1);
+    registration_ = vec.take<1>();
+    deregistration_ = vec.take<1>();
+    priority_cell_ = vec.take<1>();
+    minimum_mode_service_ = vec.take<1>();
+    migration_ = vec.take<1>();
+    system_wide_service_ = vec.take<1>();
+    tetra_voice_service_ = vec.take<1>();
+    circuit_mode_data_service_ = vec.take<1>();
+    sndcp_service_ = vec.take<1>();
+    air_interface_encryption_service_ = vec.take<1>();
+    advanced_link_supported_ = vec.take<1>();
 
     system_info_received_ = true;
 
@@ -38,7 +38,7 @@ void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& ve
                              "TETRA management entity protocol",
                              "Reserved for testing"};
 
-    auto pdu_type = vec.take(3);
+    auto pdu_type = vec.take<3>();
 
     std::cout << "MLE " << mle_pdu[pdu_type] << " " << vec << std::endl;
 
@@ -87,7 +87,7 @@ void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& ve
         "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
     };
 
-    auto pdu_type = vec.take(3);
+    auto pdu_type = vec.take<3>();
 
     std::cout << "  " << mle_uplink_pdu_type[pdu_type] << " or " << mle_downlink_pdu_type[pdu_type] << std::endl;
     std::cout << "  " << vec << std::endl;

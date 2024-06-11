@@ -10,8 +10,8 @@
 
 #include "burst_type.hpp"
 #include "l2/timebase_counter.hpp"
+#include "utils/bit_vector.hpp"
 #include <cstdint>
-#include <vector>
 
 struct BroadcastSynchronizationChannel {
   public:
@@ -29,11 +29,11 @@ struct BroadcastSynchronizationChannel {
     uint32_t mobile_network_code = 0;
     uint8_t dNwrk_broadcast_broadcast_supported = 0;
     uint8_t dNwrk_broadcast_enquiry_supported = 0;
-    uint8_t cell_load_ca = 0;
+    unsigned _BitInt(2) cell_load_ca = 0;
     uint8_t late_entry_supported = 0;
 
     BroadcastSynchronizationChannel() = default;
-    BroadcastSynchronizationChannel(const BurstType burst_type, const std::vector<uint8_t>& data);
+    BroadcastSynchronizationChannel(const BurstType burst_type, BitVector&& vec);
 
     friend auto operator<<(std::ostream& stream, const BroadcastSynchronizationChannel& bsc) -> std::ostream&;
 };

@@ -13,7 +13,7 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     message_["to"] = to_address;
     message_["from"] = from_address;
 
-    auto protocol_identifier = vec.take(8);
+    uint8_t protocol_identifier = vec.take<8>();
 
     message_["protocol_identifier"] = protocol_identifier;
 
@@ -21,18 +21,17 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
 
     {
-        auto vec_copy = BitVector();
-        vec_copy.append(vec);
+        auto vec_copy = BitVector(vec);
 
         message_["data"] = nlohmann::json::array();
 
         for (uint64_t bits; vec_copy.bits_left() >= 8;) {
-            bits = vec_copy.take(8);
+            bits = vec_copy.take<8>();
             message_["data"].push_back(bits);
         }
 
         message_["bits_in_last_byte"] = vec_copy.bits_left();
-        message_["data"].push_back(vec_copy.take(vec_copy.bits_left()));
+        message_["data"].push_back(vec_copy.take_all());
     }
 
     switch (protocol_identifier) {
@@ -54,7 +53,7 @@ void ShortDataService::process_default(const AddressType to_address, const Addre
 
     std::stringstream stream;
     for (uint64_t bits; vec.bits_left() >= 8;) {
-        bits = vec.take(8);
+        bits = vec.take<8>();
         stream << " " << std::hex << std::setw(2) << std::setfill('0') << bits;
     }
 
@@ -64,12 +63,12 @@ void ShortDataService::process_default(const AddressType to_address, const Addre
 
 void ShortDataService::process_simple_text_messaging(const AddressType to_address, const AddressType from_address,
                                                      BitVector& vec) {
-    auto reserved = vec.take(1);
-    auto text_coding_scheme = vec.take(7);
+    auto reserved = vec.take<1>();
+    auto text_coding_scheme = vec.take<7>();
 
     std::stringstream stream;
     for (uint64_t bits; vec.bits_left() >= 8;) {
-        bits = vec.take(8);
+        bits = vec.take<8>();
         stream << " " << std::hex << std::setw(2) << std::setfill('0') << bits;
     }
 
@@ -138,18 +137,18 @@ static auto decode_direction_of_travel(uint64_t v) -> std::string {
 
 void ShortDataService::process_location_information_protocol(const AddressType to_address,
                                                              const AddressType from_address, BitVector& vec) {
-    auto pdu_type = vec.take(2);
+    auto pdu_type = vec.take<2>();
 
     if (pdu_type == 0b00) {
         // Short location report
-        auto time_elapsed = vec.take(2);
-        auto longitude = decode_longitude(vec.take(25));
-        auto latitude = decode_latitude(vec.take(24));
-        auto position_error = decode_position_error(vec.take(3));
-        auto horizontal_velocity = decode_horizontal_velocity(vec.take(7));
-        auto direction_of_travel = decode_direction_of_travel(vec.take(4));
-        auto type_of_addition_data = vec.take(1);
-        auto additional_data = vec.take(8);
+        auto time_elapsed = vec.take<2>();
+        auto longitude = decode_longitude(vec.take<25>());
+        auto latitude = decode_latitude(vec.take<24>());
+        auto position_error = decode_position_error(vec.take<3>());
+        auto horizontal_velocity = decode_horizontal_velocity(vec.take<7>());
+        auto direction_of_travel = decode_direction_of_travel(vec.take<4>());
+        auto type_of_addition_data = vec.take<1>();
+        auto additional_data = vec.take<8>();
         std::cout << "  Short Location Report" << std::endl;
         std::cout << "  Time elapsed: " << std::bitset<2>(time_elapsed) << " Lon: " << longitude << " Lat: " << latitude
                   << " Position error: " << position_error << " horizontal_velocity: " << horizontal_velocity
@@ -158,7 +157,7 @@ void ShortDataService::process_location_information_protocol(const AddressType t
                   << " additional_data: " << std::bitset<8>(additional_data) << std::endl;
     } else if (pdu_type == 0b01) {
         // Location protocol PDU with extension
-        auto pdu_type_extension = vec.take(4);
+        auto pdu_type_extension = vec.take<4>();
         std::cout << "  Location Information Protocol extension: 0b" << std::bitset<4>(pdu_type_extension) << std::endl;
     } else {
         // reserved

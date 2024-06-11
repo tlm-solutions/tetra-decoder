@@ -5,14 +5,14 @@
 
 auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
     // remove last 32 bits
-    auto fcs = vec.take_last(32);
+    std::bitset<32> fcs = vec.take_last<32>();
 
-    auto computed_fcs = vec.compute_fcs();
+    std::bitset<32> computed_fcs = vec.compute_fcs();
 
     if (fcs != computed_fcs) {
         std::cout << "  FCS error" << std::endl;
-        std::cout << "    FCS           0b" << std::bitset<32>(fcs) << std::endl;
-        std::cout << "    computed FCS: 0b" << std::bitset<32>(computed_fcs) << std::endl;
+        std::cout << "    FCS           0b" << fcs << std::endl;
+        std::cout << "    computed FCS: 0b" << computed_fcs << std::endl;
         return false;
     } else {
         std::cout << "  FCS good" << std::endl;
@@ -42,7 +42,7 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
                              "Layer 2 signalling PDU",
                              "AL-DISC"};
 
-    auto pdu_type = vec.take(4);
+    auto pdu_type = vec.take<4>();
 
     std::cout << "  " << llc_pdu[pdu_type] << std::endl;
 
@@ -87,8 +87,8 @@ void LogicalLinkControl::process(const AddressType address, BitVector& vec) {
 }
 
 void LogicalLinkControl::process_bl_adata_without_fcs(const AddressType address, BitVector& vec) {
-    auto n_r = vec.take(1);
-    auto n_s = vec.take(1);
+    auto n_r = vec.take<1>();
+    auto n_s = vec.take<1>();
 
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
@@ -97,7 +97,7 @@ void LogicalLinkControl::process_bl_adata_without_fcs(const AddressType address,
 }
 
 void LogicalLinkControl::process_bl_data_without_fcs(const AddressType address, BitVector& vec) {
-    auto n_s = vec.take(1);
+    auto n_s = vec.take<1>();
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
     mle_->service_user_pdu(address, vec);
@@ -108,15 +108,15 @@ void LogicalLinkControl::process_bl_udata_without_fcs(const AddressType address,
 }
 
 void LogicalLinkControl::process_bl_ack_without_fcs(const AddressType address, BitVector& vec) {
-    auto n_r = vec.take(1);
+    auto n_r = vec.take<1>();
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
     mle_->service_user_pdu(address, vec);
 }
 
 void LogicalLinkControl::process_bl_adata_with_fcs(const AddressType address, BitVector& vec) {
-    auto n_r = vec.take(1);
-    auto n_s = vec.take(1);
+    auto n_r = vec.take<1>();
+    auto n_s = vec.take<1>();
 
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
@@ -127,7 +127,7 @@ void LogicalLinkControl::process_bl_adata_with_fcs(const AddressType address, Bi
 }
 
 void LogicalLinkControl::process_bl_data_with_fcs(const AddressType address, BitVector& vec) {
-    auto n_s = vec.take(1);
+    auto n_s = vec.take<1>();
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
     if (LogicalLinkControl::check_fcs(vec)) {
@@ -142,7 +142,7 @@ void LogicalLinkControl::process_bl_udata_with_fcs(const AddressType address, Bi
 }
 
 void LogicalLinkControl::process_bl_ack_with_fcs(const AddressType address, BitVector& vec) {
-    auto n_r = vec.take(1);
+    auto n_r = vec.take<1>();
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
     if (LogicalLinkControl::check_fcs(vec)) {
@@ -154,7 +154,7 @@ void LogicalLinkControl::process_supplementary_llc_pdu(const AddressType address
     std::string supplementary_llc_pdu[] = {"AL-X-DATA/AL-X-DATA-AR/AL-X-FINAL/AL-X-FINAL-AR", "AL-X-UDATA/AL-X-UFINAL",
                                            "AL-X-UDATA/AL-X-UFINAL", "AL-X-ACK/AL-X-RNR", "Reserved"};
 
-    auto pdu_type = vec.take(2);
+    auto pdu_type = vec.take<2>();
 
     std::cout << "  " << supplementary_llc_pdu[pdu_type] << std::endl;
     std::cout << "  Data: " << vec << std::endl;
@@ -167,8 +167,6 @@ void LogicalLinkControl::process_supplementary_llc_pdu(const AddressType address
     case 0b10:
         break;
     case 0b11:
-        break;
-    default:
         break;
     }
 }

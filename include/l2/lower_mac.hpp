@@ -10,7 +10,9 @@
 #pragma once
 
 #include "l2/broadcast_synchronization_channel.hpp"
+#include "l2/slot.hpp"
 #include "l2/timebase_counter.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -61,6 +63,8 @@ class LowerMacPrometheusCounters {
     prometheus::Counter& lower_mac_burst_skipped_count_;
     /// The counter for the too many bursts in the downlink lower MAC
     prometheus::Counter& lower_mac_burst_too_many_count_;
+
+    /// TODO: add gauge for the synchronization burst time
 
   public:
     LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
@@ -167,11 +171,10 @@ class LowerMac {
              std::optional<uint32_t> scrambling_code = std::nullopt);
     ~LowerMac() = default;
 
-    // does the signal processing and then returns a list of function that need to be executed for data to be passed
-    // to upper mac sequentially.
+    // does the signal processing and then returns the slots containing the correct logical channels and their
+    // associated data to be passed to the upper mac and further processed in a sequential order.
     [[nodiscard]] auto processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
-                                       const BroadcastSynchronizationChannel& bsc)
-        -> std::vector<std::function<void()>>;
+                                       const BroadcastSynchronizationChannel& bsc) -> Slots;
 
     /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
     /// channels. keeps track of the current network time
@@ -179,9 +182,9 @@ class LowerMac {
         -> std::vector<std::function<void()>>;
 
   private:
-    std::shared_ptr<Reporter> reporter_{};
-    std::shared_ptr<ViterbiCodec> viter_bi_codec_1614_{};
-    std::shared_ptr<UpperMac> upper_mac_{};
+    std::shared_ptr<Reporter> reporter_;
+    const ViterbiCodec viter_bi_codec_1614_;
+    std::shared_ptr<UpperMac> upper_mac_;
 
     std::unique_ptr<LowerMacPrometheusCounters> metrics_;
 
@@ -189,13 +192,4 @@ class LowerMac {
     /// This include the current scrambling code. Set by Synchronization Burst on downlink or injected from the side for
     /// uplink processing, as we decouple it from the downlink for data/control packets.
     std::optional<BroadcastSynchronizationChannel> sync_;
-
-    static auto descramble(const uint8_t* data, uint8_t* res, std::size_t len, uint32_t scramblingCode) noexcept
-        -> void;
-    static auto deinterleave(const uint8_t* data, uint8_t* res, std::size_t K, std::size_t a) noexcept -> void;
-    [[nodiscard]] static auto depuncture23(const uint8_t* data, uint32_t len) noexcept -> std::vector<int16_t>;
-    static auto reed_muller_3014_decode(const uint8_t* data, uint8_t* res) noexcept -> void;
-    [[nodiscard]] static auto check_crc_16_ccitt(const uint8_t* data, std::size_t len) noexcept -> bool;
-
-    [[nodiscard]] auto viter_bi_decode_1614(const std::vector<int16_t>& data) const noexcept -> std::vector<uint8_t>;
 };

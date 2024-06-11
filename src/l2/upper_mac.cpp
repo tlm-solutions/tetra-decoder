@@ -4,30 +4,30 @@
 #include <l2/upper_mac.hpp>
 #include <utils/bit_vector.hpp>
 
-void UpperMac::process_SCH_HD(const BurstType burst_type, const std::vector<uint8_t>& data) {
+void UpperMac::process_SCH_HD(const BurstType burst_type, BitVector& vec) {
     assert(is_downlink_burst(burst_type));
 
     std::cout << "[Channel] SCH_HD" << std::endl;
-    process_signalling_channel(burst_type, data, true, false);
+    process_signalling_channel(burst_type, vec, true, false);
 }
 
-void UpperMac::process_SCH_HU(const BurstType burst_type, const std::vector<uint8_t>& data) {
-    assert(data.size() == 92);
+void UpperMac::process_SCH_HU(const BurstType burst_type, BitVector& vec) {
+    assert(vec.bits_left() == 92);
     assert(is_uplink_burst(burst_type));
 
     try {
         fragmentation_start_burst();
         last_address_type_ = AddressType();
 
-        auto vec = BitVector(data);
-
         std::cout << "[Channel] SCH_HU" << std::endl;
 
-        auto pduType = vec.take(1);
-        auto fill_bit_indication = vec.take(1);
+        auto pduType = vec.take<1>();
+        auto fill_bit_indication = vec.take<1>();
 
         remove_fill_bits_ = true;
-        remove_fill_bits(vec);
+        if (fill_bit_indication == 0b1) {
+            remove_fill_bits(vec);
+        }
 
         if (pduType == 0b0) {
             process_mac_access(vec);
@@ -43,36 +43,34 @@ void UpperMac::process_SCH_HU(const BurstType burst_type, const std::vector<uint
     }
 }
 
-void UpperMac::process_SCH_F(const BurstType burst_type, const std::vector<uint8_t>& data) {
+void UpperMac::process_SCH_F(const BurstType burst_type, BitVector& vec) {
     std::cout << "[Channel] SCH_F" << std::endl;
-    process_signalling_channel(burst_type, data, false, false);
+    process_signalling_channel(burst_type, vec, false, false);
 }
 
-void UpperMac::process_STCH(const BurstType burst_type, const std::vector<uint8_t>& data) {
+void UpperMac::process_STCH(const BurstType burst_type, BitVector& vec) {
     std::cout << "[Channel] STCH" << std::endl;
 
     second_slot_stolen_ = false;
 
-    process_signalling_channel(burst_type, data, true, true);
+    process_signalling_channel(burst_type, vec, true, true);
 }
 
-void UpperMac::process_signalling_channel(const BurstType burst_type, const std::vector<uint8_t>& data,
-                                          bool isHalfChannel, bool isStolenChannel) {
-    auto vec = BitVector(data);
-
+void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
+                                          bool isStolenChannel) {
     remove_fill_bits_ = true;
     try {
         fragmentation_start_burst();
-        process_signalling_channel(burst_type, vec, isHalfChannel, isStolenChannel);
+        process_signalling_channel_internal(burst_type, vec, isHalfChannel, isStolenChannel);
         fragmentation_end_burst();
     } catch (std::exception& e) {
         std::cout << "Error with decoding: " << e.what() << std::endl;
     }
 }
 
-void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
-                                          bool isStolenChannel) {
-    auto pduType = vec.take(2);
+void UpperMac::process_signalling_channel_internal(const BurstType burst_type, BitVector& vec, bool isHalfChannel,
+                                                   bool isStolenChannel) {
+    auto pduType = vec.take<2>();
 
     if (pduType == 0b00) {
         // MAC-RESOURCE (downlink) or MAC-DATA (uplink)
@@ -85,7 +83,7 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
     } else if (pduType == 0b01) {
         // MAC-END or MAC-FRAG
         // TMA-SAP
-        auto subtype = vec.take(1);
+        auto subtype = vec.take<1>();
         if (subtype == 0b0) {
             if (is_downlink_burst(burst_type)) {
                 process_mac_frag_downlink(vec);
@@ -126,13 +124,13 @@ void UpperMac::process_signalling_channel(const BurstType burst_type, BitVector&
     if (vec.bits_left() > 0) {
         std::cout << "BitsLeft(): " << std::to_string(vec.bits_left()) << " " << vec << std::endl;
         if (!vec.is_mac_padding()) {
-            process_signalling_channel(burst_type, vec, isHalfChannel, isStolenChannel);
+            process_signalling_channel_internal(burst_type, vec, isHalfChannel, isStolenChannel);
         }
     }
 }
 
 void UpperMac::process_broadcast(BitVector& vec) {
-    auto broadcastType = vec.take(2);
+    auto broadcastType = vec.take<2>();
     switch (broadcastType) {
     case 0b00:
         // SYSINFO PDU
@@ -151,14 +149,11 @@ void UpperMac::process_broadcast(BitVector& vec) {
         // Reserved
         // TODO: print unimplemented error
         break;
-    default:
-        // TODO: what should happen here panic ?
-        break;
     }
 }
 
 void UpperMac::process_supplementary_mac_pdu(const BurstType burst_type, BitVector& vec) {
-    auto subtype = vec.take(1);
+    auto subtype = vec.take<1>();
 
     switch (subtype) {
     case 0b0:
@@ -172,64 +167,61 @@ void UpperMac::process_supplementary_mac_pdu(const BurstType burst_type, BitVect
         // Reserved
         // TODO: print unimplemented error
         break;
-    default:
-        // TODO: what should happen ?
-        break;
     }
 }
 
 void UpperMac::process_system_info_pdu(BitVector& vec) {
-    auto mainCarrier = vec.take(12);
-    auto frequency_band = vec.take(4);
-    auto offset = vec.take(2);
-    auto duplexSpacing = vec.take(3);
-    auto reverseOperation = vec.take(1);
-    number_secondary_control_channels_main_carrier_ = vec.take(2);
-    ms_txpwr_max_cell_ = vec.take(3);
-    rxlev_access_min_ = vec.take(4);
-    access_parameter_ = vec.take(4);
-    radio_downlink_timeout_ = vec.take(4);
-    hyper_frame_cipher_key_flag_ = vec.take(1);
+    auto mainCarrier = vec.take<12>();
+    auto frequency_band = vec.take<4>();
+    auto offset = vec.take<2>();
+    auto duplexSpacing = vec.take<3>();
+    auto reverseOperation = vec.take<1>();
+    number_secondary_control_channels_main_carrier_ = vec.take<2>();
+    ms_txpwr_max_cell_ = vec.take<3>();
+    rxlev_access_min_ = vec.take<4>();
+    access_parameter_ = vec.take<4>();
+    radio_downlink_timeout_ = vec.take<4>();
+    hyper_frame_cipher_key_flag_ = vec.take<1>();
     if (hyper_frame_cipher_key_flag_ == 0) {
-        hyper_frame_number_ = vec.take(16);
+        hyper_frame_number_ = vec.take<16>();
     } else {
-        common_cipher_key_identifier_or_static_cipher_key_version_number_ = vec.take(16);
+        common_cipher_key_identifier_or_static_cipher_key_version_number_ = vec.take<16>();
     }
-    auto optionalFieldFlag = vec.take(2);
+    auto optionalFieldFlag = vec.take<2>();
     if (optionalFieldFlag == 0b00) {
-        *even_multi_frame_definition_for_ts_mode_ = vec.take(20);
+        *even_multi_frame_definition_for_ts_mode_ = vec.take<20>();
     } else if (optionalFieldFlag == 0b01) {
-        *odd_multi_frame_definition_for_ts_mode_ = vec.take(20);
+        *odd_multi_frame_definition_for_ts_mode_ = vec.take<20>();
     } else if (optionalFieldFlag == 0b10) {
-        defaults_for_access_code_a_.immediate_ = vec.take(4);
-        defaults_for_access_code_a_.waiting_time_ = vec.take(4);
-        defaults_for_access_code_a_.number_of_random_access_transmissions_on_up_link_ = vec.take(4);
-        defaults_for_access_code_a_.frame_length_factor_ = vec.take(1);
-        defaults_for_access_code_a_.timeslot_pointer_ = vec.take(4);
-        defaults_for_access_code_a_.minimum_pdu_priority_ = vec.take(3);
+        defaults_for_access_code_a_.immediate_ = vec.take<4>();
+        defaults_for_access_code_a_.waiting_time_ = vec.take<4>();
+        defaults_for_access_code_a_.number_of_random_access_transmissions_on_up_link_ = vec.take<4>();
+        defaults_for_access_code_a_.frame_length_factor_ = vec.take<1>();
+        defaults_for_access_code_a_.timeslot_pointer_ = vec.take<4>();
+        defaults_for_access_code_a_.minimum_pdu_priority_ = vec.take<3>();
         defaults_for_access_code_a_.system_info_ = true;
     } else if (optionalFieldFlag == 0b11) {
-        extended_service_broadcast_.security_information_ = vec.take(8);
-        extended_service_broadcast_.sdstl_addressing_method_ = vec.take(2);
-        extended_service_broadcast_.gck_supported_ = vec.take(1);
-        auto section = vec.take(2);
+        extended_service_broadcast_.security_information_ = vec.take<8>();
+        extended_service_broadcast_.sdstl_addressing_method_ = vec.take<2>();
+        extended_service_broadcast_.gck_supported_ = vec.take<1>();
+        auto section = vec.take<2>();
         if (section == 0b00) {
-            extended_service_broadcast_.data_priority_supported_ = vec.take(1);
-            extended_service_broadcast_.extended_advanced_links_and_max_ublck_supported_ = vec.take(1);
-            extended_service_broadcast_.qos_negotiation_supported_ = vec.take(1);
-            extended_service_broadcast_.d8psk_service_ = vec.take(1);
-            auto _sectionInformation = vec.take(3);
+            extended_service_broadcast_.data_priority_supported_ = vec.take<1>();
+            extended_service_broadcast_.extended_advanced_links_and_max_ublck_supported_ = vec.take<1>();
+            extended_service_broadcast_.qos_negotiation_supported_ = vec.take<1>();
+            extended_service_broadcast_.d8psk_service_ = vec.take<1>();
+            auto _sectionInformation = vec.take<3>();
             extended_service_broadcast_.system_info_section_1_ = true;
         } else if (section == 0b01) {
-            extended_service_broadcast_.service_25Qam_ = vec.take(1);
-            extended_service_broadcast_.service_50Qam_ = vec.take(1);
-            extended_service_broadcast_.service_100Qam_ = vec.take(1);
-            extended_service_broadcast_.service_150Qam_ = vec.take(1);
-            auto _reserved = vec.take(3);
+            extended_service_broadcast_.service_25Qam_ = vec.take<1>();
+            extended_service_broadcast_.service_50Qam_ = vec.take<1>();
+            extended_service_broadcast_.service_100Qam_ = vec.take<1>();
+            extended_service_broadcast_.service_150Qam_ = vec.take<1>();
+            auto _reserved = vec.take<3>();
             extended_service_broadcast_.system_info_section_2_ = true;
         } else {
             // TODO: Section 2 and 3 are reserved
-            auto _reserved = vec.take(7);
+            auto _reserved = vec.take<7>();
         }
         extended_service_broadcast_.system_info_ = true;
     }
@@ -263,7 +255,7 @@ void UpperMac::process_system_info_pdu(BitVector& vec) {
     // This element shall be present when the PDU is sent using π/8-D8PSK
     // modulation. This element shall not be present when the PDU is sent using
     // π/4-DQPSK modulation.
-    // auto reserved = vec.take(28);
+    // auto reserved = vec.take<28>();
 
     mobile_link_entity_->service_DMle_system_info(vec);
 
@@ -271,38 +263,38 @@ void UpperMac::process_system_info_pdu(BitVector& vec) {
 }
 
 void UpperMac::process_access_define_pdu(BitVector& vec) {
-    auto _ = vec.take(23);
-    auto optional_field_flag = vec.take(2);
+    auto _ = vec.take<23>();
+    auto optional_field_flag = vec.take<2>();
     if (optional_field_flag == 0b01) {
-        auto _subscriber_class_bitmap = vec.take(16);
+        auto _subscriber_class_bitmap = vec.take<16>();
     } else if (optional_field_flag == 0b10) {
-        auto _gssi = vec.take(24);
+        auto _gssi = vec.take<24>();
     }
-    auto _filter_bits = vec.take(3);
+    auto _filter_bits = vec.take<3>();
 }
 
 void UpperMac::process_mac_usignal(BitVector& vec) {
-    second_slot_stolen_ = (vec.take(1) == 1);
+    second_slot_stolen_ = (vec.take<1>() == 1);
 
     // TODO: TM-SDU
     auto bits_left = vec.bits_left();
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC U-SIGNAL" << std::endl;
     std::cout << "  Second subslot is stolen: " << (second_slot_stolen_ ? "true" : "false") << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 }
 
 void UpperMac::process_mac_d_blck(BitVector& vec) {
-    auto fill_bit_indication = vec.take(1);
-    auto encrypted = vec.take(2);
-    auto event_label = vec.take(10);
+    auto fill_bit_indication = vec.take<1>();
+    auto encrypted = vec.take<2>();
+    auto event_label = vec.take<10>();
     auto address = AddressType();
     address.set_event_label(event_label);
-    auto immediate_napping_permission_flag = vec.take(1);
-    auto slot_granting_flag = vec.take(1);
+    auto immediate_napping_permission_flag = vec.take<1>();
+    auto slot_granting_flag = vec.take<1>();
     auto basic_slot_granting_element = 0;
     if (slot_granting_flag == 0b1) {
-        basic_slot_granting_element = vec.take(8);
+        basic_slot_granting_element = vec.take<8>();
     }
 
     if (fill_bit_indication == 0b1) {
@@ -310,7 +302,7 @@ void UpperMac::process_mac_d_blck(BitVector& vec) {
     }
 
     auto bits_left = vec.bits_left();
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC D-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
@@ -319,19 +311,19 @@ void UpperMac::process_mac_d_blck(BitVector& vec) {
 }
 
 void UpperMac::process_mac_u_blck(BitVector& vec) {
-    auto fill_bit_indication = vec.take(1);
-    auto encrypted = vec.take(1);
-    auto event_label = vec.take(10);
+    auto fill_bit_indication = vec.take<1>();
+    auto encrypted = vec.take<1>();
+    auto event_label = vec.take<10>();
     auto address = AddressType();
     address.set_event_label(event_label);
-    auto reservation_requirement = vec.take(4);
+    auto reservation_requirement = vec.take<4>();
 
     if (fill_bit_indication == 0b1) {
         remove_fill_bits(vec);
     }
 
     auto bits_left = vec.bits_left();
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC U-BLCK" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted) << std::endl;
@@ -342,14 +334,14 @@ void UpperMac::process_mac_u_blck(BitVector& vec) {
 }
 
 void UpperMac::process_mac_frag_downlink(BitVector& vec) {
-    auto fill_bit_indication = vec.take(1);
+    auto fill_bit_indication = vec.take<1>();
 
     if (fill_bit_indication == 0b1) {
         remove_fill_bits(vec);
     }
 
     auto bits_left = vec.bits_left();
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC FRAG" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 
@@ -357,14 +349,14 @@ void UpperMac::process_mac_frag_downlink(BitVector& vec) {
 }
 
 void UpperMac::process_mac_frag_uplink(BitVector& vec) {
-    auto fill_bit_indication = vec.take(1);
+    auto fill_bit_indication = vec.take<1>();
 
     if (fill_bit_indication == 0b1) {
         remove_fill_bits(vec);
     }
 
     auto bits_left = vec.bits_left();
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC FRAG" << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
 
@@ -376,61 +368,61 @@ void UpperMac::process_mac_end_downlink(BitVector& vec) {
 
     auto pre_processing_bit_count = vec.bits_left() + 3;
 
-    auto fill_bit_indication = vec.take(1);
-    auto position_of_grant = vec.take(1);
-    auto length_indictaion = vec.take(6);
+    auto fill_bit_indication = vec.take<1>();
+    auto position_of_grant = vec.take<1>();
+    auto length_indictaion = vec.take<6>();
     // The immediate napping permission flag shall be present when the PDU is sent
     // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
-    // sent using π/4-DQPSK modulation. auto immediateNapping = vec.take(1);
-    auto slot_granting_flag = vec.take(1);
+    // sent using π/4-DQPSK modulation. auto immediateNapping = vec.take<1>();
+    auto slot_granting_flag = vec.take<1>();
     // The multiple slot granting flag shall be present when the slot granting
     // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
     // present when the slot granting flag is set to 0 or the PDU is sent using
-    // π/4-DQPSK or π/8-D8PSK modulation auto multipleSlotGranting = vec.take(1);
+    // π/4-DQPSK or π/8-D8PSK modulation auto multipleSlotGranting = vec.take<1>();
     // The basic slot granting element shall be present when the slot granting
     // flag is set to 1 and either the PDU is sent using π/4-DQPSK or π/8-D8PSK
     // modulation, or the PDU is sent using QAM modulation and the multiple slot
     // granting flag is set to 0.
     auto basic_slot_granting_element = 0;
     if (slot_granting_flag == 0b1) {
-        basic_slot_granting_element = vec.take(8);
+        basic_slot_granting_element = vec.take<8>();
     }
-    auto channel_allocation_flag = vec.take(1);
+    auto channel_allocation_flag = vec.take<1>();
     if (channel_allocation_flag == 0b1) {
-        auto channel_allocation1 = vec.take(22);
-        auto extended_carrier_numbering_flag = vec.take(1);
+        auto channel_allocation1 = vec.take<22>();
+        auto extended_carrier_numbering_flag = vec.take<1>();
         if (extended_carrier_numbering_flag == 0b1) {
-            auto channel_allocation2 = vec.take(9);
+            auto channel_allocation2 = vec.take<9>();
         }
-        auto monitoring_pattern = vec.take(2);
+        auto monitoring_pattern = vec.take<2>();
         if (monitoring_pattern == 0b00) {
-            auto frame18_monitoring_pattern = vec.take(2);
-            auto up_downlink_assigned_for_augmented_channel_allocation = vec.take(2);
-            auto bandwidth_of_allocated_channel = vec.take(3);
-            auto modulation_mode_of_allocated_channel = vec.take(3);
+            auto frame18_monitoring_pattern = vec.take<2>();
+            auto up_downlink_assigned_for_augmented_channel_allocation = vec.take<2>();
+            auto bandwidth_of_allocated_channel = vec.take<3>();
+            auto modulation_mode_of_allocated_channel = vec.take<3>();
             if (modulation_mode_of_allocated_channel == 0b010) {
-                auto maximum_uplink_qam_modulation_level = vec.take(3);
-                auto reserved = vec.take(3);
+                auto maximum_uplink_qam_modulation_level = vec.take<3>();
+                auto reserved = vec.take<3>();
             }
-            auto channel_allocation3 = vec.take(12);
-            auto napping_status = vec.take(2);
+            auto channel_allocation3 = vec.take<12>();
+            auto napping_status = vec.take<2>();
             if (napping_status == 0b01) {
-                auto napping_information = vec.take(11);
+                auto napping_information = vec.take<11>();
             }
-            auto reserved = vec.take(4);
+            auto reserved = vec.take<4>();
 
             // taking optional element a
-            auto conditional_element_a_flag = vec.take(1);
+            auto conditional_element_a_flag = vec.take<1>();
             if (conditional_element_a_flag == 0b1) {
-                auto conditional_element_a = vec.take(16);
+                auto conditional_element_a = vec.take<16>();
             }
 
             // taking optional element b
-            auto conditional_element_b_flag = vec.take(1);
+            auto conditional_element_b_flag = vec.take<1>();
             if (conditional_element_b_flag == 0b1) {
-                auto conditional_element_b = vec.take(16);
+                auto conditional_element_b = vec.take<16>();
             }
-            auto further_augmentation_flag = vec.take(1);
+            auto further_augmentation_flag = vec.take<1>();
         }
     }
 
@@ -441,7 +433,7 @@ void UpperMac::process_mac_end_downlink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC END" << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
@@ -453,8 +445,8 @@ void UpperMac::process_mac_end_downlink(BitVector& vec) {
 void UpperMac::process_mac_end_uplink(BitVector& vec) {
     auto pre_processing_bit_count = vec.bits_left() + 3;
 
-    auto fill_bit_indication = vec.take(1);
-    auto length_indictaion = vec.take(6);
+    auto fill_bit_indication = vec.take<1>();
+    auto length_indictaion = vec.take<6>();
 
     auto mac_header_length = pre_processing_bit_count - vec.bits_left();
     auto bits_left = length_indictaion * 8 - mac_header_length;
@@ -463,7 +455,7 @@ void UpperMac::process_mac_end_uplink(BitVector& vec) {
         remove_fill_bits(vec);
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "MAC END" << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
@@ -477,17 +469,17 @@ void UpperMac::process_mac_resource(BitVector& vec) {
 
     auto preprocessing_bit_count = vec.bits_left() + 2;
 
-    auto fill_bit_indication = vec.take(1);
-    auto position_of_grant = vec.take(1);
-    auto encryption_mode = vec.take(2);
-    auto random_access_flag = vec.take(1);
-    auto length_indictaion = vec.take(6);
+    auto fill_bit_indication = vec.take<1>();
+    auto position_of_grant = vec.take<1>();
+    auto encryption_mode = vec.take<2>();
+    auto random_access_flag = vec.take<1>();
+    auto length_indictaion = vec.take<6>();
     if (length_indictaion == 0b111110 || length_indictaion == 0b111111) {
         second_slot_stolen_ = true;
     }
     std::cout << "  Second subslot is stolen: " << (second_slot_stolen_ ? "true" : "false") << std::endl;
     std::cout << "  length_indictaion: 0b" << std::bitset<6>(length_indictaion) << std::endl;
-    auto address_type = vec.take(3);
+    auto address_type = vec.take<3>();
     auto address = AddressType();
     std::cout << "  address_type: 0b" << std::bitset<3>(address_type) << std::endl;
     if (address_type == 0b000) {
@@ -503,84 +495,84 @@ void UpperMac::process_mac_resource(BitVector& vec) {
         //           << std::endl;
         return;
     } else if (address_type == 0b001) {
-        address.set_ssi(vec.take(24));
+        address.set_ssi(vec.take<24>());
     } else if (address_type == 0b010) {
-        address.set_event_label(vec.take(10));
+        address.set_event_label(vec.take<10>());
     } else if (address_type == 0b011) {
-        address.set_ussi(vec.take(24));
+        address.set_ussi(vec.take<24>());
     } else if (address_type == 0b100) {
-        address.set_smi(vec.take(24));
+        address.set_smi(vec.take<24>());
     } else if (address_type == 0b101) {
-        address.set_ssi(vec.take(24));
-        address.set_event_label(vec.take(10));
+        address.set_ssi(vec.take<24>());
+        address.set_event_label(vec.take<10>());
     } else if (address_type == 0b110) {
-        address.set_ssi(vec.take(24));
-        address.set_usage_marker(vec.take(6));
+        address.set_ssi(vec.take<24>());
+        address.set_usage_marker(vec.take<6>());
     } else if (address_type == 0b111) {
-        address.set_smi(vec.take(24));
-        address.set_event_label(vec.take(10));
+        address.set_smi(vec.take<24>());
+        address.set_event_label(vec.take<10>());
     }
     // The immediate napping permission flag shall be present when the PDU is sent
     // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
     // sent using π/4-DQPSK modulation. auto immediateNappingPermisionFlag =
-    // vec.take(1);
-    auto power_control_flag = vec.take(1);
+    // vec.take<1>();
+    auto power_control_flag = vec.take<1>();
     if (power_control_flag == 0b1) {
-        auto power_control_element = vec.take(4);
+        auto power_control_element = vec.take<4>();
     }
-    auto slot_granting_flag = vec.take(1);
+    auto slot_granting_flag = vec.take<1>();
     // The multiple slot granting flag shall be present when the slot granting
     // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
     // present when the slot granting flag is set to 0 or the PDU is sent using
     // π/4-DQPSK or π/8-D8PSK modulation. auto multipleSlotGrantingFlag =
-    // vec.take(1); The basic slot granting element shall be present when the slot
+    // vec.take<1>(); The basic slot granting element shall be present when the slot
     // granting flag is set to 1 and either the PDU is sent using π/4-DQPSK or
     // π/8-D8PSK modulation, or the PDU is sent using QAM modulation and the
     // multiple slot granting flag is set to 0.
     if (slot_granting_flag == 0b1) {
-        auto basic_slot_granting_element = vec.take(8);
+        auto basic_slot_granting_element = vec.take<8>();
     }
-    auto channel_allocation_flag = vec.take(1);
+    auto channel_allocation_flag = vec.take<1>();
     std::cout << "  channel_allocation_flag = 0b" << std::bitset<1>(channel_allocation_flag) << std::endl;
     if (channel_allocation_flag == 0b1) {
-        auto allocation_type = vec.take(2);
-        auto time_slot_assigned = vec.take(4);
-        auto up_downlink_assigned = vec.take(2);
-        auto clch_permission = vec.take(1);
-        auto cell_change_flag = vec.take(1);
-        auto carrier_number = vec.take(12);
-        auto extended_carrier_numbering_flag = vec.take(1);
+        auto allocation_type = vec.take<2>();
+        auto time_slot_assigned = vec.take<4>();
+        auto up_downlink_assigned = vec.take<2>();
+        auto clch_permission = vec.take<1>();
+        auto cell_change_flag = vec.take<1>();
+        auto carrier_number = vec.take<12>();
+        auto extended_carrier_numbering_flag = vec.take<1>();
         if (extended_carrier_numbering_flag == 0b1) {
-            auto channel_allocation_2 = vec.take(10);
+            auto channel_allocation_2 = vec.take<10>();
         }
-        auto monitoring_pattern = vec.take(2);
+        auto monitoring_pattern = vec.take<2>();
         if (monitoring_pattern == 0b00) {
-            auto frame18_monitoring_pattern = vec.take(2);
+            auto frame18_monitoring_pattern = vec.take<2>();
         }
         if (up_downlink_assigned == 0b00) {
-            auto up_downlink_assigned_for_augmented_channel_allocation = vec.take(2);
-            auto bandwidth_of_allocated_channel = vec.take(3);
-            auto modulation_mode_of_allocated_channel = vec.take(3);
+            auto up_downlink_assigned_for_augmented_channel_allocation = vec.take<2>();
+            auto bandwidth_of_allocated_channel = vec.take<3>();
+            auto modulation_mode_of_allocated_channel = vec.take<3>();
             if (modulation_mode_of_allocated_channel == 0b010) {
-                auto maximumUplinkQamModulationLevel = vec.take(3);
+                auto maximumUplinkQamModulationLevel = vec.take<3>();
             } else {
-                auto reserved = vec.take(3);
+                auto reserved = vec.take<3>();
             }
-            auto channel_allocation3 = vec.take(12);
-            auto napping_status = vec.take(2);
+            auto channel_allocation3 = vec.take<12>();
+            auto napping_status = vec.take<2>();
             if (napping_status == 0b01) {
-                auto napping_information = vec.take(11);
+                auto napping_information = vec.take<11>();
             }
-            auto reserved = vec.take(4);
-            auto conditional_element_a_flag = vec.take(1);
+            auto reserved = vec.take<4>();
+            auto conditional_element_a_flag = vec.take<1>();
             if (conditional_element_a_flag == 0b1) {
-                auto conditional_element_a = vec.take(16);
+                auto conditional_element_a = vec.take<16>();
             }
-            auto conditional_element_b_flag = vec.take(1);
+            auto conditional_element_b_flag = vec.take<1>();
             if (conditional_element_b_flag == 0b1) {
-                auto conditional_element_b = vec.take(16);
+                auto conditional_element_b = vec.take<16>();
             }
-            auto further_augmentation_flag = vec.take(1);
+            auto further_augmentation_flag = vec.take<1>();
         }
     }
 
@@ -607,7 +599,7 @@ void UpperMac::process_mac_resource(BitVector& vec) {
         bits_left = vec.bits_left();
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "  TM-SDU: size = " << std::to_string(bits_left) << ": " << tm_sdu << std::endl;
     std::cout << "  mac_header_length = " << std::to_string(mac_header_length) << std::endl;
     std::cout << "  fill_bit_indication: 0b" << std::bitset<1>(fill_bit_indication) << std::endl;
@@ -625,29 +617,29 @@ void UpperMac::process_mac_resource(BitVector& vec) {
 void UpperMac::process_mac_data(BitVector& vec) {
     auto preprocessing_bit_count = vec.bits_left() + 2;
 
-    auto fill_bit_indication = vec.take(1);
-    auto encrypted_flag = vec.take(1);
-    auto address_type = vec.take(2);
+    auto fill_bit_indication = vec.take<1>();
+    auto encrypted_flag = vec.take<1>();
+    auto address_type = vec.take<2>();
 
     std::cout << "MAC DATA" << std::endl;
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
 
     auto address = AddressType();
     if (address_type == 0b00) {
-        address.set_ssi(vec.take(24));
+        address.set_ssi(vec.take<24>());
     } else if (address_type == 0b01) {
-        address.set_event_label(vec.take(10));
+        address.set_event_label(vec.take<10>());
     } else if (address_type == 0b11) {
-        address.set_ussi(vec.take(24));
+        address.set_ussi(vec.take<24>());
     } else if (address_type == 0b11) {
-        address.set_smi(vec.take(24));
+        address.set_smi(vec.take<24>());
     }
 
-    auto length_indication_or_capacity_request = vec.take(1);
+    auto length_indication_or_capacity_request = vec.take<1>();
     auto fragmentation = false;
     uint64_t length_indication{};
     if (length_indication_or_capacity_request == 0b0) {
-        length_indication = vec.take(6);
+        length_indication = vec.take<6>();
         std::cout << "  length indication: 0b" << std::bitset<6>(length_indication) << std::endl;
         if (length_indication == 0b111110) {
             std::cout << "  Second half slot stolen on STCH" << std::endl;
@@ -659,12 +651,12 @@ void UpperMac::process_mac_data(BitVector& vec) {
             fragmentation = true;
         }
     } else {
-        auto fragmentation_flag = vec.take(1);
+        auto fragmentation_flag = vec.take<1>();
         if (fragmentation_flag == 0b1) {
             fragmentation = true;
         }
-        auto reservation_requirement = vec.take(4);
-        auto reserved = vec.take(1);
+        auto reservation_requirement = vec.take<4>();
+        auto reserved = vec.take<1>();
 
         if (reservation_requirement == 0b0000) {
             last_address_type_end_hu_ = address;
@@ -687,7 +679,7 @@ void UpperMac::process_mac_data(BitVector& vec) {
         }
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
 
@@ -705,38 +697,38 @@ void UpperMac::process_mac_access(BitVector& vec) {
     auto preprocessing_bit_count = vec.bits_left() + 2;
 
     std::cout << "MAC-ACCESS" << std::endl;
-    auto encrypted_flag = vec.take(1);
-    auto address_type = vec.take(2);
+    auto encrypted_flag = vec.take<1>();
+    auto address_type = vec.take<2>();
 
     std::cout << "  encrypted: 0b" << std::bitset<1>(encrypted_flag) << std::endl;
 
     auto address = AddressType();
     if (address_type == 0b00) {
-        address.set_ssi(vec.take(24));
+        address.set_ssi(vec.take<24>());
     } else if (address_type == 0b01) {
-        address.set_event_label(vec.take(10));
+        address.set_event_label(vec.take<10>());
     } else if (address_type == 0b11) {
-        address.set_ussi(vec.take(24));
+        address.set_ussi(vec.take<24>());
     } else if (address_type == 0b11) {
-        address.set_smi(vec.take(24));
+        address.set_smi(vec.take<24>());
     }
 
-    auto optional_field_flag = vec.take(1);
+    auto optional_field_flag = vec.take<1>();
     uint64_t length_indication{};
     uint64_t length_indication_or_capacity_request{};
     auto fragmentation = false;
 
     if (optional_field_flag == 0b1) {
-        length_indication_or_capacity_request = vec.take(1);
+        length_indication_or_capacity_request = vec.take<1>();
         if (length_indication_or_capacity_request == 0b0) {
-            length_indication = vec.take(5);
+            length_indication = vec.take<5>();
             std::cout << "  length indication: 0b" << std::bitset<5>(length_indication) << std::endl;
         } else {
-            auto fragmentation_flag = vec.take(1);
+            auto fragmentation_flag = vec.take<1>();
             if (fragmentation_flag == 0b1) {
                 fragmentation = true;
             }
-            auto reservation_requirement = vec.take(4);
+            auto reservation_requirement = vec.take<4>();
 
             if (reservation_requirement == 0b0000) {
                 last_address_type_end_hu_ = address;
@@ -754,7 +746,7 @@ void UpperMac::process_mac_access(BitVector& vec) {
         bits_left = length_indication * 8 - mac_header_length;
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     std::cout << "  Address: " << address << std::endl;
 
@@ -769,14 +761,14 @@ void UpperMac::process_mac_end_hu(BitVector& vec) {
     auto preprocessing_bit_count = vec.bits_left() + 2;
     std::cout << "MAC-END-HU" << std::endl;
 
-    auto length_indictaion_or_capacity_request = vec.take(1);
+    auto length_indictaion_or_capacity_request = vec.take<1>();
     uint64_t length_indictaion;
     if (length_indictaion_or_capacity_request == 0b0) {
         // TODO: parse this
-        length_indictaion = vec.take(4);
+        length_indictaion = vec.take<4>();
         std::cout << "  length indication: 0b" << std::bitset<4>(length_indictaion) << std::endl;
     } else {
-        auto reservation_requirement = vec.take(4);
+        auto reservation_requirement = vec.take<4>();
         std::cout << "  reservation requirement: 0b" << std::bitset<4>(reservation_requirement) << std::endl;
     }
 
@@ -787,7 +779,7 @@ void UpperMac::process_mac_end_hu(BitVector& vec) {
         bits_left = length_indictaion * 8 - mac_header_length;
     }
 
-    auto tm_sdu = BitVector(vec.take_vector(bits_left), bits_left);
+    auto tm_sdu = vec.take_vector(bits_left);
     std::cout << "  TM-SDU: size = " << std::to_string(tm_sdu.bits_left()) << ": " << tm_sdu << std::endl;
     // XXX: implement combination of uplink and downlink
     std::cout << "  Last fragment sent on reserved subslot. Cannot process! Taking the last MAC-ACCESS or MAC-DATA as "
@@ -801,7 +793,7 @@ void UpperMac::process_mac_end_hu(BitVector& vec) {
 
 void UpperMac::remove_fill_bits(BitVector& vec) {
     if (remove_fill_bits_) {
-        while (vec.take_last() == 0b0)
+        while (vec.take_last<1>() == 0b0)
             ;
     }
     remove_fill_bits_ = false;
