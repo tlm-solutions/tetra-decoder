@@ -336,9 +336,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             UpperMacPackets packets;
             try {
                 packets = UpperMacPacketBuilder::parseSlots(slots);
-                if (packets.has_user_or_control_plane_data()) {
-                    std::cout << packets << std::endl;
-                }
+                // if (packets.has_user_or_control_plane_data()) {
+                //     std::cout << packets << std::endl;
+                // }
             } catch (std::runtime_error& e) {
                 std::cout << "Error decoding packets: " << e.what() << std::endl;
                 return;
