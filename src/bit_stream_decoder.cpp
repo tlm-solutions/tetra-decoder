@@ -87,18 +87,19 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
 
         if (score_ssn <= 4) {
             auto funcs = lower_mac_->process(frame_, burst_type);
-            for (auto func : funcs) {
+            for (const auto& func : funcs) {
                 func();
             }
 
-            if (funcs.size() > 0)
+            if (funcs.size() > 0) {
                 std::vector<uint8_t>(frame_.begin() + 200, frame_.end()).swap(frame_);
-            else
+            } else {
                 frame_.erase(frame_.begin());
+            }
         } else if (minimum_score <= 2) {
             // valid burst found, send it to lower MAC
             auto funcs = lower_mac_->process(frame_, burst_type);
-            for (auto func : funcs) {
+            for (const auto& func : funcs) {
                 func();
             }
 
@@ -136,7 +137,7 @@ void BitStreamDecoder::process_downlink_frame() noexcept {
     if (minimum_score <= 5) {
         // valid burst found, send it to lower MAC
         auto funcs = lower_mac_->process(frame_, burst_type);
-        for (auto func : funcs) {
+        for (const auto& func : funcs) {
             func();
         }
     }
