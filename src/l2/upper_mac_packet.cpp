@@ -7,339 +7,201 @@
  */
 
 #include "l2/upper_mac_packet.hpp"
-#include <bitset>
-#include <ostream>
 
-auto operator<<(std::ostream& stream, const AccessCodeDefinition& element) -> std::ostream& {
-    stream << "    Default definition for access code A information element:" << std::endl;
-    stream << "      Immediate: 0b" << std::bitset<4>(element.immediate_) << std::endl;
-    stream << "      Waiting time: 0b" << std::bitset<4>(element.waiting_time_) << std::endl;
-    stream << "      Number of random access transmissions on uplink: 0b"
-           << std::bitset<4>(element.number_of_random_access_transmissions_on_up_link_) << std::endl;
-    stream << "      Frame-length factor: 0b" << std::bitset<1>(element.frame_length_factor_) << std::endl;
-    stream << "      Timeslot pointer: 0b" << std::bitset<4>(element.timeslot_pointer_) << std::endl;
-    stream << "      Minimum PDU priority: 0b" << std::bitset<3>(element.minimum_pdu_priority_) << std::endl;
-    return stream;
+AccessCodeDefinition::AccessCodeDefinition(BitVector& data)
+    : immediate_(data.take<4>())
+    , waiting_time_(data.take<4>())
+    , number_of_random_access_transmissions_on_up_link_(data.take<4>())
+    , frame_length_factor_(data.take<1>())
+    , timeslot_pointer_(data.take<4>())
+    , minimum_pdu_priority_(data.take<3>()) {}
+
+ExtendedServiceBroadcastSection1::ExtendedServiceBroadcastSection1(BitVector& data)
+    : data_priority_supported_(data.take<1>())
+    , extended_advanced_links_and_max_ublck_supported_(data.take<1>())
+    , qos_negotiation_supported_(data.take<1>())
+    , d8psk_service_(data.take<1>())
+    , section2_sent_(data.take<1>())
+    , section3_sent_(data.take<1>())
+    , section4_sent_(data.take<1>()) {}
+
+ExtendedServiceBroadcastSection2::ExtendedServiceBroadcastSection2(BitVector& data)
+    : service_25Qam_(data.take<1>())
+    , service_50Qam_(data.take<1>())
+    , service_100Qam_(data.take<1>())
+    , service_150Qam_(data.take<1>())
+    , reserved_(data.take<3>()) {}
+
+ExtendedServiceBroadcastSection3::ExtendedServiceBroadcastSection3(BitVector& data)
+    : reserved_(data.take<7>()) {}
+
+ExtendedServiceBroadcastSection4::ExtendedServiceBroadcastSection4(BitVector& data)
+    : reserved_(data.take<7>()) {}
+
+ExtendedServiceBroadcast::ExtendedServiceBroadcast(BitVector& data)
+    : security_information_(data.take<8>())
+    , sdstl_addressing_method_(data.take<2>())
+    , gck_supported_(data.take<1>()) {
+    auto section = data.take<2>();
+    if (section == 0b00) {
+        section1_ = ExtendedServiceBroadcastSection1(data);
+    } else if (section == 0b01) {
+        section2_ = ExtendedServiceBroadcastSection2(data);
+    } else if (section == 0b10) {
+        section3_ = ExtendedServiceBroadcastSection3(data);
+    } else {
+        section4_ = ExtendedServiceBroadcastSection4(data);
+    }
 }
 
-auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection1& element) -> std::ostream& {
-    stream << "      Section1:" << std::endl;
-    stream << "        Data priority supported: 0b" << std::bitset<1>(element.data_priority_supported_) << std::endl;
-    stream << "        Extended advanced links and MAC-U-BLCK supported: 0b"
-           << std::bitset<1>(element.extended_advanced_links_and_max_ublck_supported_) << std::endl;
-    stream << "        QoS negotiation supported: 0b" << std::bitset<1>(element.qos_negotiation_supported_)
-           << std::endl;
-    stream << "        D8PSK service: 0b" << std::bitset<1>(element.d8psk_service_) << std::endl;
-    stream << "        section 2 sent: 0b" << std::bitset<1>(element.section2_sent_) << std::endl;
-    stream << "        section 3 sent: 0b" << std::bitset<1>(element.section3_sent_) << std::endl;
-    stream << "        section 4 sent: 0b" << std::bitset<1>(element.section4_sent_) << std::endl;
-    return stream;
+AccessDefine::AccessDefine(BitVector& data)
+    : common_or_assigned_control_channel_flag_(data.take<1>())
+    , access_code_(data.take<2>())
+    , access_code_definition_(data) {
+    auto optional_field_flag = data.take<2>();
+    if (optional_field_flag == 0b01) {
+        subscriber_class_bitmap_ = data.take<16>();
+    } else if (optional_field_flag == 0b10) {
+        gssi_ = data.take<24>();
+    }
+    auto filler_bits = data.take<3>();
 }
 
-auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection2& element) -> std::ostream& {
-    stream << "      Section2:" << std::endl;
-    stream << "        25 kHz QAM service: 0b" << std::bitset<1>(element.service_25Qam_) << std::endl;
-    stream << "        50 kHz QAM service: 0b" << std::bitset<1>(element.service_50Qam_) << std::endl;
-    stream << "        100 kHz QAM service: 0b" << std::bitset<1>(element.service_100Qam_) << std::endl;
-    stream << "        150 kHz QAM service: 0b" << std::bitset<1>(element.service_150Qam_) << std::endl;
-    stream << "        reserved: " << std::bitset<3>(element.reserved_) << std::endl;
-    return stream;
+SystemInfo::SystemInfo(BitVector& data)
+    : main_carrier_(data.take<12>())
+    , frequency_band_(data.take<4>())
+    , offset_(data.take<2>())
+    , duplex_spacing_field_(data.take<3>())
+    , reverse_operation_(data.take<1>())
+    , number_secondary_control_channels_main_carrier_(data.take<2>())
+    , ms_txpwr_max_cell_(data.take<3>())
+    , rxlev_access_min_(data.take<4>())
+    , access_parameter_(data.take<4>())
+    , radio_downlink_timeout_(data.take<4>()) {
+    auto hyper_frame_cipher_key_flag = data.take<1>();
+    if (hyper_frame_cipher_key_flag == 0) {
+        hyper_frame_number_ = data.take<16>();
+    } else {
+        common_cipher_key_identifier_or_static_cipher_key_version_number_ = data.take<16>();
+    }
+    auto optional_field_flag = data.take<2>();
+    if (optional_field_flag == 0b00) {
+        even_multi_frame_definition_for_ts_mode_ = data.take<20>();
+    } else if (optional_field_flag == 0b01) {
+        odd_multi_frame_definition_for_ts_mode_ = data.take<20>();
+    } else if (optional_field_flag == 0b10) {
+        defaults_for_access_code_a_ = AccessCodeDefinition(data);
+    } else if (optional_field_flag == 0b11) {
+        extended_service_broadcast_ = ExtendedServiceBroadcast(data);
+    }
+
+    // This element shall be present when the PDU is sent using π/8-D8PSK
+    // modulation. This element shall not be present when the PDU is sent using
+    // π/4-DQPSK modulation.
+    // auto reserved = vec.take<28>();
+
+    // Location area (14)
+    location_area_ = data.take<14>();
+    // Subscriber class (16)
+    subscriber_class_ = data.take<16>();
+    // BS service details (12)
+    registration_ = data.take<1>();
+    deregistration_ = data.take<1>();
+    priority_cell_ = data.take<1>();
+    minimum_mode_service_ = data.take<1>();
+    migration_ = data.take<1>();
+    system_wide_service_ = data.take<1>();
+    tetra_voice_service_ = data.take<1>();
+    circuit_mode_data_service_ = data.take<1>();
+    auto reserved = data.take<1>();
+    sndcp_service_ = data.take<1>();
+    air_interface_encryption_service_ = data.take<1>();
+    advanced_link_supported_ = data.take<1>();
 }
 
-auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection3& element) -> std::ostream& {
-    stream << "      Section3:" << std::endl;
-    stream << "        reserved: " << std::bitset<7>(element.reserved_) << std::endl;
-    return stream;
+auto SystemInfo::downlink_frequency() const noexcept -> int32_t {
+    // downlink main carrier frequency = base frequency + (main carrier × 25 kHz)
+    // + offset kHz.
+    const int32_t duplex[4] = {0, 6250, -6250, 12500};
+    return frequency_band_ * 100000000 + main_carrier_ * 25000 + duplex[offset_];
 }
 
-auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection4& element) -> std::ostream& {
-    stream << "      Section4:" << std::endl;
-    stream << "        reserved: " << std::bitset<7>(element.reserved_) << std::endl;
-    return stream;
+auto SystemInfo::uplink_frequency() const noexcept -> int32_t {
+    static const int32_t kTetraDuplexSpacing[8][16] = {
+        /* values are in kHz */
+        [0] = {-1, 1600, 10000, 10000, 10000, 10000, 10000, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        [1] = {-1, 4500, -1, 36000, 7000, -1, -1, -1, 45000, 45000, -1, -1, -1, -1, -1, -1},
+        [2] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        [3] = {-1, -1, -1, 8000, 8000, -1, -1, -1, 18000, 18000, -1, -1, -1, -1, -1, -1},
+        [4] = {-1, -1, -1, 18000, 5000, -1, 30000, 30000, -1, 39000, -1, -1, -1, -1, -1, -1},
+        [5] = {-1, -1, -1, -1, 9500, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        [6] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+        [7] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    };
+    const auto duplex_spacing = kTetraDuplexSpacing[duplex_spacing_field_][frequency_band_];
+    /* reserved for future standardization */
+    if (duplex_spacing < 0) {
+        return 0;
+    }
+    if (reverse_operation_) {
+        return downlink_frequency() + duplex_spacing * 1000;
+    }
+    return downlink_frequency() - duplex_spacing * 1000;
 }
 
-auto operator<<(std::ostream& stream, const ExtendedServiceBroadcast& element) -> std::ostream& {
-    stream << "    Extended services broadcast:" << std::endl;
-    stream << "      Security information: 0b" << std::bitset<8>(element.security_information_) << std::endl;
-    stream << "      SDS-TL addressing method: 0b" << std::bitset<2>(element.sdstl_addressing_method_) << std::endl;
-    stream << "      GCK supported: 0b" << std::bitset<1>(element.gck_supported_) << std::endl;
-    if (element.section1_) {
-        stream << *element.section1_;
-    }
-    if (element.section2_) {
-        stream << *element.section2_;
-    }
-    if (element.section3_) {
-        stream << *element.section3_;
-    }
-    if (element.section4_) {
-        stream << *element.section4_;
-    }
-    return stream;
-}
+ChannelAllocationElement::ChannelAllocationElement(BitVector& data)
+    : allocation_type_(data.take<2>())
+    , timeslot_assigned_(data.take<4>())
+    , up_downlink_assigned_(data.take<2>())
+    , clch_permission_(data.take<1>())
+    , cell_change_flag_(data.take<1>())
+    , carrier_number_(data.take<12>()) {
 
-auto operator<<(std::ostream& stream, const SystemInfo& element) -> std::ostream& {
-    stream << "    [SYSINFO]" << std::endl;
-    stream << "    DL " << std::to_string(element.downlink_frequency_) << "Hz UL "
-           << std::to_string(element.uplink_frequency_) << "Hz" << std::endl;
-    stream << "    Number of common secondary control channels in use on CA main "
-              "carrier: ";
-    switch (element.number_secondary_control_channels_main_carrier_) {
-    case 0b00:
-        stream << "None";
-        break;
-    case 0b01:
-        stream << "Timeslot 2 of main carrier";
-        break;
-    case 0b10:
-        stream << "Timeslots 2 and 3 of main carrier";
-        break;
-    case 0b11:
-        stream << "Timeslots 2, 3 and 4 of main carrier";
-        break;
-    }
-    stream << std::endl;
-    stream << "    MS_TXPWR_MAX_CELL: ";
-    switch (element.ms_txpwr_max_cell_) {
-    case 0b000:
-        stream << "Reserved";
-        break;
-    default:
-        stream << std::to_string(10 + 5 * element.ms_txpwr_max_cell_) << " dBm";
-        break;
-    }
-    stream << std::endl;
-    stream << "    RXLEV_ACCESS_MIN: " << std::to_string(-125 + 5 * element.rxlev_access_min_) << " dBm" << std::endl;
-    stream << "    ACCESS_PARAMETER: " << std::to_string(-53 + 2 * element.access_parameter_) << " dBm" << std::endl;
-    stream << "    RADIO_DOWNLINK_TIMEOUT: ";
-    switch (element.radio_downlink_timeout_) {
-    case 0b0000:
-        stream << "Disable radio downlink counter";
-        break;
-    default:
-        stream << std::to_string(144 * element.radio_downlink_timeout_) << " timeslots";
-        break;
-    }
-    stream << std::endl;
-    if (element.hyper_frame_number_) {
-        stream << "    Cyclic count of hyperframes: " << std::bitset<16>(*element.hyper_frame_number_) << std::endl;
-    }
-    if (element.common_cipher_key_identifier_or_static_cipher_key_version_number_) {
-        stream << "    Common cipher key identifier: "
-               << std::bitset<16>(*element.common_cipher_key_identifier_or_static_cipher_key_version_number_)
-               << std::endl;
-    }
-    if (element.even_multi_frame_definition_for_ts_mode_) {
-        stream << "    Bit map of common frames for TS mode (even multiframes): 0b"
-               << std::bitset<20>(*element.even_multi_frame_definition_for_ts_mode_) << std::endl;
-    }
-    if (element.odd_multi_frame_definition_for_ts_mode_) {
-        stream << "    Bit map of common frames for TS mode (odd multiframes): 0b"
-               << std::bitset<20>(*element.odd_multi_frame_definition_for_ts_mode_) << std::endl;
-    }
-    if (element.defaults_for_access_code_a_) {
-        stream << *element.defaults_for_access_code_a_;
-    }
-    if (element.extended_service_broadcast_) {
-        stream << *element.extended_service_broadcast_;
+    auto extended_carrier_numbering_flag = data.take<1>();
+    if (extended_carrier_numbering_flag == 0b1) {
+        ExtendedCarrierNumbering extended_carrier_numbering{};
+        extended_carrier_numbering.frequency_band_ = data.take<4>();
+        extended_carrier_numbering.offset_ = data.take<2>();
+        extended_carrier_numbering.duplex_spacing_ = data.take<3>();
+        extended_carrier_numbering.reverse_operation_ = data.take<1>();
+
+        extended_carrier_numbering_ = extended_carrier_numbering;
     }
 
-    stream << "    Location Area (LA): " << static_cast<unsigned>(element.location_area_) << std::endl;
-    stream << "    Subscriber Class 1..16 allowed: 0b" << std::bitset<16>(element.subscriber_class_) << std::endl;
-    stream << "    "
-           << (element.registration_ ? "Registration mandatory on this cell" : "Registration not required on this cell")
-           << std::endl;
-    stream << "    "
-           << (element.deregistration_ ? "De-registration requested on this cell"
-                                       : "De-registration not required on this cell")
-           << std::endl;
-    stream << "    " << (element.priority_cell_ ? "Cell is a priority cell" : "Cell is not a priority cell")
-           << std::endl;
-    stream << "    " << (element.minimum_mode_service_ ? "Cell never uses minimum mode" : "Cell may use minimum mode")
-           << std::endl;
-    stream << "    "
-           << (element.migration_ ? "Migration is supported by this cell" : "Migration is not supported by this cell")
-           << std::endl;
-    stream << "    "
-           << (element.system_wide_service_ ? "Normal mode (system wide services supported)"
-                                            : "System wide services temporarily not supported")
-           << std::endl;
-    stream << "    "
-           << (element.tetra_voice_service_ ? "TETRA voice service is supported on this cell"
-                                            : "TETRA voice service is not supported on this cell")
-           << std::endl;
-    stream << "    "
-           << (element.circuit_mode_data_service_ ? "Circuit mode data service is supported on this cell"
-                                                  : "Circuit mode data service is not supported on this cell")
-           << std::endl;
-    stream << "    "
-           << (element.sndcp_service_ ? "SNDCP service is available on this cell"
-                                      : "SNDCP service is not available on this cell")
-           << std::endl;
-    stream << "    "
-           << (element.air_interface_encryption_service_ ? "Air interface encryption is available on this cell"
-                                                         : "Air interface encryption is not available on this cell")
-           << std::endl;
-    stream << "    "
-           << (element.advanced_link_supported_ ? "Advanced link is supported on this cell"
-                                                : "Advanced link is not supported on this cell")
-           << std::endl;
-    return stream;
-}
-
-auto operator<<(std::ostream& stream, const AccessDefine& element) -> std::ostream& {
-    stream << "    [SYSINFO]" << std::endl;
-    stream << "    "
-           << (element.common_or_assigned_control_channel_flag_ ? "ACCESS-DEFINE applies to common channel"
-                                                                : "ACCESS-DEFINE applies to assigned channel")
-           << std::endl;
-    stream << "    Access code ";
-    switch (element.access_code_) {
-    case 0b00:
-        stream << "A";
-        break;
-    case 0b01:
-        stream << "B";
-        break;
-    case 0b10:
-        stream << "C";
-        break;
-    case 0b11:
-        stream << "D";
-        break;
-    }
-    stream << std::endl;
-    stream << element.access_code_definition_;
-    if (element.subscriber_class_bitmap_) {
-        stream << "    Subscriber class bit map: " << std::bitset<16>(*element.subscriber_class_bitmap_) << std::endl;
-    }
-    if (element.gssi_) {
-        stream << "    GSSI: " << std::bitset<24>(*element.gssi_) << std::endl;
-    }
-    return stream;
-}
-
-auto operator<<(std::ostream& stream, const UpperMacBroadcastPacket& packet) -> std::ostream& {
-    stream << "  [Broadcast]" << std::endl;
-    stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
-    stream << "  [PacketType] " << to_string(packet.type_) << std::endl;
-    if (packet.sysinfo_) {
-        stream << *packet.sysinfo_;
-    }
-    if (packet.access_define_) {
-        stream << *packet.access_define_;
-    }
-    return stream;
-}
-
-auto operator<<(std::ostream& stream, const ExtendedCarrierNumbering& element) -> std::ostream& {
-    stream << "    frequency band: " << std::bitset<4>(element.frequency_band_) << std::endl;
-    stream << "    offset: " << std::bitset<2>(element.offset_) << std::endl;
-    stream << "    duplex spacing: " << std::bitset<3>(element.duplex_spacing_) << std::endl;
-    stream << "    reverse operation: " << std::bitset<1>(element.reverse_operation_);
-    return stream;
-}
-
-auto operator<<(std::ostream& stream, const AugmentedChannelAllocation& element) -> std::ostream& {
-    stream << "    up/downlink assigned: " << std::bitset<2>(element.up_downlink_assigned_) << std::endl;
-    stream << "    bandwidth: " << std::bitset<3>(element.bandwidth_) << std::endl;
-    stream << "    modulation mode: " << std::bitset<3>(element.modulation_mode_) << std::endl;
-    if (element.maximum_uplink_qam_modulation_level_) {
-        stream << "    maximum qam modulation level: " << std::bitset<3>(*element.maximum_uplink_qam_modulation_level_)
-               << std::endl;
-    }
-    stream << "    conforming channel status: " << std::bitset<3>(element.conforming_channel_status_) << std::endl;
-    stream << "    bs link imbalance: " << std::bitset<4>(element.bs_link_imbalance_) << std::endl;
-    stream << "    bs power relative to main carrier: "
-           << std::bitset<5>(element.bs_transmit_power_relative_to_main_carrier_) << std::endl;
-    stream << "    napping status: " << std::bitset<2>(element.napping_status_) << std::endl;
-    if (element.napping_information_) {
-        stream << "    napping information: " << std::bitset<11>(*element.napping_information_) << std::endl;
-    }
-    if (element.conditional_element_a_) {
-        stream << "    conditional element a: " << std::bitset<16>(*element.conditional_element_a_) << std::endl;
-    }
-    if (element.conditional_element_b_) {
-        stream << "    conditional element b: " << std::bitset<16>(*element.conditional_element_b_) << std::endl;
-    }
-    stream << "    further augmentation flag: " << std::bitset<1>(element.further_augmentation_flag_);
-    return stream;
-}
-
-auto operator<<(std::ostream& stream, const ChannelAllocationElement& element) -> std::ostream& {
-    stream << "    allocation type: " << std::bitset<2>(element.allocation_type_) << std::endl;
-    stream << "    timeslot assigned: " << std::bitset<4>(element.timeslot_assigned_) << std::endl;
-    stream << "    up/downlink assigned: " << std::bitset<2>(element.up_downlink_assigned_) << std::endl;
-    stream << "    clch permissions: " << std::bitset<1>(element.clch_permission_) << std::endl;
-    stream << "    cell change flag: " << std::bitset<1>(element.cell_change_flag_) << std::endl;
-    stream << "    carrier number: " << std::bitset<12>(element.carrier_number_) << std::endl;
-    if (element.extended_carrier_numbering_) {
-        stream << *element.extended_carrier_numbering_ << std::endl;
-    }
-    stream << "    monitoring pattern: " << std::bitset<2>(element.monitoring_pattern_) << std::endl;
-    if (element.frame18_monitoring_pattern_) {
-        stream << "    frame18 monitoring pattern: " << std::bitset<2>(*element.frame18_monitoring_pattern_)
-               << std::endl;
-    }
-    if (element.augmented_channel_allocation_) {
-        stream << *element.augmented_channel_allocation_ << std::endl;
+    monitoring_pattern_ = data.take<2>();
+    if (monitoring_pattern_ == 0b00) {
+        frame18_monitoring_pattern_ = data.take<2>();
     }
 
-    return stream;
-}
+    if (up_downlink_assigned_ == 0b00) {
+        AugmentedChannelAllocation augmented_channel_allocation;
 
-auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream& {
-    stream << "  [CPlaneSignalling]" << std::endl;
-    stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
-    stream << "  [PacketType] " << to_string(packet.type_) << std::endl;
-    stream << "    encrypted: " << (packet.encrypted_ ? "true" : "false") << std::endl;
-    if (packet.encryption_mode_) {
-        stream << "    encryption mode: " << std::bitset<2>(*packet.encryption_mode_) << std::endl;
-    }
-    stream << "    address: " << packet.address_ << std::endl;
-    stream << "    fragmentation: " << (packet.fragmentation_ ? "true" : "false") << std::endl;
-    stream << "    fragmentation on stealing channel: "
-           << (packet.fragmentation_on_stealling_channel_ ? "true" : "false") << std::endl;
-    if (packet.reservation_requirement_) {
-        stream << "    reservation requirement: " << std::bitset<4>(*packet.reservation_requirement_) << std::endl;
-    }
-    if (packet.immediate_napping_permission_flag_) {
-        stream << "    immediate napping permission flag: "
-               << (*packet.immediate_napping_permission_flag_ ? "true" : "false") << std::endl;
-    }
-    if (packet.basic_slot_granting_element_) {
-        stream << "    basic slot granting element: " << std::bitset<8>(*packet.basic_slot_granting_element_)
-               << std::endl;
-    }
-    if (packet.position_of_grant_) {
-        stream << "    position of grant: " << std::bitset<1>(*packet.position_of_grant_) << std::endl;
-    }
-    if (packet.channel_allocation_element_) {
-        stream << *packet.channel_allocation_element_;
-    }
-    if (packet.random_access_flag_) {
-        stream << "    random access flag: " << std::bitset<1>(*packet.random_access_flag_) << std::endl;
-    }
-    if (packet.power_control_element_) {
-        stream << "    power control element: " << std::bitset<4>(*packet.power_control_element_) << std::endl;
-    }
-    if (packet.tm_sdu_) {
-        stream << "    " << *packet.tm_sdu_ << std::endl;
-    }
-    return stream;
-}
+        augmented_channel_allocation.up_downlink_assigned_ = data.take<2>();
+        augmented_channel_allocation.bandwidth_ = data.take<3>();
+        augmented_channel_allocation.modulation_mode_ = data.take<3>();
+        if (augmented_channel_allocation.modulation_mode_ == 0b010) {
+            augmented_channel_allocation.maximum_uplink_qam_modulation_level_ = data.take<3>();
+            auto reserved = data.take<3>();
+        }
+        augmented_channel_allocation.conforming_channel_status_ = data.take<3>();
+        augmented_channel_allocation.bs_link_imbalance_ = data.take<4>();
+        augmented_channel_allocation.bs_transmit_power_relative_to_main_carrier_ = data.take<5>();
 
-auto operator<<(std::ostream& stream, const UpperMacUPlaneSignallingPacket& packet) -> std::ostream& {
-    stream << "  [UPlaneSignalling]" << std::endl;
-    stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
-    stream << "  [PacketType] " << to_string(packet.type_) << std::endl;
-    stream << "    " << packet.tm_sdu << std::endl;
-    return stream;
-}
+        augmented_channel_allocation.napping_status_ = data.take<2>();
+        if (augmented_channel_allocation.napping_status_ == 0b01) {
+            augmented_channel_allocation.napping_information_ = data.take<11>();
+        }
+        auto reserved = data.take<4>();
+        auto conditional_element_a_flag = data.take<1>();
+        if (conditional_element_a_flag == 0b1) {
+            augmented_channel_allocation.conditional_element_a_ = data.take<16>();
+        }
+        auto conditional_element_b_flag = data.take<1>();
+        if (conditional_element_b_flag) {
+            augmented_channel_allocation.conditional_element_b_ = data.take<16>();
+        }
+        augmented_channel_allocation.further_augmentation_flag_ = data.take<1>();
 
-auto operator<<(std::ostream& stream, const UpperMacUPlaneTrafficPacket& packet) -> std::ostream& {
-    stream << "  [UPlaneTraffic]" << std::endl;
-    stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
-    stream << "    " << packet.data << std::endl;
-    return stream;
+        augmented_channel_allocation_ = augmented_channel_allocation;
+    }
 }

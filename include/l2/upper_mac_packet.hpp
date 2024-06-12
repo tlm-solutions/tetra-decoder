@@ -12,6 +12,7 @@
 #include "utils/address_type.hpp"
 #include "utils/bit_vector.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 
 enum class MacPacketType {
@@ -74,13 +75,7 @@ struct AccessCodeDefinition {
     unsigned _BitInt(3) minimum_pdu_priority_;
 
     AccessCodeDefinition() = delete;
-    explicit AccessCodeDefinition(BitVector& data)
-        : immediate_(data.take<4>())
-        , waiting_time_(data.take<4>())
-        , number_of_random_access_transmissions_on_up_link_(data.take<4>())
-        , frame_length_factor_(data.take<1>())
-        , timeslot_pointer_(data.take<4>())
-        , minimum_pdu_priority_(data.take<3>()) {}
+    explicit AccessCodeDefinition(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const AccessCodeDefinition& element) -> std::ostream&;
 };
@@ -96,6 +91,9 @@ struct ExtendedServiceBroadcastSection1 {
     unsigned _BitInt(1) section3_sent_;
     unsigned _BitInt(1) section4_sent_;
 
+    ExtendedServiceBroadcastSection1() = delete;
+    explicit ExtendedServiceBroadcastSection1(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection1& element) -> std::ostream&;
 };
 
@@ -108,6 +106,9 @@ struct ExtendedServiceBroadcastSection2 {
     unsigned _BitInt(1) service_150Qam_;
     unsigned _BitInt(3) reserved_;
 
+    ExtendedServiceBroadcastSection2() = delete;
+    explicit ExtendedServiceBroadcastSection2(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection2& element) -> std::ostream&;
 };
 
@@ -116,6 +117,9 @@ auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection2& el
 struct ExtendedServiceBroadcastSection3 {
     unsigned _BitInt(7) reserved_;
 
+    ExtendedServiceBroadcastSection3() = delete;
+    explicit ExtendedServiceBroadcastSection3(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection3& element) -> std::ostream&;
 };
 
@@ -123,6 +127,9 @@ auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection3& el
 
 struct ExtendedServiceBroadcastSection4 {
     unsigned _BitInt(7) reserved_;
+
+    ExtendedServiceBroadcastSection4() = delete;
+    explicit ExtendedServiceBroadcastSection4(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection4& element) -> std::ostream&;
 };
@@ -139,14 +146,20 @@ struct ExtendedServiceBroadcast {
     std::optional<ExtendedServiceBroadcastSection3> section3_;
     std::optional<ExtendedServiceBroadcastSection4> section4_;
 
+    ExtendedServiceBroadcast() = delete;
+    explicit ExtendedServiceBroadcast(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcast& element) -> std::ostream&;
 };
 
 auto operator<<(std::ostream& stream, const ExtendedServiceBroadcast& element) -> std::ostream&;
 
 struct SystemInfo {
-    int32_t downlink_frequency_ = 0;
-    int32_t uplink_frequency_ = 0;
+    unsigned _BitInt(12) main_carrier_;
+    unsigned _BitInt(4) frequency_band_;
+    unsigned _BitInt(2) offset_;
+    unsigned _BitInt(3) duplex_spacing_field_;
+    unsigned _BitInt(1) reverse_operation_;
     unsigned _BitInt(2) number_secondary_control_channels_main_carrier_;
     unsigned _BitInt(3) ms_txpwr_max_cell_;
     unsigned _BitInt(4) rxlev_access_min_;
@@ -173,6 +186,15 @@ struct SystemInfo {
     unsigned _BitInt(1) air_interface_encryption_service_;
     unsigned _BitInt(1) advanced_link_supported_;
 
+    SystemInfo() = delete;
+    explicit SystemInfo(BitVector& data);
+
+    // get the downlink frequency in Hz
+    [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t;
+
+    // get the uplink frequency in Hz
+    [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t;
+
     friend auto operator<<(std::ostream& stream, const SystemInfo& element) -> std::ostream&;
 };
 
@@ -186,18 +208,7 @@ struct AccessDefine {
     std::optional<unsigned _BitInt(24)> gssi_;
 
     AccessDefine() = delete;
-    explicit AccessDefine(BitVector& data)
-        : common_or_assigned_control_channel_flag_(data.take<1>())
-        , access_code_(data.take<2>())
-        , access_code_definition_(data) {
-        auto optional_field_flag = data.take<2>();
-        if (optional_field_flag == 0b01) {
-            subscriber_class_bitmap_ = data.take<16>();
-        } else if (optional_field_flag == 0b10) {
-            gssi_ = data.take<24>();
-        }
-        auto filler_bits = data.take<3>();
-    };
+    explicit AccessDefine(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const AccessDefine& element) -> std::ostream&;
 };
@@ -320,62 +331,7 @@ struct ChannelAllocationElement {
     std::optional<AugmentedChannelAllocation> augmented_channel_allocation_;
 
     ChannelAllocationElement() = delete;
-    explicit ChannelAllocationElement(BitVector& data)
-        : allocation_type_(data.take<2>())
-        , timeslot_assigned_(data.take<4>())
-        , up_downlink_assigned_(data.take<2>())
-        , clch_permission_(data.take<1>())
-        , cell_change_flag_(data.take<1>())
-        , carrier_number_(data.take<12>()) {
-
-        auto extended_carrier_numbering_flag = data.take<1>();
-        if (extended_carrier_numbering_flag == 0b1) {
-            ExtendedCarrierNumbering extended_carrier_numbering;
-            extended_carrier_numbering.frequency_band_ = data.take<4>();
-            extended_carrier_numbering.offset_ = data.take<2>();
-            extended_carrier_numbering.duplex_spacing_ = data.take<3>();
-            extended_carrier_numbering.reverse_operation_ = data.take<1>();
-
-            extended_carrier_numbering_ = extended_carrier_numbering;
-        }
-
-        monitoring_pattern_ = data.take<2>();
-        if (monitoring_pattern_ == 0b00) {
-            frame18_monitoring_pattern_ = data.take<2>();
-        }
-
-        if (up_downlink_assigned_ == 0b00) {
-            AugmentedChannelAllocation augmented_channel_allocation;
-
-            augmented_channel_allocation.up_downlink_assigned_ = data.take<2>();
-            augmented_channel_allocation.bandwidth_ = data.take<3>();
-            augmented_channel_allocation.modulation_mode_ = data.take<3>();
-            if (augmented_channel_allocation.modulation_mode_ == 0b010) {
-                augmented_channel_allocation.maximum_uplink_qam_modulation_level_ = data.take<3>();
-                auto reserved = data.take<3>();
-            }
-            augmented_channel_allocation.conforming_channel_status_ = data.take<3>();
-            augmented_channel_allocation.bs_link_imbalance_ = data.take<4>();
-            augmented_channel_allocation.bs_transmit_power_relative_to_main_carrier_ = data.take<5>();
-
-            augmented_channel_allocation.napping_status_ = data.take<2>();
-            if (augmented_channel_allocation.napping_status_ == 0b01) {
-                augmented_channel_allocation.napping_information_ = data.take<11>();
-            }
-            auto reserved = data.take<4>();
-            auto conditional_element_a_flag = data.take<1>();
-            if (conditional_element_a_flag == 0b1) {
-                augmented_channel_allocation.conditional_element_a_ = data.take<16>();
-            }
-            auto conditional_element_b_flag = data.take<1>();
-            if (conditional_element_b_flag) {
-                augmented_channel_allocation.conditional_element_b_ = data.take<16>();
-            }
-            augmented_channel_allocation.further_augmentation_flag_ = data.take<1>();
-
-            augmented_channel_allocation_ = augmented_channel_allocation;
-        }
-    };
+    explicit ChannelAllocationElement(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ChannelAllocationElement& element) -> std::ostream&;
 };
