@@ -332,7 +332,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         callbacks.emplace_back([this, slots_ref = slots] {
             auto slots = Slots(slots_ref);
-            std::cout << slots;
+            // std::cout << slots;
             UpperMacPackets packets;
             try {
                 packets = UpperMacPacketBuilder::parseSlots(slots);
