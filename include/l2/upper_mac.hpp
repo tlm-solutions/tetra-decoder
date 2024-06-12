@@ -20,7 +20,7 @@
 #include <optional>
 #include <reporter.hpp>
 #include <utility>
-#include <utils/address_type.hpp>
+#include <utils/address.hpp>
 
 class UpperMac {
   public:

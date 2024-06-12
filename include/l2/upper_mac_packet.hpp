@@ -9,7 +9,7 @@
 #pragma once
 
 #include "l2/logical_channel.hpp"
-#include "utils/address_type.hpp"
+#include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -346,7 +346,7 @@ struct UpperMacCPlaneSignallingPacket {
 
     bool encrypted_ = false;
 
-    AddressType address_;
+    Address address_;
     bool fragmentation_ = false;
 
     bool fragmentation_on_stealling_channel_ = false;
@@ -369,7 +369,7 @@ struct UpperMacCPlaneSignallingPacket {
 
     /// check if this packet is a null pdu
     [[nodiscard]] auto is_null_pdu() const -> bool {
-        return type_ == MacPacketType::kMacResource && address_ == AddressType{};
+        return type_ == MacPacketType::kMacResource && address_ == Address{};
     };
 
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;

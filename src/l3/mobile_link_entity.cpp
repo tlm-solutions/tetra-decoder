@@ -2,7 +2,7 @@
 
 #include <l3/mobile_link_entity.hpp>
 
-void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& vec) {
+void MobileLinkEntity::service_user_pdu(const Address address, BitVector& vec) {
     std::string mle_pdu[] = {"Reserved",
                              "MM protocol",
                              "CMCE protocol",
@@ -35,7 +35,7 @@ void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& ve
     }
 }
 
-void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& vec) {
+void MobileLinkEntity::service_data_pdu(const Address address, BitVector& vec) {
 
     std::string mle_downlink_pdu_type[] = {
         "D-NEW-CELL",    "D-PREPARE-FAIL", "D-NWRK-BROADCAST",   "D-NWRK-BROADCAST EXTENSION",

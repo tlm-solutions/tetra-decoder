@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "utils/bit_vector.hpp"
 #include <bitset>
 #include <iostream>
 #include <optional>
@@ -15,12 +16,19 @@
 
 #include <nlohmann/json.hpp>
 
-class AddressType {
+class Address {
   public:
-    AddressType() = default;
+    Address() = default;
+
+    /// extract the address from the address type and addres fields in MAC-ACCESS
+    static auto from_mac_access(BitVector& data) -> Address;
+    /// extract the address from the address type and addres fields in MAC-DATA
+    static auto from_mac_data(BitVector& data) -> Address;
+    /// extract the address from the address type and addres fields in MAC-RESOURCE
+    static auto from_mac_resource(BitVector& data) -> Address;
 
     // explicit operator bool() const = delete;
-    constexpr auto operator==(AddressType address_type) const -> bool {
+    constexpr auto operator==(Address address_type) const -> bool {
         return country_code_ == address_type.country_code_ && network_code_ == address_type.network_code_ &&
                sna_ == address_type.sna_ && ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ &&
                ussi_ == address_type.ussi_ && smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
@@ -44,7 +52,7 @@ class AddressType {
     [[nodiscard]] auto smi() const noexcept { return smi_; }
     [[nodiscard]] auto usage_marker() const noexcept { return usage_marker_; }
 
-    friend auto operator<<(std::ostream& stream, const AddressType& address_type) -> std::ostream&;
+    friend auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
 
   private:
     std::optional<std::bitset<10>> country_code_;
@@ -58,8 +66,8 @@ class AddressType {
 };
 
 namespace std {
-template <> struct hash<AddressType> {
-    auto operator()(const AddressType& k) const -> std::size_t {
+template <> struct hash<Address> {
+    auto operator()(const Address& k) const -> std::size_t {
         auto stream = std::stringstream();
         stream << k;
         return std::hash<std::string>()(stream.str());
@@ -68,8 +76,8 @@ template <> struct hash<AddressType> {
 } // namespace std
 
 namespace nlohmann {
-template <> struct adl_serializer<AddressType> {
-    static void to_json(json& j, AddressType address_type) {
+template <> struct adl_serializer<Address> {
+    static void to_json(json& j, Address address_type) {
         j = json::object();
         std::cout << address_type << std::endl << std::flush;
 
@@ -101,4 +109,4 @@ template <> struct adl_serializer<AddressType> {
 };
 } // namespace nlohmann
 
-auto operator<<(std::ostream& stream, const AddressType& address_type) -> std::ostream&;
+auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;

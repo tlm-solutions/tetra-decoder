@@ -28,10 +28,10 @@ class MobileLinkEntity {
         , is_downlink_(is_downlink){};
     ~MobileLinkEntity() noexcept = default;
 
-    void service_user_pdu(AddressType address, BitVector& vec);
+    void service_user_pdu(Address address, BitVector& vec);
 
   private:
-    void service_data_pdu(AddressType address, BitVector& vec);
+    void service_data_pdu(Address address, BitVector& vec);
 
     std::shared_ptr<Reporter> reporter_{};
     std::unique_ptr<CircuitModeControlEntity> cmce_{};

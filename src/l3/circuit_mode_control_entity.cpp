@@ -3,7 +3,7 @@
 
 #include <l3/circuit_mode_control_entity.hpp>
 
-void CircuitModeControlEntity::process(bool is_downlink, const AddressType address, BitVector& vec) {
+void CircuitModeControlEntity::process(bool is_downlink, const Address address, BitVector& vec) {
     std::string cmce_downlink_pdu[] = {"D-ALERT",        "D-CALL-PROCEEDING",
                                        "D-CONNECT",      "D-CONNECT ACKNOWLEDGE",
                                        "D-DISCONNECT",   "D-INFO",
@@ -52,9 +52,9 @@ void CircuitModeControlEntity::process(bool is_downlink, const AddressType addre
     }
 }
 
-void CircuitModeControlEntity::process_d_sds_data(const AddressType to_address, BitVector& vec) {
+void CircuitModeControlEntity::process_d_sds_data(const Address to_address, BitVector& vec) {
     auto calling_party_type_identifier = vec.take<2>();
-    AddressType from_address;
+    Address from_address;
 
     if (calling_party_type_identifier == 1 || calling_party_type_identifier == 2) {
         from_address.set_ssi(vec.take<24>());
@@ -84,10 +84,10 @@ void CircuitModeControlEntity::process_d_sds_data(const AddressType to_address, 
     }
 }
 
-void CircuitModeControlEntity::process_u_sds_data(const AddressType from_address, BitVector& vec) {
+void CircuitModeControlEntity::process_u_sds_data(const Address from_address, BitVector& vec) {
     auto area_selection = vec.take<4>();
     auto calling_party_type_identifier = vec.take<2>();
-    AddressType to_address;
+    Address to_address;
 
     if (calling_party_type_identifier == 0) {
         to_address.set_sna(vec.take<8>());

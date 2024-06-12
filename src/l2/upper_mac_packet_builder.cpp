@@ -11,7 +11,7 @@
 #include "l2/logical_channel.hpp"
 #include "l2/slot.hpp"
 #include "l2/upper_mac_packet.hpp"
-#include "utils/address_type.hpp"
+#include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
 #include <cstddef>
 #include <optional>
@@ -118,7 +118,7 @@ auto UpperMacPacketBuilder::parseBroadcast(LogicalChannel channel, BitVector&& d
         std::cout << packet;
         std::cout << data.bits_left() << " bits left over." << std::endl;
         std::cout << data << std::endl;
-        throw std::runtime_error("Reseved broadcast PDU but there are bits left after parsing.");
+        throw std::runtime_error("Bits left after parsing broadcast PDU.");
     }
 
     return packet;
@@ -141,18 +141,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacAccess};
 
             packet.encrypted_ = (data.take<1>() == 1U);
-            auto address_type = data.take<2>();
-
-            auto& address = packet.address_;
-            if (address_type == 0b00) {
-                address.set_ssi(data.take<24>());
-            } else if (address_type == 0b01) {
-                address.set_event_label(data.take<10>());
-            } else if (address_type == 0b11) {
-                address.set_ussi(data.take<24>());
-            } else if (address_type == 0b11) {
-                address.set_smi(data.take<24>());
-            }
+            packet.address_ = Address::from_mac_access(data);
 
             auto optional_field_flag = data.take<1>();
             std::optional<unsigned _BitInt(5)> length_indication;
@@ -265,18 +254,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             auto fill_bit_indication = data.take<1>();
 
             packet.encrypted_ = (data.take<1>() == 1U);
-            auto address_type = data.take<2>();
-
-            auto& address = packet.address_;
-            if (address_type == 0b00) {
-                address.set_ssi(data.take<24>());
-            } else if (address_type == 0b01) {
-                address.set_event_label(data.take<10>());
-            } else if (address_type == 0b11) {
-                address.set_ussi(data.take<24>());
-            } else if (address_type == 0b11) {
-                address.set_smi(data.take<24>());
-            }
+            packet.address_ = Address::from_mac_data(data);
 
             auto length_indication_or_capacity_request = data.take<1>();
             std::optional<unsigned _BitInt(6)> length_indication;
@@ -464,28 +442,13 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 packet.fragmentation_ = true;
             }
 
-            auto address_type = data.take<3>();
-            auto& address = packet.address_;
-            if (address_type == 0b001) {
-                address.set_ssi(data.take<24>());
-            } else if (address_type == 0b010) {
-                address.set_event_label(data.take<10>());
-            } else if (address_type == 0b011) {
-                address.set_ussi(data.take<24>());
-            } else if (address_type == 0b100) {
-                address.set_smi(data.take<24>());
-            } else if (address_type == 0b101) {
-                address.set_ssi(data.take<24>());
-                address.set_event_label(data.take<10>());
-            } else if (address_type == 0b110) {
-                address.set_ssi(data.take<24>());
-                address.set_usage_marker(data.take<6>());
-            } else if (address_type == 0b111) {
-                address.set_smi(data.take<24>());
-                address.set_event_label(data.take<10>());
-            }
+            packet.address_ = Address::from_mac_resource(data);
 
-            if (address_type != 0b000) {
+            if (packet.address_ == Address{}) {
+                // The null PDU, if it appears in a MAC block, shall always be the last PDU in that block. Any spare
+                // capacity after the null PDU shall be filled with fill bits.
+                data.remove_fill_bits();
+            } else {
                 // NOTE 3: The immediate napping permission flag shall be present when the PDU is sent using π/8-D8PSK
                 // or QAM modulation. It shall not be present when the PDU is sent using π/4-DQPSK modulation.
                 auto power_control_flag = data.take<1>();
@@ -540,10 +503,6 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 }
 
                 packet.tm_sdu_ = data.take_vector(bits_left);
-            } else {
-                // The null PDU, if it appears in a MAC block, shall always be the last PDU in that block. Any spare
-                // capacity after the null PDU shall be filled with fill bits.
-                data.remove_fill_bits();
             }
 
             return packet;

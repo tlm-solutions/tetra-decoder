@@ -10,7 +10,7 @@
 
 #include <reporter.hpp>
 #include <utility>
-#include <utils/address_type.hpp>
+#include <utils/address.hpp>
 #include <utils/bit_vector.hpp>
 
 class ShortDataService {
@@ -19,12 +19,12 @@ class ShortDataService {
         : reporter_(std::move(reporter)){};
     ~ShortDataService() noexcept = default;
 
-    void process(AddressType to_address, AddressType from_address, BitVector& vec);
+    void process(Address to_address, Address from_address, BitVector& vec);
 
   private:
-    void process_simple_text_messaging(AddressType to_address, AddressType from_address, BitVector& vec);
-    void process_location_information_protocol(AddressType to_address, AddressType from_address, BitVector& vec);
-    void process_default(AddressType to_address, AddressType from_address, BitVector& vec);
+    void process_simple_text_messaging(Address to_address, Address from_address, BitVector& vec);
+    void process_location_information_protocol(Address to_address, Address from_address, BitVector& vec);
+    void process_default(Address to_address, Address from_address, BitVector& vec);
 
     nlohmann::json message_;
     std::shared_ptr<Reporter> reporter_{};
