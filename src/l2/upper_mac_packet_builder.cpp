@@ -9,8 +9,11 @@
 #include "l2/upper_mac_packet_builder.hpp"
 #include "burst_type.hpp"
 #include "l2/logical_channel.hpp"
+#include "l2/slot.hpp"
 #include "l2/upper_mac_packet.hpp"
+#include "utils/address_type.hpp"
 #include "utils/bit_vector.hpp"
+#include <cstddef>
 #include <optional>
 #include <ostream>
 #include <stdexcept>
@@ -18,6 +21,10 @@
 auto operator<<(std::ostream& stream, const UpperMacPackets& packets) -> std::ostream& {
     stream << "[UpperMacPacket]" << std::endl;
     for (const auto& packet : packets.c_plane_signalling_packets_) {
+        if (packet.is_null_pdu()) {
+            // filter out null pdus
+            continue;
+        }
         stream << packet << std::endl;
     }
     for (const auto& packet : packets.u_plane_signalling_packet_) {
@@ -723,7 +730,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                     }
                 }
 
-                auto tm_sdu = data.take_vector(bits_left);
+                packet.tm_sdu_ = data.take_vector(bits_left);
 
                 return packet;
             }
@@ -778,19 +785,36 @@ auto UpperMacPacketBuilder::parseCPlaneSignalling(const BurstType burst_type, co
 
     std::vector<UpperMacCPlaneSignallingPacket> packets;
 
-    while (data.bits_left() > 0) {
-        std::cout << data << std::endl;
+    // 23.4.3.3 PDU dissociation
+    // If the remaining size in the MAC block is less than the length of the Null PDU, the MAC shall discard the
+    // remaining bits.
+    // NOTE 2: The size of the appropriate Null PDU (as used above) is 16 bits for the downlink, 36 bits for an uplink
+    // subslot, or 37 bits for an uplink full slot or uplink STCH.
+    std::size_t min_bit_count = 0;
+    if (is_downlink_burst(burst_type)) {
+        min_bit_count = 16;
+    } else {
+        if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
+            min_bit_count = 36;
+        } else if (channel == LogicalChannel::kSignalingChannelFull || channel == LogicalChannel::kStealingChannel) {
+            min_bit_count = 37;
+        }
+    }
+
+    while (data.bits_left() >= min_bit_count) {
         if (data.is_mac_padding()) {
             std::cout << "Found padding, skipping: " << data << std::endl;
             break;
         }
         auto packet = parseCPlaneSignallingPacket(burst_type, channel, data);
-        std::cout << packet;
         packets.emplace_back(std::move(packet));
-    }
 
-    // TODO: one mac may contain multiple mac headers. proccess all the others
-    // layers first and then continue with the next
+        // The Null PDU indicates that there is no more useful data in this MAC block; after receipt of the Null PDU,
+        // the MAC shall not look for further information in the block.
+        if (packets.back().is_null_pdu()) {
+            break;
+        }
+    }
     return packets;
 }
 

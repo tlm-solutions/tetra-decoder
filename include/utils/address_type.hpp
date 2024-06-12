@@ -20,7 +20,7 @@ class AddressType {
     AddressType() = default;
 
     // explicit operator bool() const = delete;
-    constexpr bool operator==(AddressType address_type) const {
+    constexpr auto operator==(AddressType address_type) const -> bool {
         return country_code_ == address_type.country_code_ && network_code_ == address_type.network_code_ &&
                sna_ == address_type.sna_ && ssi_ == address_type.ssi_ && event_label_ == address_type.event_label_ &&
                ussi_ == address_type.ussi_ && smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;

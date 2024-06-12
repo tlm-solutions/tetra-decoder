@@ -44,6 +44,23 @@ struct UpperMacPackets {
         }
     }
 
+    [[nodiscard]] auto has_user_or_control_plane_data() const -> bool {
+        for (const auto& packet : c_plane_signalling_packets_) {
+            if (packet.is_null_pdu()) {
+                // filter out null pdus
+                continue;
+            }
+            return true;
+        }
+        if (u_plane_signalling_packet_.size() > 0) {
+            return true;
+        }
+        if (u_plane_traffic_packet_) {
+            return true;
+        }
+        return false;
+    };
+
     friend auto operator<<(std::ostream& stream, const UpperMacPackets& packets) -> std::ostream&;
 };
 

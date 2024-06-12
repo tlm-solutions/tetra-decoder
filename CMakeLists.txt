@@ -21,7 +21,6 @@ add_executable(tetra-decoder
         src/l2/timebase_counter.cpp
         src/l2/upper_mac_packet.cpp
         src/l2/upper_mac_packet_builder.cpp
-        src/l2/upper_mac_fragmentation.cpp
         src/l3/mobile_link_entity.cpp
         src/l3/mobile_management.cpp
         src/l3/circuit_mode_control_entity.cpp

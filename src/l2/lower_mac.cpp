@@ -330,14 +330,24 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // check if we have crc decode errors in the lower mac
         decode_error |= slots.has_crc_error();
 
-        callbacks.emplace_back([slots_ref = slots] {
+        callbacks.emplace_back([this, slots_ref = slots] {
             auto slots = Slots(slots_ref);
             std::cout << slots;
+            UpperMacPackets packets;
             try {
-                auto packets = UpperMacPacketBuilder::parseSlots(slots);
-                std::cout << packets << std::endl;
+                packets = UpperMacPacketBuilder::parseSlots(slots);
+                if (packets.has_user_or_control_plane_data()) {
+                    std::cout << packets << std::endl;
+                }
             } catch (std::runtime_error& e) {
                 std::cout << "Error decoding packets: " << e.what() << std::endl;
+                return;
+            }
+            try {
+                upper_mac_->process(std::move(packets));
+
+            } catch (std::runtime_error& e) {
+                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
             }
         });
     }

@@ -411,6 +411,11 @@ struct UpperMacCPlaneSignallingPacket {
     std::optional<unsigned _BitInt(1)> random_access_flag_;
     std::optional<unsigned _BitInt(4)> power_control_element_;
 
+    /// check if this packet is a null pdu
+    [[nodiscard]] auto is_null_pdu() const -> bool {
+        return type_ == MacPacketType::kMacResource && address_ == AddressType{};
+    };
+
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;
 };
 

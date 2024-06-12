@@ -12,6 +12,10 @@ void MobileLinkEntity::service_user_pdu(const AddressType address, BitVector& ve
                              "TETRA management entity protocol",
                              "Reserved for testing"};
 
+    if (vec.bits_left() == 0) {
+        return;
+    }
+
     auto pdu_type = vec.take<3>();
 
     std::cout << "MLE " << mle_pdu[pdu_type] << " " << vec << std::endl;
@@ -60,6 +64,10 @@ void MobileLinkEntity::service_data_pdu(const AddressType address, BitVector& ve
         "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
         "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
     };
+
+    if (vec.bits_left() == 0) {
+        return;
+    }
 
     auto pdu_type = vec.take<3>();
 
