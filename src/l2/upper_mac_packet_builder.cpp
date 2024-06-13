@@ -40,28 +40,29 @@ auto operator<<(std::ostream& stream, const UpperMacPackets& packets) -> std::os
     return stream;
 }
 
-auto UpperMacPacketBuilder::parseSlots(Slots& slots) -> UpperMacPackets {
+auto UpperMacPacketBuilder::parse_slots(Slots& slots) -> UpperMacPackets {
     UpperMacPackets packets;
 
     {
         const auto& first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
-        packets.merge(parseSlot(slots.get_burst_type(), first_slot));
+        packets.merge(parse_slot(slots.get_burst_type(), first_slot));
     }
 
     if (slots.has_second_slot()) {
         const auto& second_slot = slots.get_second_slot().get_logical_channel_data_and_crc();
-        packets.merge(parseSlot(slots.get_burst_type(), second_slot));
+        packets.merge(parse_slot(slots.get_burst_type(), second_slot));
     }
 
     return packets;
 }
 
-auto UpperMacPacketBuilder::parseSlot(const BurstType burst_type,
-                                      const LogicalChannelDataAndCrc& logical_channel_data_and_crc) -> UpperMacPackets {
+auto UpperMacPacketBuilder::parse_slot(const BurstType burst_type,
+                                       const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
+    -> UpperMacPackets {
     const auto& channel = logical_channel_data_and_crc.channel;
     auto data = BitVector(logical_channel_data_and_crc.data);
     if (channel == LogicalChannel::kTrafficChannel) {
-        return UpperMacPackets{.u_plane_traffic_packet_ = parseUPlaneTraffic(channel, std::move(data))};
+        return UpperMacPackets{.u_plane_traffic_packet_ = parse_u_plane_traffic(channel, std::move(data))};
     }
 
     // filter out signalling packets with a wrong crc
@@ -77,25 +78,26 @@ auto UpperMacPacketBuilder::parseSlot(const BurstType burst_type,
         if (pdu_type == 0b11) {
             // process MAC-U-SIGNAL
             // this takes the complete stealing channel
-            return UpperMacPackets{.u_plane_signalling_packet_ = {parseUPlaneSignalling(channel, std::move(data))}};
+            return UpperMacPackets{.u_plane_signalling_packet_ = {parse_u_plane_signalling(channel, std::move(data))}};
         }
         return UpperMacPackets{.c_plane_signalling_packets_ =
-                                   parseCPlaneSignalling(burst_type, channel, std::move(data))};
+                                   parse_c_plane_signalling(burst_type, channel, std::move(data))};
     }
 
     if (pdu_type == 0b10) {
         // Broadcast
         // TMB-SAP
         if (is_downlink_burst(burst_type)) {
-            return UpperMacPackets{.broadcast_packet_ = parseBroadcast(channel, std::move(data))};
+            return UpperMacPackets{.broadcast_packet_ = parse_broadcast(channel, std::move(data))};
         }
         throw std::runtime_error("Broadcast may only be sent on downlink.");
     }
 
-    return UpperMacPackets{.c_plane_signalling_packets_ = parseCPlaneSignalling(burst_type, channel, std::move(data))};
+    return UpperMacPackets{.c_plane_signalling_packets_ =
+                               parse_c_plane_signalling(burst_type, channel, std::move(data))};
 }
 
-auto UpperMacPacketBuilder::parseBroadcast(LogicalChannel channel, BitVector&& data) -> UpperMacBroadcastPacket {
+auto UpperMacPacketBuilder::parse_broadcast(LogicalChannel channel, BitVector&& data) -> UpperMacBroadcastPacket {
     UpperMacBroadcastPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacBroadcast};
 
     auto pdu_type = data.take<2>();
@@ -162,8 +164,8 @@ auto UpperMacPacketBuilder::extract_tm_sdu(BitVector& data, std::size_t preproce
     return data.take_vector(payload_length);
 }
 
-auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, LogicalChannel channel, BitVector& data)
-    -> UpperMacCPlaneSignallingPacket {
+auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type, LogicalChannel channel,
+                                                            BitVector& data) -> UpperMacCPlaneSignallingPacket {
     auto preprocessing_bit_count = data.bits_left();
 
     if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
@@ -509,8 +511,8 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
     }
 }
 
-auto UpperMacPacketBuilder::parseCPlaneSignalling(const BurstType burst_type, const LogicalChannel channel,
-                                                  BitVector&& data) -> std::vector<UpperMacCPlaneSignallingPacket> {
+auto UpperMacPacketBuilder::parse_c_plane_signalling(const BurstType burst_type, const LogicalChannel channel,
+                                                     BitVector&& data) -> std::vector<UpperMacCPlaneSignallingPacket> {
 
     std::vector<UpperMacCPlaneSignallingPacket> packets;
 
@@ -535,7 +537,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignalling(const BurstType burst_type, co
             std::cout << "Found padding, skipping: " << data << std::endl;
             break;
         }
-        auto packet = parseCPlaneSignallingPacket(burst_type, channel, data);
+        auto packet = parse_c_plane_signalling_packet(burst_type, channel, data);
         packets.emplace_back(std::move(packet));
 
         // The Null PDU indicates that there is no more useful data in this MAC block; after receipt of the Null PDU,
@@ -547,7 +549,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignalling(const BurstType burst_type, co
     return packets;
 }
 
-auto UpperMacPacketBuilder::parseUPlaneSignalling(const LogicalChannel channel, BitVector&& data)
+auto UpperMacPacketBuilder::parse_u_plane_signalling(const LogicalChannel channel, BitVector&& data)
     -> UpperMacUPlaneSignallingPacket {
     // the only valid packet here is MAC-U-SIGNAL
 
@@ -562,7 +564,7 @@ auto UpperMacPacketBuilder::parseUPlaneSignalling(const LogicalChannel channel, 
         .logical_channel_ = channel, .type_ = MacPacketType::kMacUSignal, .tm_sdu_ = std::move(data)};
 }
 
-auto UpperMacPacketBuilder::parseUPlaneTraffic(const LogicalChannel channel, BitVector&& data)
+auto UpperMacPacketBuilder::parse_u_plane_traffic(const LogicalChannel channel, BitVector&& data)
     -> UpperMacUPlaneTrafficPacket {
     return UpperMacUPlaneTrafficPacket{.logical_channel_ = channel, .data_ = std::move(data)};
 }

@@ -335,7 +335,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
             // std::cout << slots;
             UpperMacPackets packets;
             try {
-                packets = UpperMacPacketBuilder::parseSlots(slots);
+                packets = UpperMacPacketBuilder::parse_slots(slots);
                 // if (packets.has_user_or_control_plane_data()) {
                 //     std::cout << packets << std::endl;
                 // }
