@@ -10,17 +10,10 @@
 #pragma once
 
 #include "l2/upper_mac_fragments.hpp"
-#include "l2/upper_mac_packet.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
-#include "utils/bit_vector.hpp"
-#include <burst_type.hpp>
 #include <l2/logical_link_control.hpp>
 #include <l3/mobile_link_entity.hpp>
-#include <memory>
-#include <optional>
 #include <reporter.hpp>
-#include <utility>
-#include <utils/address.hpp>
 
 class UpperMac {
   public:
@@ -31,12 +24,12 @@ class UpperMac {
         , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
 
+    /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
+    /// \param packets the packets that were parsed in the upper MAC layer
     auto process(UpperMacPackets&& packets) -> void {
         for (const auto& packet : packets.c_plane_signalling_packets_) {
             // TODO: handle fragmentation over STCH
-            if ((packet.type_ == MacPacketType::kMacResource && packet.fragmentation_) ||
-                (packet.type_ == MacPacketType::kMacFragmentDownlink) ||
-                (packet.type_ == MacPacketType::kMacEndDownlink)) {
+            if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
                 auto reconstructed_fragment = fragmentation_.push_fragment(packet);
                 if (reconstructed_fragment) {
                     auto data = BitVector(*reconstructed_fragment->tm_sdu_);

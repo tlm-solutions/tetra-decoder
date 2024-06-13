@@ -149,6 +149,40 @@ auto SystemInfo::uplink_frequency() const noexcept -> int32_t {
     return downlink_frequency() - duplex_spacing * 1000;
 }
 
+ExtendedCarrierNumbering::ExtendedCarrierNumbering(BitVector& data)
+    : frequency_band_(data.take<4>())
+    , offset_(data.take<2>())
+    , duplex_spacing_(data.take<3>())
+    , reverse_operation_(data.take<1>()) {}
+
+AugmentedChannelAllocation::AugmentedChannelAllocation(BitVector& data)
+    : up_downlink_assigned_(data.take<2>())
+    , bandwidth_(data.take<3>())
+    , modulation_mode_(data.take<3>()) {
+    if (modulation_mode_ == 0b010) {
+        maximum_uplink_qam_modulation_level_ = data.take<3>();
+        auto reserved = data.take<3>();
+    }
+    conforming_channel_status_ = data.take<3>();
+    bs_link_imbalance_ = data.take<4>();
+    bs_transmit_power_relative_to_main_carrier_ = data.take<5>();
+
+    napping_status_ = data.take<2>();
+    if (napping_status_ == 0b01) {
+        napping_information_ = data.take<11>();
+    }
+    auto reserved = data.take<4>();
+    auto conditional_element_a_flag = data.take<1>();
+    if (conditional_element_a_flag == 0b1) {
+        conditional_element_a_ = data.take<16>();
+    }
+    auto conditional_element_b_flag = data.take<1>();
+    if (conditional_element_b_flag) {
+        conditional_element_b_ = data.take<16>();
+    }
+    further_augmentation_flag_ = data.take<1>();
+}
+
 ChannelAllocationElement::ChannelAllocationElement(BitVector& data)
     : allocation_type_(data.take<2>())
     , timeslot_assigned_(data.take<4>())
@@ -159,13 +193,7 @@ ChannelAllocationElement::ChannelAllocationElement(BitVector& data)
 
     auto extended_carrier_numbering_flag = data.take<1>();
     if (extended_carrier_numbering_flag == 0b1) {
-        ExtendedCarrierNumbering extended_carrier_numbering{};
-        extended_carrier_numbering.frequency_band_ = data.take<4>();
-        extended_carrier_numbering.offset_ = data.take<2>();
-        extended_carrier_numbering.duplex_spacing_ = data.take<3>();
-        extended_carrier_numbering.reverse_operation_ = data.take<1>();
-
-        extended_carrier_numbering_ = extended_carrier_numbering;
+        extended_carrier_numbering_ = ExtendedCarrierNumbering(data);
     }
 
     monitoring_pattern_ = data.take<2>();
@@ -174,34 +202,6 @@ ChannelAllocationElement::ChannelAllocationElement(BitVector& data)
     }
 
     if (up_downlink_assigned_ == 0b00) {
-        AugmentedChannelAllocation augmented_channel_allocation;
-
-        augmented_channel_allocation.up_downlink_assigned_ = data.take<2>();
-        augmented_channel_allocation.bandwidth_ = data.take<3>();
-        augmented_channel_allocation.modulation_mode_ = data.take<3>();
-        if (augmented_channel_allocation.modulation_mode_ == 0b010) {
-            augmented_channel_allocation.maximum_uplink_qam_modulation_level_ = data.take<3>();
-            auto reserved = data.take<3>();
-        }
-        augmented_channel_allocation.conforming_channel_status_ = data.take<3>();
-        augmented_channel_allocation.bs_link_imbalance_ = data.take<4>();
-        augmented_channel_allocation.bs_transmit_power_relative_to_main_carrier_ = data.take<5>();
-
-        augmented_channel_allocation.napping_status_ = data.take<2>();
-        if (augmented_channel_allocation.napping_status_ == 0b01) {
-            augmented_channel_allocation.napping_information_ = data.take<11>();
-        }
-        auto reserved = data.take<4>();
-        auto conditional_element_a_flag = data.take<1>();
-        if (conditional_element_a_flag == 0b1) {
-            augmented_channel_allocation.conditional_element_a_ = data.take<16>();
-        }
-        auto conditional_element_b_flag = data.take<1>();
-        if (conditional_element_b_flag) {
-            augmented_channel_allocation.conditional_element_b_ = data.take<16>();
-        }
-        augmented_channel_allocation.further_augmentation_flag_ = data.take<1>();
-
-        augmented_channel_allocation_ = augmented_channel_allocation;
+        augmented_channel_allocation_ = AugmentedChannelAllocation(data);
     }
 }

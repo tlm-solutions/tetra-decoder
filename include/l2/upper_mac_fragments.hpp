@@ -14,20 +14,33 @@
 #include <stdexcept>
 #include <vector>
 
+/// hold the fragments of fragmented messages
 struct UpperMacFragments {
+    /// the start fragment
     std::optional<UpperMacCPlaneSignallingPacket> start_fragment_;
+    /// the optional continuation fragments
     std::vector<UpperMacCPlaneSignallingPacket> continuation_fragments_;
+    /// the end fragment
     std::optional<UpperMacCPlaneSignallingPacket> end_fragment_;
 };
 
+/// Class that provides the fragment reconstruction for uplink and downlink packets.
+/// TODO: Uplink fragmentation may include reserved slots and is therefore harder to reconstruct. This is not handled
+/// with this class.
+/// TODO: Fragmentation over two slots of a stealing channel is also not handled.
 class UpperMacFragmentation {
   private:
+    /// the fragments for the downlink
     UpperMacFragments downlink_fragments_;
+    /// the fragments for the uplink
     UpperMacFragments uplink_fragments_;
 
   public:
     UpperMacFragmentation() = default;
 
+    /// Push a fragment for reconstruction.
+    /// \param fragment the control plane signalling packet that is fragmented
+    /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
     auto push_fragment(const UpperMacCPlaneSignallingPacket& fragment)
         -> std::optional<UpperMacCPlaneSignallingPacket> {
         switch (fragment.type_) {
@@ -71,7 +84,7 @@ class UpperMacFragmentation {
             throw std::runtime_error("No fragmentation in MacUSignal");
         }
 
-        // TODO: forward and clear on MacEndDownlink
+        // forward and clear on MacEndDownlink
         if (downlink_fragments_.end_fragment_) {
             UpperMacCPlaneSignallingPacket packet = *downlink_fragments_.start_fragment_;
 
@@ -89,8 +102,23 @@ class UpperMacFragmentation {
             return packet;
         }
 
-        // TODO: forward and clear on MacEndHu and MacEndUplink
-        // TODO: uplink fragmentation may include reserved slots and is therefore harder to reconstruct
+        // forward and clear on MacEndHu and MacEndUplink
+        if (uplink_fragments_.end_fragment_) {
+            UpperMacCPlaneSignallingPacket packet = *uplink_fragments_.start_fragment_;
+
+            for (const auto& fragment : uplink_fragments_.continuation_fragments_) {
+                if (fragment.tm_sdu_) {
+                    packet.tm_sdu_->append(*fragment.tm_sdu_);
+                }
+            }
+            if (uplink_fragments_.end_fragment_->tm_sdu_) {
+                packet.tm_sdu_->append(*uplink_fragments_.end_fragment_->tm_sdu_);
+            }
+
+            uplink_fragments_ = UpperMacFragments{};
+
+            return packet;
+        }
 
         return std::nullopt;
     };

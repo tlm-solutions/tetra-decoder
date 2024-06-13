@@ -333,13 +333,13 @@ auto operator<<(std::ostream& stream, const UpperMacUPlaneSignallingPacket& pack
     stream << "  [UPlaneSignalling]" << std::endl;
     stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
     stream << "  [PacketType] " << to_string(packet.type_) << std::endl;
-    stream << "    " << packet.tm_sdu << std::endl;
+    stream << "    " << packet.tm_sdu_ << std::endl;
     return stream;
 }
 
 auto operator<<(std::ostream& stream, const UpperMacUPlaneTrafficPacket& packet) -> std::ostream& {
     stream << "  [UPlaneTraffic]" << std::endl;
     stream << "  [LogicalChannel] " << to_string(packet.logical_channel_) << std::endl;
-    stream << "    " << packet.data << std::endl;
+    stream << "    " << packet.data_ << std::endl;
     return stream;
 }

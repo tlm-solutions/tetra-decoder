@@ -45,20 +45,19 @@ auto UpperMacPacketBuilder::parseSlots(Slots& slots) -> UpperMacPackets {
 
     {
         const auto& first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
-        packets.merge(parseLogicalChannel(slots.get_burst_type(), first_slot));
+        packets.merge(parseSlot(slots.get_burst_type(), first_slot));
     }
 
     if (slots.has_second_slot()) {
         const auto& second_slot = slots.get_second_slot().get_logical_channel_data_and_crc();
-        packets.merge(parseLogicalChannel(slots.get_burst_type(), second_slot));
+        packets.merge(parseSlot(slots.get_burst_type(), second_slot));
     }
 
     return packets;
 }
 
-auto UpperMacPacketBuilder::parseLogicalChannel(const BurstType burst_type,
-                                                const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
-    -> UpperMacPackets {
+auto UpperMacPacketBuilder::parseSlot(const BurstType burst_type,
+                                      const LogicalChannelDataAndCrc& logical_channel_data_and_crc) -> UpperMacPackets {
     const auto& channel = logical_channel_data_and_crc.channel;
     auto data = BitVector(logical_channel_data_and_crc.data);
     if (channel == LogicalChannel::kTrafficChannel) {
@@ -560,10 +559,10 @@ auto UpperMacPacketBuilder::parseUPlaneSignalling(const LogicalChannel channel, 
     }
 
     return UpperMacUPlaneSignallingPacket{
-        .logical_channel_ = channel, .type_ = MacPacketType::kMacUSignal, .tm_sdu = std::move(data)};
+        .logical_channel_ = channel, .type_ = MacPacketType::kMacUSignal, .tm_sdu_ = std::move(data)};
 }
 
 auto UpperMacPacketBuilder::parseUPlaneTraffic(const LogicalChannel channel, BitVector&& data)
     -> UpperMacUPlaneTrafficPacket {
-    return UpperMacUPlaneTrafficPacket{.logical_channel_ = channel, .data = std::move(data)};
+    return UpperMacUPlaneTrafficPacket{.logical_channel_ = channel, .data_ = std::move(data)};
 }

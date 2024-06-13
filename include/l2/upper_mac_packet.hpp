@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <optional>
 
+/// The different MAC PDU types which define which MAC PDU is contained in the MAC.
 enum class MacPacketType {
     // downlink c-plane
     kMacResource,
@@ -75,6 +76,7 @@ struct AccessCodeDefinition {
     unsigned _BitInt(3) minimum_pdu_priority_;
 
     AccessCodeDefinition() = delete;
+    /// construct a AccessCodeDefinition from a BitVector
     explicit AccessCodeDefinition(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const AccessCodeDefinition& element) -> std::ostream&;
@@ -92,6 +94,7 @@ struct ExtendedServiceBroadcastSection1 {
     unsigned _BitInt(1) section4_sent_;
 
     ExtendedServiceBroadcastSection1() = delete;
+    /// construct a ExtendedServiceBroadcastSection1 from a BitVector
     explicit ExtendedServiceBroadcastSection1(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection1& element) -> std::ostream&;
@@ -107,6 +110,7 @@ struct ExtendedServiceBroadcastSection2 {
     unsigned _BitInt(3) reserved_;
 
     ExtendedServiceBroadcastSection2() = delete;
+    /// construct a ExtendedServiceBroadcastSection2 from a BitVector
     explicit ExtendedServiceBroadcastSection2(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection2& element) -> std::ostream&;
@@ -118,6 +122,7 @@ struct ExtendedServiceBroadcastSection3 {
     unsigned _BitInt(7) reserved_;
 
     ExtendedServiceBroadcastSection3() = delete;
+    /// construct a ExtendedServiceBroadcastSection3 from a BitVector
     explicit ExtendedServiceBroadcastSection3(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection3& element) -> std::ostream&;
@@ -129,6 +134,7 @@ struct ExtendedServiceBroadcastSection4 {
     unsigned _BitInt(7) reserved_;
 
     ExtendedServiceBroadcastSection4() = delete;
+    /// construct a ExtendedServiceBroadcastSection4 from a BitVector
     explicit ExtendedServiceBroadcastSection4(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection4& element) -> std::ostream&;
@@ -147,6 +153,7 @@ struct ExtendedServiceBroadcast {
     std::optional<ExtendedServiceBroadcastSection4> section4_;
 
     ExtendedServiceBroadcast() = delete;
+    /// construct a ExtendedServiceBroadcast from a BitVector
     explicit ExtendedServiceBroadcast(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ExtendedServiceBroadcast& element) -> std::ostream&;
@@ -187,6 +194,7 @@ struct SystemInfo {
     unsigned _BitInt(1) advanced_link_supported_;
 
     SystemInfo() = delete;
+    /// construct a SystemInfo from a BitVector
     explicit SystemInfo(BitVector& data);
 
     // get the downlink frequency in Hz
@@ -208,6 +216,7 @@ struct AccessDefine {
     std::optional<unsigned _BitInt(24)> gssi_;
 
     AccessDefine() = delete;
+    /// construct a AccessDefine from a BitVector
     explicit AccessDefine(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const AccessDefine& element) -> std::ostream&;
@@ -287,6 +296,10 @@ struct ExtendedCarrierNumbering {
     unsigned _BitInt(3) duplex_spacing_;
     unsigned _BitInt(1) reverse_operation_;
 
+    ExtendedCarrierNumbering() = delete;
+    /// construct a ExtendedCarrierNumbering from a BitVector
+    explicit ExtendedCarrierNumbering(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const ExtendedCarrierNumbering& element) -> std::ostream&;
 };
 
@@ -310,6 +323,10 @@ struct AugmentedChannelAllocation {
     std::optional<unsigned _BitInt(16)> conditional_element_b_;
     unsigned _BitInt(1) further_augmentation_flag_;
 
+    AugmentedChannelAllocation() = delete;
+    /// construct a AugmentedChannelAllocation from a BitVector
+    explicit AugmentedChannelAllocation(BitVector& data);
+
     friend auto operator<<(std::ostream& stream, const AugmentedChannelAllocation& element) -> std::ostream&;
 };
 
@@ -331,6 +348,7 @@ struct ChannelAllocationElement {
     std::optional<AugmentedChannelAllocation> augmented_channel_allocation_;
 
     ChannelAllocationElement() = delete;
+    /// construct a ChannelAllocationElement from a BitVector
     explicit ChannelAllocationElement(BitVector& data);
 
     friend auto operator<<(std::ostream& stream, const ChannelAllocationElement& element) -> std::ostream&;
@@ -344,11 +362,16 @@ struct UpperMacCPlaneSignallingPacket {
     /// the type of the mac packet
     MacPacketType type_;
 
+    /// Is the content of the packet encrypted
     bool encrypted_ = false;
 
+    /// The address this packet is addressed to
     Address address_;
-    bool fragmentation_ = false;
 
+    /// Is this packet fragmented
+    bool fragmentation_ = false;
+    /// Is this packet fragmented over a stealing channel, i.e. MAC-DATA in the first STCH and MAC-END (uplink) in the
+    /// second STCH. Same for MAC-RESOURCE and MAC-END (downlink).
     bool fragmentation_on_stealling_channel_ = false;
 
     std::optional<unsigned _BitInt(4)> reservation_requirement_;
@@ -372,6 +395,18 @@ struct UpperMacCPlaneSignallingPacket {
         return type_ == MacPacketType::kMacResource && address_ == Address{};
     };
 
+    /// check if this packet is part of a downlink fragment
+    [[nodiscard]] auto is_downlink_fragment() const -> bool {
+        return (type_ == MacPacketType::kMacResource && fragmentation_) ||
+               (type_ == MacPacketType::kMacFragmentDownlink) || (type_ == MacPacketType::kMacEndDownlink);
+    };
+
+    /// check if this packet is part of a uplink fragment
+    [[nodiscard]] auto is_uplink_fragment() const -> bool {
+        return (type_ == MacPacketType::kMacData && fragmentation_) || (type_ == MacPacketType::kMacFragmentUplink) ||
+               (type_ == MacPacketType::kMacEndUplink);
+    };
+
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;
 };
 
@@ -383,9 +418,7 @@ struct UpperMacUPlaneSignallingPacket {
     /// the type of the mac packet
     MacPacketType type_;
     /// the tm_sdu that is passed to the LLC
-    BitVector tm_sdu;
-
-    /// all the other relevant fields...
+    BitVector tm_sdu_;
 
     friend auto operator<<(std::ostream& stream, const UpperMacUPlaneSignallingPacket& packet) -> std::ostream&;
 };
@@ -396,9 +429,7 @@ struct UpperMacUPlaneTrafficPacket {
     /// the type of the logical channel on which this packet is sent
     LogicalChannel logical_channel_;
     /// the traffic in the packet
-    BitVector data;
-
-    /// all the other relevant fields...
+    BitVector data_;
 
     friend auto operator<<(std::ostream& stream, const UpperMacUPlaneTrafficPacket& packet) -> std::ostream&;
 };

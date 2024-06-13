@@ -16,12 +16,20 @@
 #include <stdexcept>
 #include <vector>
 
+/// datastructure to hold the packets that are processed in the upper MAC
 struct UpperMacPackets {
+    /// the C-plane signalling packets
     std::vector<UpperMacCPlaneSignallingPacket> c_plane_signalling_packets_;
+    /// the U-plane signalling packets
     std::vector<UpperMacUPlaneSignallingPacket> u_plane_signalling_packet_;
+    /// an optional U-plane traffic packet
     std::optional<UpperMacUPlaneTrafficPacket> u_plane_traffic_packet_;
+    /// an optional broadcast packet
     std::optional<UpperMacBroadcastPacket> broadcast_packet_;
 
+    /// Merge two extracted UpperMacPackets into one. Thsi function is used to merge the extracted packets from two
+    /// slots.
+    /// \param other the UpperMacPackets which should be merged into the current one
     auto merge(UpperMacPackets&& other) -> void {
         std::move(other.c_plane_signalling_packets_.begin(), other.c_plane_signalling_packets_.end(),
                   std::back_inserter(c_plane_signalling_packets_));
@@ -45,6 +53,8 @@ struct UpperMacPackets {
         }
     }
 
+    /// Check if the packet contains data that is of importance for C-Plane or U-Plane
+    /// \return true if the UpperMacPackets contain user or control plane data (either signalling or traffic)
     [[nodiscard]] auto has_user_or_control_plane_data() const -> bool {
         for (const auto& packet : c_plane_signalling_packets_) {
             if (packet.is_null_pdu()) {
@@ -80,23 +90,56 @@ class UpperMacPacketBuilder {
                                              unsigned _BitInt(1) fill_bit_indication,
                                              std::optional<std::size_t> length = std::nullopt) -> BitVector;
 
-    [[nodiscard]] static auto parseLogicalChannel(BurstType burst_type,
-                                                  const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
+    /// Parse a slot (singular) and extract all the contained packets
+    /// \param burst_type which burst was used to send this slot
+    /// \param logical_channel_data_and_crc the data passed from the lower mac for this slot
+    /// \return the extracted packets
+    [[nodiscard]] static auto parseSlot(BurstType burst_type,
+                                        const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
         -> UpperMacPackets;
 
+    /// Parse the broadcast packet contained in a BitVector
+    /// \param channel the logical channel on which the broadcast packet is sent
+    /// \param data the BitVector which holds the MAC broadcast packet
+    /// \return the parsed broadcast packet
     [[nodiscard]] static auto parseBroadcast(LogicalChannel channel, BitVector&& data) -> UpperMacBroadcastPacket;
+
+    /// Parse a control plane signalling packet (singular) contained in a BitVector
+    /// \param burst_type which burst was used to send this packet
+    /// \param channel the logical channel on which the packets are sent
+    /// \param data the BitVector which holds the packet
+    /// \return the parsed c-plane signalling packet
     [[nodiscard]] static auto parseCPlaneSignallingPacket(BurstType burst_type, LogicalChannel channel, BitVector& data)
         -> UpperMacCPlaneSignallingPacket;
+
+    /// Parse the control plane signalling packets contained in a BitVector
+    /// \param burst_type which burst was used to send these packets
+    /// \param channel the logical channel on which the packets are sent
+    /// \param data the BitVector which holds the packets
+    /// \return the parsed c-plane signalling packets
     [[nodiscard]] static auto parseCPlaneSignalling(BurstType burst_type, LogicalChannel channel, BitVector&& data)
         -> std::vector<UpperMacCPlaneSignallingPacket>;
+
+    /// Parse the user plane signalling packet contained in a BitVector
+    /// \param channel the logical channel on which the packet is sent
+    /// \param data the BitVector which holds the packet
+    /// \return the parsed u-plane signalling packet
     [[nodiscard]] static auto parseUPlaneSignalling(LogicalChannel channel, BitVector&& data)
         -> UpperMacUPlaneSignallingPacket;
+
+    /// Parse the user plane traffic packet contained in a BitVector
+    /// \param channel the logical channel on which the packet is sent
+    /// \param data the BitVector which holds the packet
+    /// \return the parsed u-plane traffic packet
     [[nodiscard]] static auto parseUPlaneTraffic(LogicalChannel channel, BitVector&& data)
         -> UpperMacUPlaneTrafficPacket;
 
   public:
     UpperMacPacketBuilder() = default;
 
-    // TODO: make this function take a const Slots reference
+    /// TODO: make this function take a const Slots reference.
+    /// Parse the slots from the lower mac and extract all the contained packets
+    /// \param slots the datastructure that contains all the information from the lower mact
+    /// \return the extracted packets
     static auto parseSlots(Slots& slots) -> UpperMacPackets;
 };
