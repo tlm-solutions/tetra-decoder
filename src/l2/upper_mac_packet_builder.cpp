@@ -319,7 +319,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             throw std::runtime_error("Broadcast PDU should not be handled in parseCPlaneSignallingPacket function!");
         }
 
-        if (pdu_type == 0b11) {
+        {
             // Supplementary MAC PDU (not on STCH, SCH/HD or SCH-P8/HD)
             auto subtype = data.take<1>();
 
@@ -473,7 +473,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             throw std::runtime_error("Broadcast PDU should not be handled in parseCPlaneSignallingPacket function!");
         }
 
-        if (pdu_type == 0b11) {
+        {
             // Supplementary MAC PDU (not on STCH, SCH/HD or SCH-P8/HD)
             auto subtype = data.take<1>();
 
