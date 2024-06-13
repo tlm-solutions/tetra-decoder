@@ -77,11 +77,11 @@ auto UpperMacPacketBuilder::parseLogicalChannel(const BurstType burst_type,
     if (channel == LogicalChannel::kStealingChannel) {
         if (pdu_type == 0b11) {
             // process MAC-U-SIGNAL
+            // this takes the complete stealing channel
             return UpperMacPackets{.u_plane_signalling_packet_ = {parseUPlaneSignalling(channel, std::move(data))}};
         }
         return UpperMacPackets{.c_plane_signalling_packets_ =
                                    parseCPlaneSignalling(burst_type, channel, std::move(data))};
-        // throw std::runtime_error("Only MAC-U-SIGNAL may be sent on the stealing channel.");
     }
 
     if (pdu_type == 0b10) {
@@ -124,14 +124,53 @@ auto UpperMacPacketBuilder::parseBroadcast(LogicalChannel channel, BitVector&& d
     return packet;
 }
 
+auto UpperMacPacketBuilder::extract_tm_sdu(BitVector& data, std::size_t preprocessing_bit_count,
+                                           unsigned _BitInt(1) fill_bit_indication, std::optional<std::size_t> length)
+    -> BitVector {
+    // 1. calculate the header size of the MAC. this step must be performed before removing fill bits, as this would
+    // change the number of bits in the BitVector
+    const auto mac_header_length = preprocessing_bit_count - data.bits_left();
+
+    // 2. remove the fill bits
+    if (fill_bit_indication == 0b1) {
+        data.remove_fill_bits();
+    }
+
+    // 3. calculate the length either through the length indicated in the packet or the implicit length
+    std::size_t payload_length = 0;
+    if (length) {
+        // there was a length indication in the packet. use it to calculate the payload size
+        payload_length = *length - mac_header_length;
+        // The fill bit indication shall indicate if there are any fill bits, which shall be added whenever the size of
+        // the TM-SDU is less than the available capacity of the MAC block or less than the size of the TM-SDU indicated
+        // by the length indication field. The TM-SDU length is equal to the MAC PDU length minus the MAC PDU header
+        // length.
+        if (payload_length > data.bits_left()) {
+            // cap the number of bits left to the maximum available. this should only happen if the
+            // tm_sdu size + mac header size is not alligned to octect boundary
+            if (payload_length - data.bits_left() >= 8) {
+                throw std::runtime_error(
+                    "Fill bits were indicated and the length indication shows a size that does not fit "
+                    "in the MAC, but the length indication is more than 7 bits apart.");
+            }
+            payload_length = data.bits_left();
+        }
+    } else {
+        // the length is defined implicitly
+        payload_length = data.bits_left();
+    }
+
+    return data.take_vector(payload_length);
+}
+
 auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, LogicalChannel channel, BitVector& data)
     -> UpperMacCPlaneSignallingPacket {
+    auto preprocessing_bit_count = data.bits_left();
+
     if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
         if (is_downlink_burst(burst_type)) {
             throw std::runtime_error("SignalingChannelHalfUplink may only be set on uplink.");
         }
-
-        auto preprocessing_bit_count = data.bits_left();
 
         auto pdu_type = data.take<1>();
         auto fill_bit_indication = data.take<1>();
@@ -145,53 +184,25 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
 
             auto optional_field_flag = data.take<1>();
             std::optional<unsigned _BitInt(5)> length_indication;
+            std::optional<std::size_t> length;
             if (optional_field_flag == 0b1) {
                 auto length_indication_or_capacity_request = data.take<1>();
                 if (length_indication_or_capacity_request == 0b0) {
                     length_indication = data.take<5>();
+                    length = LengthIndication::from_mac_access(*length_indication);
                 } else {
                     packet.fragmentation_ = (data.take<1>() == 1U);
                     packet.reservation_requirement_ = data.take<4>();
                 }
             }
 
-            auto bits_left = data.bits_left();
-            const auto mac_header_length = preprocessing_bit_count - bits_left;
-
-            if (fill_bit_indication == 0b1) {
-                data.remove_fill_bits();
+            // Null PDU
+            if (length_indication == 0b00000) {
+                return packet;
             }
 
-            if (length_indication.has_value()) {
-                if (length_indication == 0b00000) {
-                    bits_left = 0;
-                } else {
-                    bits_left = LengthIndication::from_mac_access(*length_indication) - mac_header_length;
-                    if (fill_bit_indication == 0b1) {
-                        // The fill bit indication shall indicate if there are any fill bits, which shall be added
-                        // whenever the
-                        // size of the TM-SDU is less than the available capacity of the MAC block or less than the size
-                        // of the TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC
-                        // PDU length minus the MAC PDU header length.
-                        if (bits_left > data.bits_left()) {
-                            // cap the number of bits left to the maximum available. this should only happen if the
-                            // tm_sdu size + mac header size is not alligned to octect boundary
-                            if (bits_left - data.bits_left() >= 8) {
-                                throw std::runtime_error(
-                                    "Fill bits were indicated and the length indication shows a size that does not fit "
-                                    "in the MAC, but the length indication is more than 7 bits apart.");
-                            }
-                            bits_left = data.bits_left();
-                        }
-                    }
-                }
-            } else {
-                bits_left = data.bits_left();
-            }
-
-            if (bits_left != 0) {
-                packet.tm_sdu_ = data.take_vector(bits_left);
-            }
+            packet.tm_sdu_ =
+                UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
             return packet;
         }
@@ -202,39 +213,16 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
 
             auto length_indictaion_or_capacity_request = data.take<1>();
             std::optional<unsigned _BitInt(4)> length_indication;
+            std::optional<std::size_t> length;
             if (length_indictaion_or_capacity_request == 0b0) {
                 length_indication = data.take<4>();
+                length = LengthIndication::from_mac_end_hu(*length_indication);
             } else {
                 packet.reservation_requirement_ = data.take<4>();
             }
 
-            auto bits_left = data.bits_left();
-            const auto mac_header_length = preprocessing_bit_count - bits_left;
-
-            if (length_indication.has_value()) {
-                bits_left = LengthIndication::from_mac_end_hu(*length_indication) - mac_header_length;
-                if (fill_bit_indication == 0b1) {
-                    // The fill bit indication shall indicate if there are any fill bits, which shall be added
-                    // whenever the
-                    // size of the TM-SDU is less than the available capacity of the MAC block or less than the size
-                    // of the TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC
-                    // PDU length minus the MAC PDU header length.
-                    if (bits_left > data.bits_left()) {
-                        // cap the number of bits left to the maximum available. this should only happen if the
-                        // tm_sdu size + mac header size is not alligned to octect boundary
-                        if (bits_left - data.bits_left() >= 8) {
-                            throw std::runtime_error(
-                                "Fill bits were indicated and the length indication shows a size that does not fit "
-                                "in the MAC, but the length indication is more than 7 bits apart.");
-                        }
-                        bits_left = data.bits_left();
-                    }
-                }
-            } else {
-                bits_left = data.bits_left();
-            }
-
-            packet.tm_sdu_ = data.take_vector(bits_left);
+            packet.tm_sdu_ =
+                UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
             return packet;
         }
@@ -242,8 +230,6 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
 
     if (is_uplink_burst(burst_type)) {
         // process the SCH/F and STCH of the uplink
-        auto preprocessing_bit_count = data.bits_left();
-
         auto pdu_type = data.take<2>();
 
         if (pdu_type == 0b00) {
@@ -258,10 +244,17 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
 
             auto length_indication_or_capacity_request = data.take<1>();
             std::optional<unsigned _BitInt(6)> length_indication;
+            std::optional<std::size_t> length;
             if (length_indication_or_capacity_request == 0b0) {
                 length_indication = data.take<6>();
                 if (length_indication == 0b111111) {
                     packet.fragmentation_on_stealling_channel_ = true;
+                }
+                if (length_indication == 0b111111 || length_indication == 0b111110) {
+                    // length is defined implicitly
+                    length_indication.reset();
+                } else {
+                    length = LengthIndication::from_mac_data(*length_indication);
                 }
             } else {
                 packet.fragmentation_ = (data.take<1>() == 1U);
@@ -269,45 +262,13 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 auto reserved = data.take<1>();
             }
 
-            auto bits_left = data.bits_left();
-            const auto mac_header_length = preprocessing_bit_count - bits_left;
-
-            if (fill_bit_indication == 0b1) {
-                data.remove_fill_bits();
+            // Null PDU
+            if (length_indication == 0b000000) {
+                return packet;
             }
 
-            if (length_indication.has_value()) {
-                if (length_indication == 0b000000) {
-                    bits_left = 0;
-                } else if (length_indication == 0b111111 || length_indication == 0b111110) {
-                    bits_left = data.bits_left();
-                } else {
-                    bits_left = LengthIndication::from_mac_data(*length_indication) - mac_header_length;
-                    if (fill_bit_indication == 0b1) {
-                        // The fill bit indication shall indicate if there are any fill bits, which shall be added
-                        // whenever the
-                        // size of the TM-SDU is less than the available capacity of the MAC block or less than the size
-                        // of the TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC
-                        // PDU length minus the MAC PDU header length.
-                        if (bits_left > data.bits_left()) {
-                            // cap the number of bits left to the maximum available. this should only happen if the
-                            // tm_sdu size + mac header size is not alligned to octect boundary
-                            if (bits_left - data.bits_left() >= 8) {
-                                throw std::runtime_error(
-                                    "Fill bits were indicated and the length indication shows a size that does not fit "
-                                    "in the MAC, but the length indication is more than 7 bits apart.");
-                            }
-                            bits_left = data.bits_left();
-                        }
-                    }
-                }
-            } else {
-                bits_left = data.bits_left();
-            }
-
-            if (bits_left != 0) {
-                packet.tm_sdu_ = data.take_vector(bits_left);
-            }
+            packet.tm_sdu_ =
+                UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
             return packet;
         }
@@ -325,11 +286,8 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                                                       .type_ = MacPacketType::kMacFragmentUplink};
 
                 auto fill_bit_indication = data.take<1>();
-                if (fill_bit_indication == 0b1) {
-                    data.remove_fill_bits();
-                }
-
-                packet.tm_sdu_ = data.take_vector(data.bits_left());
+                packet.tm_sdu_ =
+                    UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication);
 
                 return packet;
             }
@@ -341,42 +299,18 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 auto fill_bit_indication = data.take<1>();
 
                 auto length_indictaion_or_reservation_requirement = data.take<6>();
-
-                auto bits_left = data.bits_left();
-                const auto mac_header_length = preprocessing_bit_count - bits_left;
-
-                if (fill_bit_indication == 0b1) {
-                    data.remove_fill_bits();
-                }
+                std::optional<std::size_t> length;
 
                 if (length_indictaion_or_reservation_requirement >= 0b110000) {
                     // reservation requirement
                     packet.reservation_requirement_ = length_indictaion_or_reservation_requirement & 0x0f;
-                    bits_left = data.bits_left();
                 } else {
                     // length indication
-                    bits_left = LengthIndication::from_mac_end_uplink(length_indictaion_or_reservation_requirement) -
-                                mac_header_length;
-                    if (fill_bit_indication == 0b1) {
-                        // The fill bit indication shall indicate if there are any fill bits, which shall be added
-                        // whenever the
-                        // size of the TM-SDU is less than the available capacity of the MAC block or less than the size
-                        // of the TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC
-                        // PDU length minus the MAC PDU header length.
-                        if (bits_left > data.bits_left()) {
-                            // cap the number of bits left to the maximum available. this should only happen if the
-                            // tm_sdu size + mac header size is not alligned to octect boundary
-                            if (bits_left - data.bits_left() >= 8) {
-                                throw std::runtime_error(
-                                    "Fill bits were indicated and the length indication shows a size that does not fit "
-                                    "in the MAC, but the length indication is more than 7 bits apart.");
-                            }
-                            bits_left = data.bits_left();
-                        }
-                    }
+                    length = LengthIndication::from_mac_end_uplink(length_indictaion_or_reservation_requirement);
                 }
 
-                packet.tm_sdu_ = data.take_vector(bits_left);
+                packet.tm_sdu_ =
+                    UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
                 return packet;
             }
@@ -401,22 +335,18 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacUBlck};
 
             auto fill_bit_indication = data.take<1>();
-            if (fill_bit_indication == 0b1) {
-                data.remove_fill_bits();
-            }
-
             packet.encrypted_ = (data.take<1>() == 1U);
             auto event_label = data.take<10>();
             packet.address_.set_event_label(event_label);
             packet.reservation_requirement_ = data.take<4>();
+
+            packet.tm_sdu_ = UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication);
 
             return packet;
         }
     } else {
         // process SCH/F, SCH/HD and STCH on the downlink
         // process the SCH/F and STCH of the uplink
-        const auto preprocessing_bit_count = data.bits_left();
-
         auto pdu_type = data.take<2>();
 
         if (pdu_type == 0b00) {
@@ -437,9 +367,13 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             packet.random_access_flag_ = data.take<1>();
 
             auto length_indication = data.take<6>();
+            std::optional<std::size_t> length;
 
             if (length_indication == 0b111111) {
                 packet.fragmentation_ = true;
+            }
+            if (length_indication != 0b111111 && length_indication != 0b111110) {
+                length = LengthIndication::from_mac_data(length_indication);
             }
 
             packet.address_ = Address::from_mac_resource(data);
@@ -448,62 +382,34 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 // The null PDU, if it appears in a MAC block, shall always be the last PDU in that block. Any spare
                 // capacity after the null PDU shall be filled with fill bits.
                 data.remove_fill_bits();
-            } else {
-                // NOTE 3: The immediate napping permission flag shall be present when the PDU is sent using π/8-D8PSK
-                // or QAM modulation. It shall not be present when the PDU is sent using π/4-DQPSK modulation.
-                auto power_control_flag = data.take<1>();
-                if (power_control_flag == 0b1) {
-                    packet.power_control_element_ = data.take<4>();
-                }
-                auto slot_granting_flag = data.take<1>();
-                // The multiple slot granting flag shall be present when the slot granting
-                // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
-                // present when the slot granting flag is set to 0 or the PDU is sent using
-                // π/4-DQPSK or π/8-D8PSK modulation auto multipleSlotGranting = vec.take<1>();
-                // The basic slot granting element shall be present when the slot granting
-                // flag is set to 1 and either the PDU is sent using π/4-DQPSK or π/8-D8PSK
-                // modulation, or the PDU is sent using QAM modulation and the multiple slot
-                // granting flag is set to 0.
-                if (slot_granting_flag == 0b1) {
-                    packet.basic_slot_granting_element_ = data.take<8>();
-                }
-                auto channel_allocation_flag = data.take<1>();
-                if (channel_allocation_flag == 0b1) {
-                    packet.channel_allocation_element_ = ChannelAllocationElement(data);
-                }
-
-                auto bits_left = data.bits_left();
-                const auto mac_header_length = preprocessing_bit_count - bits_left;
-
-                if (fill_bit_indication == 0b1) {
-                    data.remove_fill_bits();
-                }
-
-                if (length_indication < 0b111110) {
-                    bits_left = LengthIndication::from_mac_resource(length_indication) - mac_header_length;
-                    if (fill_bit_indication == 0b1) {
-                        // The fill bit indication shall indicate if there are any fill bits, which shall be added
-                        // whenever the
-                        // size of the TM-SDU is less than the available capacity of the MAC block or less than the size
-                        // of the TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC
-                        // PDU length minus the MAC PDU header length.
-                        if (bits_left > data.bits_left()) {
-                            // cap the number of bits left to the maximum available. this should only happen if the
-                            // tm_sdu size + mac header size is not alligned to octect boundary
-                            if (bits_left - data.bits_left() >= 8) {
-                                throw std::runtime_error(
-                                    "Fill bits were indicated and the length indication shows a size that does not fit "
-                                    "in the MAC, but the length indication is more than 7 bits apart.");
-                            }
-                            bits_left = data.bits_left();
-                        }
-                    }
-                } else {
-                    bits_left = data.bits_left();
-                }
-
-                packet.tm_sdu_ = data.take_vector(bits_left);
+                return packet;
             }
+
+            // NOTE 3: The immediate napping permission flag shall be present when the PDU is sent using π/8-D8PSK
+            // or QAM modulation. It shall not be present when the PDU is sent using π/4-DQPSK modulation.
+            auto power_control_flag = data.take<1>();
+            if (power_control_flag == 0b1) {
+                packet.power_control_element_ = data.take<4>();
+            }
+            auto slot_granting_flag = data.take<1>();
+            // The multiple slot granting flag shall be present when the slot granting
+            // flag is set to 1 and the PDU is sent using QAM modulation. It shall not be
+            // present when the slot granting flag is set to 0 or the PDU is sent using
+            // π/4-DQPSK or π/8-D8PSK modulation auto multipleSlotGranting = vec.take<1>();
+            // The basic slot granting element shall be present when the slot granting
+            // flag is set to 1 and either the PDU is sent using π/4-DQPSK or π/8-D8PSK
+            // modulation, or the PDU is sent using QAM modulation and the multiple slot
+            // granting flag is set to 0.
+            if (slot_granting_flag == 0b1) {
+                packet.basic_slot_granting_element_ = data.take<8>();
+            }
+            auto channel_allocation_flag = data.take<1>();
+            if (channel_allocation_flag == 0b1) {
+                packet.channel_allocation_element_ = ChannelAllocationElement(data);
+            }
+
+            packet.tm_sdu_ =
+                UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
             return packet;
         }
@@ -521,11 +427,9 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                                                       .type_ = MacPacketType::kMacFragmentDownlink};
 
                 auto fill_bit_indication = data.take<1>();
-                if (fill_bit_indication == 0b1) {
-                    data.remove_fill_bits();
-                }
 
-                packet.tm_sdu_ = data.take_vector(data.bits_left());
+                packet.tm_sdu_ =
+                    UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication);
 
                 return packet;
             }
@@ -538,6 +442,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
 
                 packet.position_of_grant_ = data.take<1>();
                 auto length_indication = data.take<6>();
+                auto length = LengthIndication::from_mac_end_downlink(length_indication);
                 // The immediate napping permission flag shall be present when the PDU is sent
                 // using π/8-D8PSK or QAM modulation. It shall not be present when the PDU is
                 // sent using π/4-DQPSK modulation. auto immediateNapping = vec.take<1>();
@@ -558,28 +463,8 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                     packet.channel_allocation_element_ = ChannelAllocationElement(data);
                 }
 
-                auto mac_header_length = preprocessing_bit_count - data.bits_left();
-                auto bits_left = LengthIndication::from_mac_end_downlink(length_indication) - mac_header_length;
-
-                // The fill bit indication shall indicate if there are any fill bits, which shall be added whenever the
-                // size of the TM-SDU is less than the available capacity of the MAC block or less than the size of the
-                // TM-SDU indicated by the length indication field. The TM-SDU length is equal to the MAC PDU length
-                // minus the MAC PDU header length.
-                if (fill_bit_indication == 0b1) {
-                    data.remove_fill_bits();
-                    if (bits_left > data.bits_left()) {
-                        // cap the number of bits left to the maximum available. this should only happen if the tm_sdu
-                        // size + mac header size is not alligned to octect boundary
-                        if (bits_left - data.bits_left() >= 8) {
-                            throw std::runtime_error(
-                                "Fill bits were indicated and the length indication shows a size that does not fit "
-                                "in the MAC, but the length indication is more than 7 bits apart.");
-                        }
-                        bits_left = data.bits_left();
-                    }
-                }
-
-                packet.tm_sdu_ = data.take_vector(bits_left);
+                packet.tm_sdu_ =
+                    UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication, length);
 
                 return packet;
             }
@@ -604,10 +489,6 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
             UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacDBlck};
 
             auto fill_bit_indication = data.take<1>();
-            if (fill_bit_indication == 0b1) {
-                data.remove_fill_bits();
-            }
-
             auto encryption_mode = data.take<2>();
             if (encryption_mode > 0b00) {
                 packet.encrypted_ = true;
@@ -622,7 +503,7 @@ auto UpperMacPacketBuilder::parseCPlaneSignallingPacket(BurstType burst_type, Lo
                 packet.basic_slot_granting_element_ = data.take<8>();
             }
 
-            packet.tm_sdu_ = data.take_vector(data.bits_left());
+            packet.tm_sdu_ = UpperMacPacketBuilder::extract_tm_sdu(data, preprocessing_bit_count, fill_bit_indication);
 
             return packet;
         }

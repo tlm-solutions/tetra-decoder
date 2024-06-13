@@ -11,6 +11,7 @@
 #include "l2/slot.hpp"
 #include "l2/upper_mac_packet.hpp"
 #include "utils/bit_vector.hpp"
+#include <cstddef>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -68,6 +69,17 @@ auto operator<<(std::ostream& stream, const UpperMacPackets& packets) -> std::os
 
 class UpperMacPacketBuilder {
   private:
+    /// Extract a TM-SDU for a MAC packet. It needs to know the size of the header, if there are fill bits. The length
+    /// may be either defined implicitly or by a length indication.
+    /// \param data the BitVector which holds the TM-SDU
+    /// \param preprocessing_bit_count the number of bits int he BitVector before parsing the MAC PDU
+    /// \param fill_bit_indication true if there are fill bits indicated
+    /// \param length the length in bits of the payload if it is not defined implicitly
+    /// \return the TM-SDU as a BitVector
+    [[nodiscard]] static auto extract_tm_sdu(BitVector& data, std::size_t preprocessing_bit_count,
+                                             unsigned _BitInt(1) fill_bit_indication,
+                                             std::optional<std::size_t> length = std::nullopt) -> BitVector;
+
     [[nodiscard]] static auto parseLogicalChannel(BurstType burst_type,
                                                   const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
         -> UpperMacPackets;
