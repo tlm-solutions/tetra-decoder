@@ -72,7 +72,8 @@ class LowerMacPrometheusCounters {
     prometheus::Gauge& lower_mac_prediction_time_;
 
   public:
-    LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+    LowerMacPrometheusCounters() = delete;
+    explicit LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
         : burst_received_count_family_(prometheus_exporter->burst_received_count())
         , control_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "ControlUplinkBurst"}}))
         , normal_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "NormalUplinkBurst"}}))
