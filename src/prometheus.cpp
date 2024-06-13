@@ -31,3 +31,11 @@ auto PrometheusExporter::burst_lower_mac_mismatch_count() noexcept -> prometheus
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::lower_mac_time_gauge() noexcept -> prometheus::Family<prometheus::Gauge>& {
+    return prometheus::BuildGauge()
+        .Name("lower_mac_time_gauge")
+        .Help("The gauge for the network time")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

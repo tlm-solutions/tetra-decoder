@@ -291,6 +291,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     // We do not have any time handling for uplink processing.
     if (sync_ && is_downlink_burst(burst_type)) {
         sync_->time.increment();
+        if (metrics_) {
+            metrics_->set_time(sync_->time);
+        }
     }
 
     if (burst_type == BurstType::SynchronizationBurst) {
@@ -316,7 +319,7 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // Update the mismatching received number of bursts metrics
         if (current_sync && sync_ && metrics_) {
-            metrics_->increment(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
+            metrics_->set_time(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
         }
         sync_ = current_sync;
     }

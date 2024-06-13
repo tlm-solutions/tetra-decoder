@@ -64,7 +64,12 @@ class LowerMacPrometheusCounters {
     /// The counter for the too many bursts in the downlink lower MAC
     prometheus::Counter& lower_mac_burst_too_many_count_;
 
-    /// TODO: add gauge for the synchronization burst time
+    /// The family of gauges for the network time
+    prometheus::Family<prometheus::Gauge>& lower_mac_time_family_;
+    /// The gauges for the time according to the synchronization bursts
+    prometheus::Gauge& lower_mac_synchronization_burst_time_;
+    /// The gauges for the time according to the prediction
+    prometheus::Gauge& lower_mac_prediction_time_;
 
   public:
     LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
@@ -94,13 +99,15 @@ class LowerMacPrometheusCounters {
               burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "SynchronizationBurst"}}))
         , burst_lower_mac_mismatch_count_family_(prometheus_exporter->burst_lower_mac_mismatch_count())
         , lower_mac_burst_skipped_count_(burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Skipped"}}))
-        , lower_mac_burst_too_many_count_(
-              burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Too many"}})){};
+        , lower_mac_burst_too_many_count_(burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Too many"}}))
+        , lower_mac_time_family_(prometheus_exporter->lower_mac_time_gauge())
+        , lower_mac_synchronization_burst_time_(lower_mac_time_family_.Add({{"type", "Synchronization Burst"}}))
+        , lower_mac_prediction_time_(lower_mac_time_family_.Add({{"type", "Prediction"}})){};
 
     /// This function is called for every burst. It increments the counter associated to the burst type.
     /// \param burst_type the type of the burst for which to increment the counter
-    /// \param decode_error true if there was an error decoding the packets on the lower mac (crc16)
-    auto increment(BurstType burst_type, bool decode_error) -> void {
+    /// \param decode_error true if there was an error decoding the packets on the )lower mac (crc16)
+    auto increment(const BurstType burst_type, bool decode_error) -> void {
         switch (burst_type) {
         case BurstType::ControlUplinkBurst:
             control_uplink_burst_received_count_.Increment();
@@ -146,11 +153,15 @@ class LowerMacPrometheusCounters {
         }
     }
 
+    /// This function is called every time the time counters are changed
+    /// \param timestamp the current predicted timestamp
+    auto set_time(const TimebaseCounter timestamp) { lower_mac_prediction_time_.Set(timestamp.count()); }
+
     /// This function is called for Synchronization Bursts. It increments the counters for the missmatched received
-    /// burst counts.
+    /// burst counts. It sets the gauge for the synchronization burst time.
     /// \param current_timestamp the current timestamp of the synchronization burst
     /// \param expected_timestamp the predicted timestamp of the synchronization burst
-    auto increment(const TimebaseCounter current_timestamp, const TimebaseCounter expected_timestamp) {
+    auto set_time(const TimebaseCounter current_timestamp, const TimebaseCounter expected_timestamp) {
         auto current_timestamp_count = current_timestamp.count();
         auto expected_timestamp_count = expected_timestamp.count();
 
@@ -161,6 +172,8 @@ class LowerMacPrometheusCounters {
             auto too_many_bursts = expected_timestamp_count - current_timestamp_count;
             lower_mac_burst_too_many_count_.Increment(too_many_bursts);
         }
+
+        lower_mac_synchronization_burst_time_.Set(current_timestamp.count());
     }
 };
 
