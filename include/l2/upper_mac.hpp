@@ -184,15 +184,14 @@ class UpperMac {
             // increment the total count and crc error count metrics
             metrics_->increment(slot);
 
-            bool decode_error = false;
-
             try {
                 packets = UpperMacPacketBuilder::parse_slot(slot);
                 // if (packets.has_user_or_control_plane_data()) {
                 //     std::cout << packets << std::endl;
                 // }
             } catch (std::runtime_error& e) {
-                decode_error = true;
+                metrics_->increment_decode_error(slot);
+
                 std::cout << "Error decoding packets: " << e.what() << std::endl;
                 return;
             }
@@ -200,13 +199,9 @@ class UpperMac {
             try {
                 processPackets(std::move(packets));
             } catch (std::runtime_error& e) {
-                decode_error = true;
-                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
-            }
-
-            // If we had an error during decoding increment the metrics
-            if (decode_error) {
                 metrics_->increment_decode_error(slot);
+
+                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
             }
         }
     }
