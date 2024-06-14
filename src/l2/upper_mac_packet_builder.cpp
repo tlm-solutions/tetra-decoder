@@ -164,6 +164,7 @@ auto UpperMacPacketBuilder::extract_tm_sdu(BitVector& data, std::size_t preproce
     return data.take_vector(payload_length);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type, LogicalChannel channel,
                                                             BitVector& data) -> UpperMacCPlaneSignallingPacket {
     auto preprocessing_bit_count = data.bits_left();
