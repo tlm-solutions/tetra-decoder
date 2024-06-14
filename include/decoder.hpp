@@ -48,11 +48,14 @@ class Decoder {
     void main_loop();
 
   private:
-    std::shared_ptr<BitStreamDecoder> bit_stream_decoder_;
-    std::unique_ptr<IQStreamDecoder> iq_stream_decoder_;
+    /// The worker queue for the lower mac
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> lower_mac_work_queue_;
 
     /// The reference to the upper mac thread class
     std::unique_ptr<UpperMac> upper_mac_;
+
+    std::shared_ptr<BitStreamDecoder> bit_stream_decoder_;
+    std::unique_ptr<IQStreamDecoder> iq_stream_decoder_;
 
     bool packed_ = false;
 

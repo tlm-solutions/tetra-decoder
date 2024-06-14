@@ -17,15 +17,20 @@
 #include <optional>
 #include <signal_handler.hpp>
 #include <thread>
+#include <variant>
 #include <vector>
 #if defined(__linux__)
 #include <pthread.h>
 #endif
 
+struct TerminationToken {};
+
 // thread pool executing work but outputting it the order of the input
 template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
 
   public:
+    using ReturnTypeOrTerminationToken = std::variant<ReturnType, TerminationToken>;
+
     StreamingOrderedOutputThreadPoolExecutor() = delete;
 
     explicit StreamingOrderedOutputThreadPoolExecutor(int num_workers) {
@@ -43,12 +48,13 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
     };
 
     ~StreamingOrderedOutputThreadPoolExecutor() {
+        /// Queue up a termination token
         for (auto& t : workers_)
             t.join();
     };
 
-    // append work to the queuetemplate <typename ReturnType>
-    void queue_work(std::function<ReturnType()> work) {
+    // append work to the queuetemplate <typename ReturnTypeOrTerminationToken>
+    void queue_work(std::function<ReturnTypeOrTerminationToken()> work) {
         {
             std::lock_guard<std::mutex> lock(cv_input_item_mutex_);
             input_queue_.emplace_back(std::make_pair(input_counter_++, work));
@@ -57,11 +63,11 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
     };
 
     // wait and get a finished item
-    auto get() -> ReturnType {
+    auto get() -> ReturnTypeOrTerminationToken {
         using namespace std::chrono_literals;
 
         for (;;) {
-            std::optional<ReturnType> result{};
+            std::optional<ReturnTypeOrTerminationToken> result{};
 
             {
                 std::lock_guard<std::mutex> lk(cv_output_item_mutex_);
@@ -100,15 +106,16 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
         using namespace std::chrono_literals;
 
         for (;;) {
-            std::optional<std::pair<uint64_t, std::function<ReturnType()>>> work{};
+            std::optional<std::pair<uint64_t, std::function<ReturnTypeOrTerminationToken()>>> work{};
 
             {
                 std::lock_guard lk(cv_input_item_mutex_);
                 if (!input_queue_.empty()) {
                     work = input_queue_.front();
                     input_queue_.pop_front();
-                } else if (stop)
+                } else if (stop) {
                     break;
+                }
             }
 
             if (!work.has_value()) {
@@ -148,10 +155,10 @@ template <typename ReturnType> class StreamingOrderedOutputThreadPoolExecutor {
     std::mutex cv_output_item_mutex_;
 
     // queue_ of work with and incrementing index
-    std::deque<std::pair<uint64_t, std::function<ReturnType()>>> input_queue_{};
+    std::deque<std::pair<uint64_t, std::function<ReturnTypeOrTerminationToken()>>> input_queue_{};
 
     // output queue_. this is a map so we can do a lookup on the current index for ordered output
-    std::map<uint64_t, ReturnType> output_map_{};
+    std::map<uint64_t, ReturnTypeOrTerminationToken> output_map_{};
 
     // contains the value of the next input item
     uint64_t input_counter_ = 0;
