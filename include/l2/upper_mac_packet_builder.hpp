@@ -57,11 +57,10 @@ struct UpperMacPackets {
     /// \return true if the UpperMacPackets contain user or control plane data (either signalling or traffic)
     [[nodiscard]] auto has_user_or_control_plane_data() const -> bool {
         for (const auto& packet : c_plane_signalling_packets_) {
-            if (packet.is_null_pdu()) {
-                // filter out null pdus
-                continue;
+            // filter out null pdus
+            if (!packet.is_null_pdu()) {
+                return true;
             }
-            return true;
         }
         if (u_plane_signalling_packet_.size() > 0) {
             return true;
