@@ -11,23 +11,23 @@
 #include "utils/bit_vector.hpp"
 
 enum class LogicalChannel {
-    kSignalingChannelHalfDownlink,
-    kSignalingChannelHalfUplink,
+    kSignallingChannelHalfDownlink,
+    kSignallingChannelHalfUplink,
     kTrafficChannel,
-    kSignalingChannelFull,
+    kSignallingChannelFull,
     kStealingChannel
 };
 
 constexpr auto to_string(LogicalChannel channel) noexcept -> const char* {
     switch (channel) {
-    case LogicalChannel::kSignalingChannelHalfDownlink:
-        return "SignalingChannelHalfDownlink";
-    case LogicalChannel::kSignalingChannelHalfUplink:
-        return "SignalingChannelHalfUplink";
+    case LogicalChannel::kSignallingChannelHalfDownlink:
+        return "SignallingChannelHalfDownlink";
+    case LogicalChannel::kSignallingChannelHalfUplink:
+        return "SignallingChannelHalfUplink";
     case LogicalChannel::kTrafficChannel:
         return "TrafficChannel";
-    case LogicalChannel::kSignalingChannelFull:
-        return "SignalingChannelFull";
+    case LogicalChannel::kSignallingChannelFull:
+        return "SignallingChannelFull";
     case LogicalChannel::kStealingChannel:
         return "StealingChannel";
     }
@@ -38,6 +38,6 @@ struct LogicalChannelDataAndCrc {
     LogicalChannel channel;
     /// the data on the logical channel
     BitVector data;
-    /// true if the crc of the signaling channels is ok
+    /// true if the crc of the signalling channels is ok
     bool crc_ok;
 };

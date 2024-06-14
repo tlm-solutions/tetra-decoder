@@ -29,7 +29,7 @@ Slots::Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot)
     /// the information from the access assignment from the corresponding downlink timeslot to make the right
     /// decision here.
     if (burst_type_ == BurstType::NormalUplinkBurst) {
-        get_first_slot().select_logical_channel(LogicalChannel::kSignalingChannelFull);
+        get_first_slot().select_logical_channel(LogicalChannel::kSignallingChannelFull);
     }
 
     if (!get_first_slot().is_concreate()) {

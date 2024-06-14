@@ -39,3 +39,19 @@ auto PrometheusExporter::lower_mac_time_gauge() noexcept -> prometheus::Family<p
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::upper_mac_total_slot_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("upper_mac_total_slot_count")
+        .Help("Incrementing counter of the number of received slots in the upper MAC")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}
+
+auto PrometheusExporter::upper_mac_slot_error_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("upper_mac_slot_error_count")
+        .Help("Incrementing counter of the number of received slots in the upper MAC with errors.")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

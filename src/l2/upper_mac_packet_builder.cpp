@@ -169,9 +169,9 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                                                             BitVector& data) -> UpperMacCPlaneSignallingPacket {
     auto preprocessing_bit_count = data.bits_left();
 
-    if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
+    if (channel == LogicalChannel::kSignallingChannelHalfUplink) {
         if (is_downlink_burst(burst_type)) {
-            throw std::runtime_error("SignalingChannelHalfUplink may only be set on uplink.");
+            throw std::runtime_error("SignallingChannelHalfUplink may only be set on uplink.");
         }
 
         auto pdu_type = data.take<1>();
@@ -330,7 +330,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("Supplementary MAC PDU subtype 0b1 is reserved.");
             }
 
-            if (channel != LogicalChannel::kSignalingChannelFull) {
+            if (channel != LogicalChannel::kSignallingChannelFull) {
                 throw std::runtime_error("MAC-U-BLCK may only be sent on SCH/F.");
             }
 
@@ -484,7 +484,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("Supplementary MAC PDU subtype 0b1 is reserved.");
             }
 
-            if (channel != LogicalChannel::kSignalingChannelFull) {
+            if (channel != LogicalChannel::kSignallingChannelFull) {
                 throw std::runtime_error("MAC-D-BLCK may only be sent on SCH/F.");
             }
 
@@ -526,9 +526,9 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling(const BurstType burst_type,
     if (is_downlink_burst(burst_type)) {
         min_bit_count = 16;
     } else {
-        if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
+        if (channel == LogicalChannel::kSignallingChannelHalfUplink) {
             min_bit_count = 36;
-        } else if (channel == LogicalChannel::kSignalingChannelFull || channel == LogicalChannel::kStealingChannel) {
+        } else if (channel == LogicalChannel::kSignallingChannelFull || channel == LogicalChannel::kStealingChannel) {
             min_bit_count = 37;
         }
     }

@@ -4,6 +4,7 @@
 #include "l2/logical_channel.hpp"
 #include "l2/lower_mac_coding.hpp"
 #include "l2/slot.hpp"
+#include "l2/upper_mac.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
 #include "utils/bit_vector.hpp"
 #include <array>
@@ -28,7 +29,8 @@ LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<Prometheu
         sync_->scrambling_code = *scrambling_code;
     }
 
-    upper_mac_ = std::make_shared<UpperMac>(reporter_, /*is_downlink=*/!scrambling_code.has_value());
+    upper_mac_ =
+        std::make_shared<UpperMac>(prometheus_exporter, reporter_, /*is_downlink=*/!scrambling_code.has_value());
 
     if (prometheus_exporter) {
         metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
@@ -78,7 +80,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         slots = Slots(burst_type, SlotsType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
-                          .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                          .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                           .data = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124)),
                           .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits),
                       }));
@@ -119,7 +121,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // ✅done
             slots = Slots(burst_type, SlotsType::kFullSlot,
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelFull,
+                              .channel = LogicalChannel::kSignallingChannelFull,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits),
                           }));
@@ -181,12 +183,12 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // SCH/HD + BNCH
             slots = Slots(burst_type, SlotsType::kTwoSubslots,
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                              .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn1_bits),
                           }),
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                              .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                               .data = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits),
                           }));
@@ -205,7 +207,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // SCH/HU
         slots = Slots(burst_type, SlotsType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
-                          .channel = LogicalChannel::kSignalingChannelHalfUplink,
+                          .channel = LogicalChannel::kSignallingChannelHalfUplink,
                           .data = BitVector(std::vector(cb_bits.cbegin(), cb_bits.cbegin() + 92)),
                           .crc_ok = LowerMacCoding::check_crc_16_ccitt<108>(cb_bits),
                       }));
@@ -226,7 +228,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         slots = Slots(burst_type, SlotsType::kFullSlot,
                       Slot({
                           LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelFull,
+                              .channel = LogicalChannel::kSignallingChannelFull,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits),
                           },
@@ -333,26 +335,8 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // check if we have crc decode errors in the lower mac
         decode_error |= slots.has_crc_error();
 
-        callbacks.emplace_back([this, slots_ref = slots] {
-            auto slots = Slots(slots_ref);
-            // std::cout << slots;
-            UpperMacPackets packets;
-            try {
-                packets = UpperMacPacketBuilder::parse_slots(slots);
-                // if (packets.has_user_or_control_plane_data()) {
-                //     std::cout << packets << std::endl;
-                // }
-            } catch (std::runtime_error& e) {
-                std::cout << "Error decoding packets: " << e.what() << std::endl;
-                return;
-            }
-            try {
-                upper_mac_->process(std::move(packets));
-
-            } catch (std::runtime_error& e) {
-                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
-            }
-        });
+        // pass the slots to the upper mac
+        callbacks.emplace_back(std::bind(&UpperMac::process, upper_mac_, slots));
     }
 
     // Update the received burst type metrics
