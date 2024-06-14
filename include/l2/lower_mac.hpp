@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -9,24 +9,26 @@
 
 #pragma once
 
+#include "burst_type.hpp"
 #include "l2/broadcast_synchronization_channel.hpp"
 #include "l2/slot.hpp"
 #include "l2/timebase_counter.hpp"
-#include <cstddef>
+#include "prometheus.h"
+#include "reporter.hpp"
+#include "utils/viter_bi_codec.hpp"
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include <burst_type.hpp>
-#include <l2/upper_mac.hpp>
-#include <prometheus.h>
-#include <reporter.hpp>
-#include <utils/viter_bi_codec.hpp>
-
 /// The class to provide prometheus metrics to the lower mac
 class LowerMacPrometheusCounters {
   private:
+    /// The prometheus exporter
+    std::shared_ptr<PrometheusExporter> prometheus_exporter_;
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+
     /// The family of counters for received bursts
     prometheus::Family<prometheus::Counter>& burst_received_count_family_;
     /// The counter for the received ControlUplinkBurst
@@ -71,10 +73,13 @@ class LowerMacPrometheusCounters {
     /// The gauges for the time according to the prediction
     prometheus::Gauge& lower_mac_prediction_time_;
 
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+
   public:
     LowerMacPrometheusCounters() = delete;
-    explicit LowerMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : burst_received_count_family_(prometheus_exporter->burst_received_count())
+    explicit LowerMacPrometheusCounters(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : prometheus_exporter_(prometheus_exporter)
+        , burst_received_count_family_(prometheus_exporter_->burst_received_count())
         , control_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "ControlUplinkBurst"}}))
         , normal_uplink_burst_received_count_(burst_received_count_family_.Add({{"burst_type", "NormalUplinkBurst"}}))
         , normal_uplink_burst_split_received_count_(
@@ -85,7 +90,7 @@ class LowerMacPrometheusCounters {
               burst_received_count_family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
         , synchronization_burst_received_count_(
               burst_received_count_family_.Add({{"burst_type", "SynchronizationBurst"}}))
-        , burst_lower_mac_decode_error_count_family_(prometheus_exporter->burst_lower_mac_decode_error_count())
+        , burst_lower_mac_decode_error_count_family_(prometheus_exporter_->burst_lower_mac_decode_error_count())
         , control_uplink_burst_lower_mac_decode_error_count_(
               burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "ControlUplinkBurst"}}))
         , normal_uplink_burst_lower_mac_decode_error_count_(
@@ -98,10 +103,10 @@ class LowerMacPrometheusCounters {
               burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "NormalDownlinkBurstSplit"}}))
         , synchronization_burst_lower_mac_decode_error_count_(
               burst_lower_mac_decode_error_count_family_.Add({{"burst_type", "SynchronizationBurst"}}))
-        , burst_lower_mac_mismatch_count_family_(prometheus_exporter->burst_lower_mac_mismatch_count())
+        , burst_lower_mac_mismatch_count_family_(prometheus_exporter_->burst_lower_mac_mismatch_count())
         , lower_mac_burst_skipped_count_(burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Skipped"}}))
         , lower_mac_burst_too_many_count_(burst_lower_mac_mismatch_count_family_.Add({{"mismatch_type", "Too many"}}))
-        , lower_mac_time_family_(prometheus_exporter->lower_mac_time_gauge())
+        , lower_mac_time_family_(prometheus_exporter_->lower_mac_time_gauge())
         , lower_mac_synchronization_burst_time_(lower_mac_time_family_.Add({{"type", "Synchronization Burst"}}))
         , lower_mac_prediction_time_(lower_mac_time_family_.Add({{"type", "Prediction"}})){};
 
@@ -180,25 +185,24 @@ class LowerMacPrometheusCounters {
 
 class LowerMac {
   public:
+    using return_type = std::optional<Slots>;
+
     LowerMac() = delete;
-    LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter,
-             std::optional<uint32_t> scrambling_code = std::nullopt);
+    explicit LowerMac(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+                      std::optional<uint32_t> scrambling_code = std::nullopt);
     ~LowerMac() = default;
 
+    /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
+    /// channels. keeps track of the current network time
+    [[nodiscard]] auto process(std::vector<uint8_t> frame, BurstType burst_type) -> return_type;
+
+  private:
     // does the signal processing and then returns the slots containing the correct logical channels and their
     // associated data to be passed to the upper mac and further processed in a sequential order.
     [[nodiscard]] auto processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
                                        const BroadcastSynchronizationChannel& bsc) -> Slots;
 
-    /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
-    /// channels. keeps track of the current network time
-    [[nodiscard]] auto process(const std::vector<uint8_t>& frame, BurstType burst_type)
-        -> std::vector<std::function<void()>>;
-
-  private:
-    std::shared_ptr<Reporter> reporter_;
     const ViterbiCodec viter_bi_codec_1614_;
-    std::shared_ptr<UpperMac> upper_mac_;
 
     std::unique_ptr<LowerMacPrometheusCounters> metrics_;
 

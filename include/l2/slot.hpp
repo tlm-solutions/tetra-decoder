@@ -10,7 +10,6 @@
 
 #include "burst_type.hpp"
 #include "l2/logical_channel.hpp"
-#include <array>
 #include <cassert>
 #include <set>
 #include <vector>
@@ -125,7 +124,10 @@ class Slots {
   public:
     Slots() = delete;
 
-    Slots(const Slots&) = default;
+    Slots(const Slots& other)
+        : burst_type_(other.burst_type_)
+        , slot_type_(other.slot_type_)
+        , slots_(other.slots_){};
 
     /// constructor for one subslot or a full slot
     Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -9,10 +9,10 @@
 
 #pragma once
 
+#include "l2/lower_mac.hpp"
+#include "streaming_ordered_output_thread_pool_executor.hpp"
 #include <memory>
 #include <vector>
-
-#include <l2/lower_mac.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation
@@ -34,8 +34,11 @@
  */
 class BitStreamDecoder {
   public:
-    BitStreamDecoder(std::shared_ptr<LowerMac> lower_mac, bool is_uplink)
-        : lower_mac_(std::move(lower_mac))
+    BitStreamDecoder(
+        const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& lower_mac_worker_queue,
+        const std::shared_ptr<LowerMac>& lower_mac, bool is_uplink)
+        : lower_mac_worker_queue_(lower_mac_worker_queue)
+        , lower_mac_(lower_mac)
         , is_uplink_(is_uplink){};
     ~BitStreamDecoder() = default;
 
@@ -53,7 +56,10 @@ class BitStreamDecoder {
     void process_bit(uint8_t symbol) noexcept;
 
   private:
-    std::shared_ptr<LowerMac> lower_mac_{};
+    /// The pointer to the worker queue
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> lower_mac_worker_queue_;
+
+    std::shared_ptr<LowerMac> lower_mac_;
 
     bool is_synchronized_ = false;
     bool is_uplink_{};

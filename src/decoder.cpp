@@ -7,11 +7,13 @@
  *   Tassilo Tanneberger
  */
 
+#include "l2/upper_mac.hpp"
 #include <arpa/inet.h>
 #include <cassert>
 #include <complex>
 #include <cstring>
 #include <fcntl.h>
+#include <memory>
 #include <netinet/in.h>
 #include <stdexcept>
 #include <sys/socket.h>
@@ -26,16 +28,20 @@
 Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
                  std::optional<std::string> output_file, bool iq_or_bit_stream,
                  std::optional<unsigned int> uplink_scrambling_code,
-                 std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-    : reporter_(std::make_shared<Reporter>(send_port))
-    , packed_(packed)
+                 const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+    : packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code)
     , iq_or_bit_stream_(iq_or_bit_stream) {
-
-    lower_mac_ = std::make_shared<LowerMac>(reporter_, prometheus_exporter, uplink_scrambling_code);
-    bit_stream_decoder_ = std::make_shared<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
+    auto lower_mac_work_queue = std::make_shared<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>(4);
+    auto reporter = std::make_shared<Reporter>(send_port);
+    auto is_uplink = uplink_scrambling_code_.has_value();
+    auto lower_mac = std::make_shared<LowerMac>(prometheus_exporter, uplink_scrambling_code);
+    bit_stream_decoder_ =
+        std::make_shared<BitStreamDecoder>(lower_mac_work_queue, lower_mac, uplink_scrambling_code_.has_value());
     iq_stream_decoder_ =
-        std::make_unique<IQStreamDecoder>(lower_mac_, bit_stream_decoder_, uplink_scrambling_code_.has_value());
+        std::make_unique<IQStreamDecoder>(lower_mac_work_queue, lower_mac, bit_stream_decoder_, is_uplink);
+    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue, prometheus_exporter, reporter,
+                                            /*is_downlink=*/!is_uplink);
 
     // read input file from file or from socket
     if (input_file.has_value()) {

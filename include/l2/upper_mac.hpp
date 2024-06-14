@@ -11,13 +11,14 @@
 
 #include "l2/logical_channel.hpp"
 #include "l2/logical_link_control.hpp"
+#include "l2/lower_mac.hpp"
 #include "l2/slot.hpp"
 #include "l2/upper_mac_fragments.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
-#include "l3/mobile_link_entity.hpp"
 #include "prometheus.h"
 #include "reporter.hpp"
-#include <vector>
+#include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <thread>
 
 /// The class to provide prometheus metrics to the upper mac.
 /// 1. Received Slot are counted. Details about the number of Slot with CRC errors and decoding errors are saved.
@@ -26,6 +27,9 @@
 /// 3. The count and type of c-plane signalling packets, divided into non fragmented and fragmented pieces
 class UpperMacPrometheusCounters {
   private:
+    /// The prometheus exporter
+    std::shared_ptr<PrometheusExporter> prometheus_exporter_;
+
     // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
 
     /// The family of counters for received slot
@@ -66,8 +70,9 @@ class UpperMacPrometheusCounters {
 
   public:
     UpperMacPrometheusCounters() = delete;
-    explicit UpperMacPrometheusCounters(std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : slot_received_count_family_(prometheus_exporter->upper_mac_total_slot_count())
+    explicit UpperMacPrometheusCounters(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : prometheus_exporter_(prometheus_exporter)
+        , slot_received_count_family_(prometheus_exporter_->upper_mac_total_slot_count())
         , signalling_channel_half_downlink_received_count_(
               slot_received_count_family_.Add({{"logical_channel", "SignallingChannelHalfDownlink"}}))
         , signalling_channel_half_uplink_received_count_(
@@ -76,7 +81,7 @@ class UpperMacPrometheusCounters {
         , signalling_channel_full_received_count_(
               slot_received_count_family_.Add({{"logical_channel", "SignallingChannelFull"}}))
         , stealing_channel_received_count_(slot_received_count_family_.Add({{"logical_channel", "StealingChannel"}}))
-        , slot_error_count_family_(prometheus_exporter->upper_mac_slot_error_count())
+        , slot_error_count_family_(prometheus_exporter_->upper_mac_slot_error_count())
         , signalling_channel_half_downlink_received_count_crc_error_(slot_error_count_family_.Add(
               {{"logical_channel", "SignallingChannelHalfDownlink"}, {"error_type", "CRC Error"}}))
         , signalling_channel_half_uplink_received_count_crc_error_(slot_error_count_family_.Add(
@@ -160,76 +165,39 @@ class UpperMacPrometheusCounters {
 class UpperMac {
   public:
     UpperMac() = delete;
-    UpperMac(std::shared_ptr<PrometheusExporter>& prometheus_exporter, std::shared_ptr<Reporter> reporter,
-             bool is_downlink)
-        : reporter_(std::move(reporter))
-        , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_, is_downlink))
-        , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)) {
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<UpperMacPrometheusCounters>(prometheus_exporter);
-        }
-    };
-    ~UpperMac() noexcept = default;
+    ///
+    /// \param queue the input queue from the lower mac
+    /// \param prometheus_exporter the reference to the prometheus exporter that is used for the metrics in the upper
+    /// mac
+    /// \param is_downlink true if this channel is on the downlink
+    UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
+             const std::shared_ptr<PrometheusExporter>& prometheus_exporter, const std::shared_ptr<Reporter>& reporter,
+             bool is_downlink);
+    ~UpperMac();
+
+  private:
+    /// The thread function for continously process incomming packets for the lower MAC and passing it into the upper
+    /// layers.
+    auto worker() -> void;
 
     /// process the slots from the lower MAC
     /// \param slots the slots from the lower MAC
-    auto process(Slots& slots) -> void {
-        const auto concreate_slots = slots.get_concreate_slots();
-
-        for (const auto& slot : concreate_slots) {
-            UpperMacPackets packets;
-
-            // std::cout << slot;
-
-            // increment the total count and crc error count metrics
-            metrics_->increment(slot);
-
-            try {
-                packets = UpperMacPacketBuilder::parse_slot(slot);
-                // if (packets.has_user_or_control_plane_data()) {
-                //     std::cout << packets << std::endl;
-                // }
-            } catch (std::runtime_error& e) {
-                metrics_->increment_decode_error(slot);
-
-                std::cout << "Error decoding packets: " << e.what() << std::endl;
-                return;
-            }
-
-            try {
-                processPackets(std::move(packets));
-            } catch (std::runtime_error& e) {
-                metrics_->increment_decode_error(slot);
-
-                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
-            }
-        }
-    }
+    auto process(const Slots& slots) -> void;
 
     /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
     /// \param packets the packets that were parsed in the upper MAC layer
-    auto processPackets(UpperMacPackets&& packets) -> void {
-        for (const auto& packet : packets.c_plane_signalling_packets_) {
-            // TODO: handle fragmentation over STCH
-            if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
-                auto reconstructed_fragment = fragmentation_.push_fragment(packet);
-                if (reconstructed_fragment) {
-                    auto data = BitVector(*reconstructed_fragment->tm_sdu_);
-                    logical_link_control_->process(reconstructed_fragment->address_, data);
-                }
-            } else if (packet.tm_sdu_) {
-                auto data = BitVector(*packet.tm_sdu_);
-                logical_link_control_->process(packet.address_, data);
-            }
-        }
-    };
+    auto processPackets(UpperMacPackets&& packets) -> void;
 
-  private:
-    std::shared_ptr<Reporter> reporter_;
-    std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
-    std::unique_ptr<LogicalLinkControl> logical_link_control_;
+    /// The input queue
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;
 
+    /// The prometheus metrics
     std::unique_ptr<UpperMacPrometheusCounters> metrics_;
 
+    std::unique_ptr<LogicalLinkControl> logical_link_control_;
+
     UpperMacFragmentation fragmentation_;
+
+    /// The worker thread
+    std::thread worker_thread_;
 };

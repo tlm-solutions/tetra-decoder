@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "l2/upper_mac.hpp"
 #include <memory>
 #include <optional>
 #include <string>
@@ -41,16 +42,17 @@ class Decoder {
     Decoder(unsigned int receive_port, unsigned int send_port, bool packed, std::optional<std::string> input_file,
             std::optional<std::string> output_file, bool iq_or_bit_stream,
             std::optional<unsigned int> uplink_scrambling_code,
-            std::shared_ptr<PrometheusExporter>& prometheus_exporter);
+            const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~Decoder();
 
     void main_loop();
 
   private:
-    std::shared_ptr<LowerMac> lower_mac_{};
-    std::shared_ptr<Reporter> reporter_{};
-    std::shared_ptr<BitStreamDecoder> bit_stream_decoder_{};
-    std::unique_ptr<IQStreamDecoder> iq_stream_decoder_{};
+    std::shared_ptr<BitStreamDecoder> bit_stream_decoder_;
+    std::unique_ptr<IQStreamDecoder> iq_stream_decoder_;
+
+    /// The reference to the upper mac thread class
+    std::unique_ptr<UpperMac> upper_mac_;
 
     bool packed_ = false;
 
