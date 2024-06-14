@@ -72,7 +72,7 @@ class BitVector {
                                      ")");
         }
 
-        const auto bits = data_.begin() + bits_left() - N;
+        const auto bits = data_.begin() + read_offset_ + bits_left() - N;
 
         // delete last n entries
         len_ -= N;
@@ -87,7 +87,7 @@ class BitVector {
                                      std::to_string(bits_left()) + ")");
         }
 
-        const auto bits = data_.begin() + read_offset_ + N + offset;
+        const auto bits = data_.begin() + read_offset_ + offset;
 
         return to_bit_int<N>(bits);
     }
@@ -101,6 +101,16 @@ class BitVector {
     [[nodiscard]] auto take_all() -> uint64_t;
 
     [[nodiscard]] auto is_mac_padding() const noexcept -> bool;
+
+    /// function to remove fill bits of a bitvector once and only once
+    auto remove_fill_bits() -> void {
+        if (!fill_bits_removed_) {
+            while (take_last<1>() == 0b0) {
+            }
+
+            fill_bits_removed_ = true;
+        }
+    };
 
     friend auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
 
@@ -120,6 +130,8 @@ class BitVector {
 
         return ret;
     }
+
+    bool fill_bits_removed_ = false;
 };
 
 auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;

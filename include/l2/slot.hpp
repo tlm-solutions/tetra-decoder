@@ -75,10 +75,25 @@ class Slot {
             throw std::runtime_error("Attempted to select a channel that is not availabe.");
         }
     }
+
+    friend auto operator<<(std::ostream& stream, const Slot& slot) -> std::ostream&;
 };
+
+auto operator<<(std::ostream& stream, const Slot& slot) -> std::ostream&;
 
 /// defines the number and types of slots in a packet
 enum class SlotsType { kOneSubslot, kTwoSubslots, kFullSlot };
+
+constexpr auto to_string(SlotsType type) noexcept -> const char* {
+    switch (type) {
+    case SlotsType::kOneSubslot:
+        return "OneSubslot";
+    case SlotsType::kTwoSubslots:
+        return "TwoSubslots";
+    case SlotsType::kFullSlot:
+        return "FullSlot";
+    }
+};
 
 /// defines the slots in a packet
 class Slots {
@@ -92,6 +107,8 @@ class Slots {
 
   public:
     Slots() = delete;
+
+    Slots(const Slots&) = default;
 
     /// constructor for one subslot or a full slot
     Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot)
@@ -220,4 +237,11 @@ class Slots {
 
         return error;
     };
+
+    /// get the type of the underlying burst
+    [[nodiscard]] auto get_burst_type() const noexcept -> BurstType { return burst_type_; }
+
+    friend auto operator<<(std::ostream& stream, const Slots& slots) -> std::ostream&;
 };
+
+auto operator<<(std::ostream& stream, const Slots& slots) -> std::ostream&;

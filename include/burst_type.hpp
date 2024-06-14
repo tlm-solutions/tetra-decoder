@@ -21,6 +21,23 @@ enum class BurstType {
     SynchronizationBurst,
 };
 
+constexpr auto to_string(BurstType type) noexcept -> const char* {
+    switch (type) {
+    case BurstType::ControlUplinkBurst:
+        return "ControlUplinkBurst";
+    case BurstType::NormalUplinkBurst:
+        return "NormalUplinkBurst";
+    case BurstType::NormalUplinkBurstSplit:
+        return "NormalUplinkBurstSplit";
+    case BurstType::NormalDownlinkBurst:
+        return "NormalDownlinkBurst";
+    case BurstType::NormalDownlinkBurstSplit:
+        return "NormalDownlinkBurstSplit";
+    case BurstType::SynchronizationBurst:
+        return "SynchronizationBurst";
+    }
+};
+
 [[nodiscard]] inline auto is_uplink_burst(BurstType burst_type) noexcept -> bool {
     return burst_type == BurstType::ControlUplinkBurst || burst_type == BurstType::NormalUplinkBurst ||
            burst_type == BurstType::NormalUplinkBurstSplit;

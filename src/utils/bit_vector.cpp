@@ -88,15 +88,20 @@ auto BitVector::take_all() -> uint64_t {
 };
 
 auto BitVector::is_mac_padding() const noexcept -> bool {
-    if (len_ == 0)
+    if (len_ == 0) {
         return false;
+    }
 
-    if (data_[read_offset_] != 1)
+    // first bit must be true
+    if (!data_[read_offset_]) {
         return false;
+    }
 
+    // all other bits must be false
     for (auto i = 1; i < len_; i++) {
-        if (data_[read_offset_ + i] != 0)
+        if (data_[read_offset_ + i]) {
             return false;
+        }
     }
 
     return true;

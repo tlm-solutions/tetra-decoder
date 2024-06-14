@@ -6,7 +6,7 @@
 
 #include <l3/short_data_service.hpp>
 
-void ShortDataService::process(const AddressType to_address, const AddressType from_address, BitVector& vec) {
+void ShortDataService::process(const Address to_address, const Address from_address, BitVector& vec) {
     message_ = {};
 
     message_["type"] = "SDS";
@@ -49,7 +49,7 @@ void ShortDataService::process(const AddressType to_address, const AddressType f
     reporter_->emit_report(message_);
 }
 
-void ShortDataService::process_default(const AddressType to_address, const AddressType from_address, BitVector& vec) {
+void ShortDataService::process_default(const Address to_address, const Address from_address, BitVector& vec) {
 
     std::stringstream stream;
     for (uint64_t bits; vec.bits_left() >= 8;) {
@@ -61,7 +61,7 @@ void ShortDataService::process_default(const AddressType to_address, const Addre
     std::cout << "  " << vec << std::endl;
 }
 
-void ShortDataService::process_simple_text_messaging(const AddressType to_address, const AddressType from_address,
+void ShortDataService::process_simple_text_messaging(const Address to_address, const Address from_address,
                                                      BitVector& vec) {
     auto reserved = vec.take<1>();
     auto text_coding_scheme = vec.take<7>();
@@ -135,8 +135,8 @@ static auto decode_direction_of_travel(uint64_t v) -> std::string {
     return direction_of_travel[v];
 }
 
-void ShortDataService::process_location_information_protocol(const AddressType to_address,
-                                                             const AddressType from_address, BitVector& vec) {
+void ShortDataService::process_location_information_protocol(const Address to_address, const Address from_address,
+                                                             BitVector& vec) {
     auto pdu_type = vec.take<2>();
 
     if (pdu_type == 0b00) {

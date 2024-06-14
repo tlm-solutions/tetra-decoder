@@ -3,12 +3,16 @@
 #include "l2/broadcast_synchronization_channel.hpp"
 #include "l2/logical_channel.hpp"
 #include "l2/lower_mac_coding.hpp"
+#include "l2/slot.hpp"
+#include "l2/upper_mac_packet_builder.hpp"
 #include "utils/bit_vector.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <l2/lower_mac.hpp>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 
 #include <fmt/color.h>
@@ -326,29 +330,26 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         // check if we have crc decode errors in the lower mac
         decode_error |= slots.has_crc_error();
 
-        // construct the callbacks for the slots
-        std::map<LogicalChannel, void (UpperMac::*)(BurstType, BitVector&)> logical_channel_to_function_map({
-            {LogicalChannel::kSignalingChannelHalfDownlink, &UpperMac::process_SCH_HD},
-            {LogicalChannel::kSignalingChannelHalfUplink, &UpperMac::process_SCH_HU},
-            {LogicalChannel::kSignalingChannelFull, &UpperMac::process_SCH_F},
-            {LogicalChannel::kStealingChannel, &UpperMac::process_STCH},
+        callbacks.emplace_back([this, slots_ref = slots] {
+            auto slots = Slots(slots_ref);
+            // std::cout << slots;
+            UpperMacPackets packets;
+            try {
+                packets = UpperMacPacketBuilder::parse_slots(slots);
+                // if (packets.has_user_or_control_plane_data()) {
+                //     std::cout << packets << std::endl;
+                // }
+            } catch (std::runtime_error& e) {
+                std::cout << "Error decoding packets: " << e.what() << std::endl;
+                return;
+            }
+            try {
+                upper_mac_->process(std::move(packets));
+
+            } catch (std::runtime_error& e) {
+                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
+            }
         });
-
-        {
-            auto& first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
-            if (logical_channel_to_function_map.count(first_slot.channel) && first_slot.crc_ok) {
-                auto& function = logical_channel_to_function_map[first_slot.channel];
-                callbacks.emplace_back(std::bind(function, upper_mac_, burst_type, first_slot.data));
-            }
-        }
-
-        if (slots.has_second_slot()) {
-            auto& second_slot = slots.get_second_slot().get_logical_channel_data_and_crc();
-            if (logical_channel_to_function_map.count(second_slot.channel) && second_slot.crc_ok) {
-                auto& function = logical_channel_to_function_map[second_slot.channel];
-                callbacks.emplace_back(std::bind(function, upper_mac_, burst_type, second_slot.data));
-            }
-        }
     }
 
     // Update the received burst type metrics

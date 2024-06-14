@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -9,19 +9,11 @@
 
 #pragma once
 
-#include "utils/bit_vector.hpp"
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-#include <burst_type.hpp>
+#include "l2/upper_mac_fragments.hpp"
+#include "l2/upper_mac_packet_builder.hpp"
 #include <l2/logical_link_control.hpp>
 #include <l3/mobile_link_entity.hpp>
 #include <reporter.hpp>
-#include <utils/address_type.hpp>
 
 class UpperMac {
   public:
@@ -32,122 +24,28 @@ class UpperMac {
         , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
     ~UpperMac() noexcept = default;
 
-    // Signalling CHannel for mapping onto Half-bursts on the Downlink
-    void process_SCH_HD(BurstType burst_type, BitVector& vec);
-    // Signalling CHannel for mapping onto Half-bursts on the Uplink
-    void process_SCH_HU(BurstType burst_type, BitVector& vec);
-    // Signalling CHannel for mapping onto Full bursts
-    void process_SCH_F(BurstType burst_type, BitVector& vec);
-    // STealing CHannel
-    void process_STCH(BurstType burst_type, BitVector& vec);
-
-    [[nodiscard]] auto downlink_frequency() const noexcept -> int32_t { return downlink_frequency_; }
-    [[nodiscard]] auto uplink_frequency() const noexcept -> int32_t { return uplink_frequency_; }
-    [[nodiscard]] auto second_slot_stolen() const noexcept -> bool { return second_slot_stolen_; }
-
-    friend auto operator<<(std::ostream& stream, const UpperMac& upperMac) -> std::ostream&;
+    /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
+    /// \param packets the packets that were parsed in the upper MAC layer
+    auto process(UpperMacPackets&& packets) -> void {
+        for (const auto& packet : packets.c_plane_signalling_packets_) {
+            // TODO: handle fragmentation over STCH
+            if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
+                auto reconstructed_fragment = fragmentation_.push_fragment(packet);
+                if (reconstructed_fragment) {
+                    auto data = BitVector(*reconstructed_fragment->tm_sdu_);
+                    logical_link_control_->process(reconstructed_fragment->address_, data);
+                }
+            } else if (packet.tm_sdu_) {
+                auto data = BitVector(*packet.tm_sdu_);
+                logical_link_control_->process(packet.address_, data);
+            }
+        }
+    };
 
   private:
-    std::shared_ptr<Reporter> reporter_{};
+    std::shared_ptr<Reporter> reporter_;
+    std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
+    std::unique_ptr<LogicalLinkControl> logical_link_control_;
 
-    void process_signalling_channel(BurstType burst_type, BitVector& vec, bool isHalfChannel, bool isStolenChannel);
-    void process_signalling_channel_internal(BurstType burst_type, BitVector& vec, bool isHalfChannel,
-                                             bool isStolenChannel);
-
-    void process_broadcast(BitVector& vec);
-    void process_supplementary_mac_pdu(BurstType burst_type, BitVector& vec);
-
-    // TMA-SAP Uplink
-    void process_mac_access(BitVector& vec);
-    void process_mac_end_hu(BitVector& vec);
-    void process_mac_data(BitVector& vec);
-    void process_mac_frag_uplink(BitVector& vec);
-    void process_mac_end_uplink(BitVector& vec);
-    void process_mac_u_blck(BitVector& vec);
-    // TMA-SAP Downlink
-    void process_mac_resource(BitVector& vec);
-    void process_mac_frag_downlink(BitVector& vec);
-    void process_mac_end_downlink(BitVector& vec);
-    void process_mac_d_blck(BitVector& vec);
-    // TMB-SAP broadcast
-    void process_system_info_pdu(BitVector& vec);
-    static void process_access_define_pdu(BitVector& vec);
-    void process_system_info_da(BitVector& vec){};
-    // TMD-SAP
-    void process_mac_usignal(BitVector& vec);
-
-    // fragmentation
-    // XXX: might have to delay processing as SSI may only be known after the Null PDU
-    void fragmentation_start_burst();
-    void fragmentation_end_burst();
-    void fragmentation_push_tm_sdu_start(AddressType address_type, BitVector& vec);
-    void fragmentation_push_tm_sdu_frag(BitVector& vec);
-    void fragmentation_push_tm_sdu_end(BitVector& vec);
-    void fragmentation_push_tm_sdu_end_hu(BitVector& vec);
-
-    void remove_fill_bits(BitVector& vec);
-    bool remove_fill_bits_{};
-
-    // SYSINFO PDU
-    bool system_info_received_ = false;
-    int32_t downlink_frequency_ = 0;
-    int32_t uplink_frequency_ = 0;
-    uint8_t number_secondary_control_channels_main_carrier_{};
-    uint8_t ms_txpwr_max_cell_{};
-    uint8_t rxlev_access_min_{};
-    uint8_t access_parameter_{};
-    uint8_t radio_downlink_timeout_{};
-    uint8_t hyper_frame_cipher_key_flag_{};
-    uint8_t hyper_frame_number_{};
-    uint8_t common_cipher_key_identifier_or_static_cipher_key_version_number_{};
-    std::optional<uint32_t> even_multi_frame_definition_for_ts_mode_;
-    std::optional<uint32_t> odd_multi_frame_definition_for_ts_mode_;
-
-    struct DefaultDefinitionForAccessCodeA {
-        bool system_info_ = false;
-        uint8_t immediate_ = 0;
-        uint8_t waiting_time_ = 0;
-        uint8_t number_of_random_access_transmissions_on_up_link_ = 0;
-        uint8_t frame_length_factor_ = 0;
-        uint8_t timeslot_pointer_ = 0;
-        uint8_t minimum_pdu_priority_ = 0;
-    } defaults_for_access_code_a_;
-
-    struct ExtendedServiceBroadcast {
-        // TODO: I dont know how this works but maybe smart making for the sections
-        //  separate structs which then live in std::optionals
-        bool system_info_ = false;
-        uint8_t security_information_ = 0;
-        uint8_t sdstl_addressing_method_ = 0;
-        uint8_t gck_supported_ = 0;
-
-        bool system_info_section_1_ = false;
-        uint8_t data_priority_supported_ = 0;
-        uint8_t extended_advanced_links_and_max_ublck_supported_ = 0;
-        uint8_t qos_negotiation_supported_ = 0;
-        uint8_t d8psk_service_ = 0;
-
-        bool system_info_section_2_ = false;
-        uint8_t service_25Qam_ = 0;
-        uint8_t service_50Qam_ = 0;
-        uint8_t service_100Qam_ = 0;
-        uint8_t service_150Qam_ = 0;
-    } extended_service_broadcast_;
-
-    // STCH
-    bool second_slot_stolen_{};
-
-    std::shared_ptr<MobileLinkEntity> mobile_link_entity_{};
-    std::unique_ptr<LogicalLinkControl> logical_link_control_{};
-
-    // hashmap to keep track of framented mac segments
-    std::unordered_map<AddressType, std::vector<BitVector>> fragment_map_ = {};
-    std::vector<BitVector> fragment_list_{};
-    bool fragment_end_received_{};
-    bool fragment_end_hu_received_{};
-    AddressType last_address_type_{};
-    // save the last MAC-ACCESS or MAC-DATA where reservation_requirement is 0b0000 (1 sublot) for END-HU
-    AddressType last_address_type_end_hu_{};
+    UpperMacFragmentation fragmentation_;
 };
-
-std::ostream& operator<<(std::ostream& stream, const UpperMac& upperMac);

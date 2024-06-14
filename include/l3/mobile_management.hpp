@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <reporter.hpp>
-#include <utils/address_type.hpp>
+#include <utils/address.hpp>
 #include <utils/bit_vector.hpp>
 
 class MobileManagement {
@@ -19,7 +19,7 @@ class MobileManagement {
     MobileManagement(){};
     ~MobileManagement() noexcept = default;
 
-    void process(bool is_downlink, AddressType address, BitVector& vec);
+    void process(bool is_downlink, Address address, BitVector& vec);
 
   private:
 };

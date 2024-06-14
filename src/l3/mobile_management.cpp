@@ -4,7 +4,7 @@
 
 #include <l3/mobile_management.hpp>
 
-void MobileManagement::process(bool is_downlink, const AddressType address, BitVector& vec) {
+void MobileManagement::process(bool is_downlink, const Address address, BitVector& vec) {
     std::string mm_downlink_pdu[] = {"D-OTAR",
                                      "D-AUTHENTICATION",
                                      "D-CK CHANGE DEMAND",
