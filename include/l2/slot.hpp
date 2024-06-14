@@ -10,6 +10,7 @@
 
 #include "burst_type.hpp"
 #include "l2/logical_channel.hpp"
+#include <array>
 #include <cassert>
 #include <set>
 #include <vector>
@@ -95,6 +96,20 @@ constexpr auto to_string(SlotsType type) noexcept -> const char* {
     }
 };
 
+/// This datastructure is used to pass concreate slots between different abstractions.
+struct ConcreateSlot {
+    /// which burst type ths slots originated from
+    const BurstType burst_type;
+    /// the datastructure that contains the logical channel, the data and the crc
+    const LogicalChannelDataAndCrc& logical_channel_data_and_crc;
+
+    ConcreateSlot() = delete;
+
+    ConcreateSlot(BurstType burst_type, const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
+        : burst_type(burst_type)
+        , logical_channel_data_and_crc(logical_channel_data_and_crc){};
+};
+
 /// defines the slots in a packet
 class Slots {
   private:
@@ -102,8 +117,10 @@ class Slots {
     BurstType burst_type_;
     /// the number and types of slots
     SlotsType slot_type_;
-    /// the slots, either one half or full slot or two half slots
-    std::vector<Slot> slots_;
+    /// The slots, either one half or full slot or two half slots.
+    /// We are doing accesses that would normally not be const but are in this case, because we make assumption about
+    /// the content of this vector based on the constructor used to initialize this class.
+    mutable std::vector<Slot> slots_;
 
   public:
     Slots() = delete;
@@ -116,11 +133,28 @@ class Slots {
     /// construct for two half slot
     Slots(BurstType burst_type, SlotsType slot_type, Slot&& first_slot, Slot&& second_slot);
 
+    /// get a reference to the concreate slots
+    [[nodiscard]] auto get_concreate_slots() const -> std::vector<ConcreateSlot> {
+        std::vector<ConcreateSlot> slots;
+
+        {
+            const auto& first_slot = get_first_slot().get_logical_channel_data_and_crc();
+            slots.emplace_back(burst_type_, first_slot);
+        }
+
+        if (has_second_slot()) {
+            const auto& second_slot = get_second_slot().get_logical_channel_data_and_crc();
+            slots.emplace_back(burst_type_, second_slot);
+        }
+
+        return slots;
+    }
+
     /// access the first slot
-    [[nodiscard]] auto get_first_slot() noexcept -> Slot& { return slots_.front(); };
+    [[nodiscard]] auto get_first_slot() const noexcept -> Slot& { return slots_.front(); };
 
     /// access the second slot
-    [[nodiscard]] auto get_second_slot() -> Slot& {
+    [[nodiscard]] auto get_second_slot() const -> Slot& {
         if (!has_second_slot()) {
             throw std::runtime_error("Attempted to accesses the second slot, but we do not have two slots.");
         }

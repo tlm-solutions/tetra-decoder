@@ -11,11 +11,13 @@
 
 #include "l2/logical_channel.hpp"
 #include "l2/logical_link_control.hpp"
+#include "l2/slot.hpp"
 #include "l2/upper_mac_fragments.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
 #include "l3/mobile_link_entity.hpp"
 #include "prometheus.h"
 #include "reporter.hpp"
+#include <vector>
 
 /// The class to provide prometheus metrics to the upper mac.
 /// 1. Received Slot are counted. Details about the number of Slot with CRC errors and decoding errors are saved.
@@ -93,9 +95,9 @@ class UpperMacPrometheusCounters {
               slot_error_count_family_.Add({{"logical_channel", "StealingChannel"}, {"error_type", "Decode Error"}})){};
 
     /// This function is called for every slot once it is passed up from the lower MAC
-    /// \param logical_channel_data_and_crc the content of the slot
-    auto increment(const LogicalChannelDataAndCrc& logical_channel_data_and_crc) -> void {
-        switch (logical_channel_data_and_crc.channel) {
+    /// \param slot the content of the slot
+    auto increment(const ConcreateSlot& slot) -> void {
+        switch (slot.logical_channel_data_and_crc.channel) {
         case LogicalChannel::kSignallingChannelHalfDownlink:
             signalling_channel_half_downlink_received_count_.Increment();
             break;
@@ -113,8 +115,8 @@ class UpperMacPrometheusCounters {
             break;
         }
 
-        if (!logical_channel_data_and_crc.crc_ok) {
-            switch (logical_channel_data_and_crc.channel) {
+        if (!slot.logical_channel_data_and_crc.crc_ok) {
+            switch (slot.logical_channel_data_and_crc.channel) {
             case LogicalChannel::kSignallingChannelHalfDownlink:
                 signalling_channel_half_downlink_received_count_crc_error_.Increment();
                 break;
@@ -130,6 +132,27 @@ class UpperMacPrometheusCounters {
                 stealing_channel_received_count_crc_error_.Increment();
                 break;
             }
+        }
+    }
+
+    /// This function is called for every slot once if there were decode errors in upper mac layers
+    /// \param slot the content of the slot
+    auto increment_decode_error(const ConcreateSlot& slot) -> void {
+        switch (slot.logical_channel_data_and_crc.channel) {
+        case LogicalChannel::kSignallingChannelHalfDownlink:
+            signalling_channel_half_downlink_received_count_decoding_error_.Increment();
+            break;
+        case LogicalChannel::kSignallingChannelHalfUplink:
+            signalling_channel_half_uplink_received_count_decoding_error_.Increment();
+            break;
+        case LogicalChannel::kTrafficChannel:
+            break;
+        case LogicalChannel::kSignallingChannelFull:
+            signalling_channel_full_received_count_decoding_error_.Increment();
+            break;
+        case LogicalChannel::kStealingChannel:
+            stealing_channel_received_count_decoding_error_.Increment();
+            break;
         }
     }
 };
@@ -151,31 +174,40 @@ class UpperMac {
     /// process the slots from the lower MAC
     /// \param slots the slots from the lower MAC
     auto process(Slots& slots) -> void {
-        UpperMacPackets packets;
+        const auto concreate_slots = slots.get_concreate_slots();
 
-        // std::cout << slots;
+        for (const auto& slot : concreate_slots) {
+            UpperMacPackets packets;
 
-        // increment the total count and crc error count metrics
-        metrics_->increment(slots.get_first_slot().get_logical_channel_data_and_crc());
-        if (slots.has_second_slot()) {
-            metrics_->increment(slots.get_second_slot().get_logical_channel_data_and_crc());
-        }
+            // std::cout << slot;
 
-        try {
-            packets = UpperMacPacketBuilder::parse_slots(slots);
-            // if (packets.has_user_or_control_plane_data()) {
-            //     std::cout << packets << std::endl;
-            // }
-        } catch (std::runtime_error& e) {
-            std::cout << "Error decoding packets: " << e.what() << std::endl;
-            return;
-        }
+            // increment the total count and crc error count metrics
+            metrics_->increment(slot);
 
-        try {
-            processPackets(std::move(packets));
+            bool decode_error = false;
 
-        } catch (std::runtime_error& e) {
-            std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
+            try {
+                packets = UpperMacPacketBuilder::parse_slot(slot);
+                // if (packets.has_user_or_control_plane_data()) {
+                //     std::cout << packets << std::endl;
+                // }
+            } catch (std::runtime_error& e) {
+                decode_error = true;
+                std::cout << "Error decoding packets: " << e.what() << std::endl;
+                return;
+            }
+
+            try {
+                processPackets(std::move(packets));
+            } catch (std::runtime_error& e) {
+                decode_error = true;
+                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
+            }
+
+            // If we had an error during decoding increment the metrics
+            if (decode_error) {
+                metrics_->increment_decode_error(slot);
+            }
         }
     }
 
