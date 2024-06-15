@@ -30,6 +30,9 @@ class PrometheusExporter {
     auto upper_mac_total_slot_count() noexcept -> prometheus::Family<prometheus::Counter>&;
     /// The family of counters for all received slots with errors
     auto upper_mac_slot_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+
+    /// The family of counters for all received upper mac packets
+    auto upper_mac_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H

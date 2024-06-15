@@ -66,6 +66,17 @@ class UpperMacPrometheusCounters {
     /// The counter for received StealingChannel with decoding errors
     prometheus::Counter& stealing_channel_received_count_decoding_error_;
 
+    /// The family of counters for all received upper mac packets
+    prometheus::Family<prometheus::Counter>& packet_count_family_;
+    /// The counters for all received c-plane signalling packets
+    prometheus::Counter& c_plane_signalling_packet_count_;
+    /// The counters for all received u-plane signalling packets
+    prometheus::Counter& u_plane_signalling_packet_count_;
+    /// The counters for all received u-plane traffic packets
+    prometheus::Counter& u_plane_traffic_packet_count_;
+    /// The counters for all received broadcast packets
+    prometheus::Counter& broadcast_packet_count_;
+
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 
   public:
@@ -97,7 +108,12 @@ class UpperMacPrometheusCounters {
         , signalling_channel_full_received_count_decoding_error_(slot_error_count_family_.Add(
               {{"logical_channel", "SignallingChannelFull"}, {"error_type", "Decode Error"}}))
         , stealing_channel_received_count_decoding_error_(
-              slot_error_count_family_.Add({{"logical_channel", "StealingChannel"}, {"error_type", "Decode Error"}})){};
+              slot_error_count_family_.Add({{"logical_channel", "StealingChannel"}, {"error_type", "Decode Error"}}))
+        , packet_count_family_(prometheus_exporter_->upper_mac_packet_count())
+        , c_plane_signalling_packet_count_(packet_count_family_.Add({{"packet_type", "C-Plane Signalling"}}))
+        , u_plane_signalling_packet_count_(packet_count_family_.Add({{"packet_type", "U-Plane Signalling"}}))
+        , u_plane_traffic_packet_count_(packet_count_family_.Add({{"packet_type", "U-Plane Traffic"}}))
+        , broadcast_packet_count_(packet_count_family_.Add({{"packet_type", "Broadcast"}})){};
 
     /// This function is called for every slot once it is passed up from the lower MAC
     /// \param slot the content of the slot
@@ -158,6 +174,19 @@ class UpperMacPrometheusCounters {
         case LogicalChannel::kStealingChannel:
             stealing_channel_received_count_decoding_error_.Increment();
             break;
+        }
+    }
+
+    /// This function is called for all decoded packets in the upper mac
+    /// \param packets the datastructure that contains all the successfully decoded packets
+    auto increment_packet_counters(const UpperMacPackets& packets) -> void {
+        c_plane_signalling_packet_count_.Increment(static_cast<double>(packets.c_plane_signalling_packets_.size()));
+        u_plane_signalling_packet_count_.Increment(static_cast<double>(packets.u_plane_signalling_packet_.size()));
+        if (packets.u_plane_traffic_packet_) {
+            u_plane_traffic_packet_count_.Increment();
+        }
+        if (packets.broadcast_packet_) {
+            broadcast_packet_count_.Increment();
         }
     }
 };

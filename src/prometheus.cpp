@@ -55,3 +55,11 @@ auto PrometheusExporter::upper_mac_slot_error_count() noexcept -> prometheus::Fa
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::upper_mac_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("upper_mac_packet_count")
+        .Help("Incrementing counter of the number of received packets in the upper MAC.")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

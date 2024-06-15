@@ -114,4 +114,9 @@ auto UpperMac::processPackets(UpperMacPackets&& packets,
             logical_link_control_->process(packet.address_, data);
         }
     }
+
+    /// increment the packet counter
+    if (metrics_) {
+        metrics_->increment_packet_counters(packets);
+    }
 }

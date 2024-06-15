@@ -124,10 +124,7 @@ class Slots {
   public:
     Slots() = delete;
 
-    Slots(const Slots& other)
-        : burst_type_(other.burst_type_)
-        , slot_type_(other.slot_type_)
-        , slots_(other.slots_){};
+    Slots(const Slots& other) = default;
 
     /// constructor for one subslot or a full slot
     Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot);
