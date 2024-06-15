@@ -398,13 +398,15 @@ struct UpperMacCPlaneSignallingPacket {
     /// check if this packet is part of a downlink fragment
     [[nodiscard]] auto is_downlink_fragment() const -> bool {
         return (type_ == MacPacketType::kMacResource && fragmentation_) ||
+               (type_ == MacPacketType::kMacResource && fragmentation_on_stealling_channel_) ||
                (type_ == MacPacketType::kMacFragmentDownlink) || (type_ == MacPacketType::kMacEndDownlink);
     };
 
     /// check if this packet is part of a uplink fragment
     [[nodiscard]] auto is_uplink_fragment() const -> bool {
-        return (type_ == MacPacketType::kMacData && fragmentation_) || (type_ == MacPacketType::kMacFragmentUplink) ||
-               (type_ == MacPacketType::kMacEndUplink);
+        return (type_ == MacPacketType::kMacData && fragmentation_) ||
+               (type_ == MacPacketType::kMacData && fragmentation_on_stealling_channel_) ||
+               (type_ == MacPacketType::kMacFragmentUplink) || (type_ == MacPacketType::kMacEndUplink);
     };
 
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;

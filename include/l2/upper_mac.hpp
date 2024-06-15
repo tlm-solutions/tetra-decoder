@@ -186,7 +186,10 @@ class UpperMac {
 
     /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
     /// \param packets the packets that were parsed in the upper MAC layer
-    auto processPackets(UpperMacPackets&& packets) -> void;
+    /// \param stealling_channel_fragmentation the fragmentation reconstructor fragmenting over two stealing channel in
+    /// the same burst
+    auto processPackets(UpperMacPackets&& packets,
+                        std::optional<UpperMacFragmentation>& stealling_channel_fragmentation) -> void;
 
     /// The input queue
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;

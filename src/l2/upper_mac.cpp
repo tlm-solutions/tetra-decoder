@@ -8,7 +8,9 @@
 
 #include "l2/upper_mac.hpp"
 #include "l2/lower_mac.hpp"
+#include "l2/upper_mac_fragments.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -54,6 +56,8 @@ void UpperMac::worker() {
 auto UpperMac::process(const Slots& slots) -> void {
     const auto concreate_slots = slots.get_concreate_slots();
 
+    /// Use this fragmentation reconstructor for the two stealing channels
+    std::optional<UpperMacFragmentation> stealing_channel_fragmentation;
     for (const auto& slot : concreate_slots) {
         UpperMacPackets packets;
 
@@ -81,7 +85,7 @@ auto UpperMac::process(const Slots& slots) -> void {
         }
 
         try {
-            processPackets(std::move(packets));
+            processPackets(std::move(packets), stealing_channel_fragmentation);
         } catch (std::runtime_error& e) {
             if (metrics_) {
                 metrics_->increment_decode_error(slot);
@@ -90,11 +94,22 @@ auto UpperMac::process(const Slots& slots) -> void {
     }
 }
 
-auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
+auto UpperMac::processPackets(UpperMacPackets&& packets,
+                              std::optional<UpperMacFragmentation>& stealling_channel_fragmentation) -> void {
     for (const auto& packet : packets.c_plane_signalling_packets_) {
-        // TODO: handle fragmentation over STCH
         if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
-            auto reconstructed_fragment = fragmentation_.push_fragment(packet);
+            /// populate the fragmenter for stealing channel
+            if (packet.fragmentation_on_stealling_channel_ && !stealling_channel_fragmentation) {
+                stealling_channel_fragmentation = UpperMacFragmentation{};
+            }
+
+            // select the correct fragment reconstructor
+            auto& fragmentation = fragmentation_;
+            if (stealling_channel_fragmentation) {
+                fragmentation = *stealling_channel_fragmentation;
+            }
+
+            auto reconstructed_fragment = fragmentation.push_fragment(packet);
             if (reconstructed_fragment) {
                 auto data = BitVector(*reconstructed_fragment->tm_sdu_);
                 logical_link_control_->process(reconstructed_fragment->address_, data);
