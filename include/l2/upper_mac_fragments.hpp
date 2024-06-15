@@ -9,34 +9,146 @@
 #pragma once
 
 #include "l2/upper_mac_packet.hpp"
+#include "prometheus.h"
 #include <cassert>
+#include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
-/// hold the fragments of fragmented messages
-struct UpperMacFragments {
-    /// the start fragment
-    std::optional<UpperMacCPlaneSignallingPacket> start_fragment_;
-    /// the optional continuation fragments
-    std::vector<UpperMacCPlaneSignallingPacket> continuation_fragments_;
-    /// the end fragment
-    std::optional<UpperMacCPlaneSignallingPacket> end_fragment_;
+class UpperMacFragmentsPrometheusCounters {
+  private:
+    /// The prometheus exporter
+    std::shared_ptr<PrometheusExporter> prometheus_exporter_;
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+
+    /// The family of counters for received fragments
+    prometheus::Family<prometheus::Counter>& fragment_count_family_;
+    /// The counter for total received fragments
+    prometheus::Counter& fragment_count_total_;
+    /// The counter for received fragments that could not be reassembled
+    prometheus::Counter& fragment_count_error_;
+
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+
+  public:
+    UpperMacFragmentsPrometheusCounters() = delete;
+    explicit UpperMacFragmentsPrometheusCounters(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+                                                 const std::string& type)
+        : prometheus_exporter_(prometheus_exporter)
+        , fragment_count_family_(prometheus_exporter_->upper_mac_fragment_count())
+        , fragment_count_total_(fragment_count_family_.Add({{"type", type}, {"counter_type", "All"}}))
+        , fragment_count_error_(
+              fragment_count_family_.Add({{"type", type}, {"counter_type", "Reconstuction Error"}})){};
+
+    /// This function is called for every fragment where no fitting previous fragment could be found.
+    auto increment_fragment_reconstruction_error() -> void { fragment_count_error_.Increment(); }
+    /// This function is called for every fragment.
+    auto increment_fragment_count() -> void { fragment_count_total_.Increment(); }
 };
 
 /// Class that provides the fragment reconstruction for uplink and downlink packets.
 /// TODO: Uplink fragmentation may include reserved slots and is therefore harder to reconstruct. This is not handled
 /// with this class.
-/// TODO: Fragmentation over two slots of a stealing channel is also not handled.
 class UpperMacFragmentation {
   private:
-    /// the fragments for the downlink
-    UpperMacFragments downlink_fragments_;
-    /// the fragments for the uplink
-    UpperMacFragments uplink_fragments_;
+    /// Holds the internal state of the fragment rebuilder
+    enum class State {
+        kStart,
+        kStartFragmentReceived,
+        kContinuationFragmentReceived,
+        kEndFragmentReceived,
+    };
+    /// The vector that holds the accumulated fragments
+    std::vector<UpperMacCPlaneSignallingPacket> fragments_;
+    /// Are continuation allowed in the state machine?
+    std::map<State, std::set<State>> allowed_state_changes_;
+    /// The current state of the fragment reassembler
+    State state_;
+
+    /// the metrics for the fragmentation
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> metrics_;
+
+    /// Try the state transtition with a fragment. Increment the error metrics if there is an invalid state transition
+    /// attempted
+    /// \param new_state the new state into which the state machine would be transfered with this fragment
+    /// \param fragment the control plane signalling packet that is fragmented
+    /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
+    auto change_state(State new_state, const UpperMacCPlaneSignallingPacket& fragment)
+        -> std::optional<UpperMacCPlaneSignallingPacket> {
+        const auto& valid_state_changes = allowed_state_changes_[state_];
+
+        // increment the total fragment counters
+        if (metrics_) {
+            metrics_->increment_fragment_count();
+        }
+
+        if (valid_state_changes.count(new_state)) {
+            // valid state change. perform and add fragment
+            fragments_.emplace_back(fragment);
+            state_ = new_state;
+        } else {
+            // increment the invalid state metrics
+            if (metrics_) {
+                metrics_->increment_fragment_reconstruction_error();
+            }
+
+            // always save the start segment
+            if (new_state == State::kStartFragmentReceived) {
+                fragments_ = {fragment};
+                state_ = State::kStartFragmentReceived;
+            } else {
+                fragments_.clear();
+                state_ = State::kStart;
+            }
+        }
+
+        // if we are in the end state reassmeble the packet.
+        if (state_ == State::kEndFragmentReceived) {
+            std::optional<UpperMacCPlaneSignallingPacket> packet;
+            for (const auto& fragment : fragments_) {
+                if (packet) {
+                    packet->tm_sdu_->append(*fragment.tm_sdu_);
+                } else {
+                    packet = fragment;
+                }
+            }
+            fragments_.clear();
+            state_ = State::kStart;
+
+            return packet;
+        }
+
+        return std::nullopt;
+    };
 
   public:
-    UpperMacFragmentation() = default;
+    UpperMacFragmentation() = delete;
+
+    /// Constructor for the fragmentations. Optionally specify if an arbitraty numner of continuation fragments are
+    /// allowed
+    explicit UpperMacFragmentation(const std::shared_ptr<UpperMacFragmentsPrometheusCounters>& metrics,
+                                   bool continuation_fragments_allowed = true)
+        : state_(State::kStart)
+        , metrics_(metrics) {
+        if (continuation_fragments_allowed) {
+            allowed_state_changes_ = {
+                {State::kStart, {State::kStartFragmentReceived}},
+                {State::kStartFragmentReceived, {State::kContinuationFragmentReceived, State::kEndFragmentReceived}},
+                {State::kContinuationFragmentReceived,
+                 {State::kContinuationFragmentReceived, State::kEndFragmentReceived}},
+                {State::kEndFragmentReceived, {State::kStart}}};
+        } else {
+            allowed_state_changes_ = {{State::kStart, {State::kStartFragmentReceived}},
+                                      {State::kStartFragmentReceived, {State::kEndFragmentReceived}},
+                                      {State::kEndFragmentReceived, {State::kStart}}};
+        }
+    };
+
+    /// Check if we are in the start state i.e., do no have any fragments.
+    auto is_in_start_state() -> bool { return state_ == State::kStart; }
 
     /// Push a fragment for reconstruction.
     /// \param fragment the control plane signalling packet that is fragmented
@@ -46,18 +158,11 @@ class UpperMacFragmentation {
         switch (fragment.type_) {
         case MacPacketType::kMacResource:
             assert(fragment.fragmentation_);
-            downlink_fragments_ = UpperMacFragments{.start_fragment_ = fragment};
-            break;
+            return change_state(State::kStartFragmentReceived, fragment);
         case MacPacketType::kMacFragmentDownlink:
-            if (downlink_fragments_.start_fragment_) {
-                downlink_fragments_.continuation_fragments_.push_back(fragment);
-            }
-            break;
+            return change_state(State::kContinuationFragmentReceived, fragment);
         case MacPacketType::kMacEndDownlink:
-            if (downlink_fragments_.start_fragment_) {
-                downlink_fragments_.end_fragment_ = fragment;
-            }
-            break;
+            return change_state(State::kEndFragmentReceived, fragment);
         case MacPacketType::kMacDBlck:
             throw std::runtime_error("No fragmentation in MacDBlck");
         case MacPacketType::kMacBroadcast:
@@ -65,61 +170,16 @@ class UpperMacFragmentation {
         case MacPacketType::kMacAccess:
         case MacPacketType::kMacData:
             assert(fragment.fragmentation_);
-            uplink_fragments_ = UpperMacFragments{.start_fragment_ = fragment};
-            break;
+            return change_state(State::kStartFragmentReceived, fragment);
         case MacPacketType::kMacFragmentUplink:
-            if (uplink_fragments_.start_fragment_) {
-                uplink_fragments_.continuation_fragments_.push_back(fragment);
-            }
-            break;
+            return change_state(State::kContinuationFragmentReceived, fragment);
         case MacPacketType::kMacEndHu:
         case MacPacketType::kMacEndUplink:
-            if (uplink_fragments_.start_fragment_) {
-                uplink_fragments_.end_fragment_ = fragment;
-            }
-            break;
+            return change_state(State::kEndFragmentReceived, fragment);
         case MacPacketType::kMacUBlck:
             throw std::runtime_error("No fragmentation in MacUBlck");
         case MacPacketType::kMacUSignal:
             throw std::runtime_error("No fragmentation in MacUSignal");
         }
-
-        // forward and clear on MacEndDownlink
-        if (downlink_fragments_.end_fragment_) {
-            UpperMacCPlaneSignallingPacket packet = *downlink_fragments_.start_fragment_;
-
-            for (const auto& fragment : downlink_fragments_.continuation_fragments_) {
-                if (fragment.tm_sdu_) {
-                    packet.tm_sdu_->append(*fragment.tm_sdu_);
-                }
-            }
-            if (downlink_fragments_.end_fragment_->tm_sdu_) {
-                packet.tm_sdu_->append(*downlink_fragments_.end_fragment_->tm_sdu_);
-            }
-
-            downlink_fragments_ = UpperMacFragments{};
-
-            return packet;
-        }
-
-        // forward and clear on MacEndHu and MacEndUplink
-        if (uplink_fragments_.end_fragment_) {
-            UpperMacCPlaneSignallingPacket packet = *uplink_fragments_.start_fragment_;
-
-            for (const auto& fragment : uplink_fragments_.continuation_fragments_) {
-                if (fragment.tm_sdu_) {
-                    packet.tm_sdu_->append(*fragment.tm_sdu_);
-                }
-            }
-            if (uplink_fragments_.end_fragment_->tm_sdu_) {
-                packet.tm_sdu_->append(*uplink_fragments_.end_fragment_->tm_sdu_);
-            }
-
-            uplink_fragments_ = UpperMacFragments{};
-
-            return packet;
-        }
-
-        return std::nullopt;
     };
 };

@@ -63,3 +63,11 @@ auto PrometheusExporter::upper_mac_packet_count() noexcept -> prometheus::Family
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::upper_mac_fragment_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("upper_mac_fragment_count")
+        .Help("Incrementing counter of the number of fragments in the upper MAC.")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

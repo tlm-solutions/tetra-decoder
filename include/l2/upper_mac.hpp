@@ -18,6 +18,7 @@
 #include "prometheus.h"
 #include "reporter.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <memory>
 #include <thread>
 
 /// The class to provide prometheus metrics to the upper mac.
@@ -215,10 +216,7 @@ class UpperMac {
 
     /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
     /// \param packets the packets that were parsed in the upper MAC layer
-    /// \param stealling_channel_fragmentation the fragmentation reconstructor fragmenting over two stealing channel in
-    /// the same burst
-    auto processPackets(UpperMacPackets&& packets,
-                        std::optional<UpperMacFragmentation>& stealling_channel_fragmentation) -> void;
+    auto processPackets(UpperMacPackets&& packets) -> void;
 
     /// The input queue
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;
@@ -226,9 +224,13 @@ class UpperMac {
     /// The prometheus metrics
     std::unique_ptr<UpperMacPrometheusCounters> metrics_;
 
+    /// The prometheus metrics for the fragmentation
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_continous_;
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_stealing_channel_;
+
     std::unique_ptr<LogicalLinkControl> logical_link_control_;
 
-    UpperMacFragmentation fragmentation_;
+    std::unique_ptr<UpperMacFragmentation> fragmentation_;
 
     /// The worker thread
     std::thread worker_thread_;

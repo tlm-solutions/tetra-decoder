@@ -10,6 +10,7 @@
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
@@ -26,7 +27,12 @@ UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecuto
           std::make_unique<LogicalLinkControl>(reporter, std::make_shared<MobileLinkEntity>(reporter, is_downlink))) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacPrometheusCounters>(prometheus_exporter);
+        fragmentation_metrics_continous_ =
+            std::make_shared<UpperMacFragmentsPrometheusCounters>(prometheus_exporter, "Continous");
+        fragmentation_metrics_stealing_channel_ =
+            std::make_shared<UpperMacFragmentsPrometheusCounters>(prometheus_exporter, "Stealing Channel");
     }
+    fragmentation_ = std::make_unique<UpperMacFragmentation>(fragmentation_metrics_continous_);
     worker_thread_ = std::thread(&UpperMac::worker, this);
 
 #if defined(__linux__)
@@ -49,25 +55,21 @@ void UpperMac::worker() {
         if (slots) {
             this->process(*slots);
         }
-        // TODO: Implement a way to send a stop signal until termination
     }
 }
 
 auto UpperMac::process(const Slots& slots) -> void {
     const auto concreate_slots = slots.get_concreate_slots();
 
-    /// Use this fragmentation reconstructor for the two stealing channels
-    std::optional<UpperMacFragmentation> stealing_channel_fragmentation;
+    UpperMacPackets packets;
     for (const auto& slot : concreate_slots) {
-        UpperMacPackets packets;
-
         // increment the total count and crc error count metrics
         if (metrics_) {
             metrics_->increment(slot);
         }
 
         try {
-            packets = UpperMacPacketBuilder::parse_slot(slot);
+            packets.merge(UpperMacPacketBuilder::parse_slot(slot));
             // if (packets.has_user_or_control_plane_data()) {
             //     std::cout << packets << std::endl;
             // }
@@ -76,32 +78,28 @@ auto UpperMac::process(const Slots& slots) -> void {
                 metrics_->increment_decode_error(slot);
             }
 
-            return;
+            continue;
         }
+    }
 
-        try {
-            processPackets(std::move(packets), stealing_channel_fragmentation);
-        } catch (std::runtime_error& e) {
-            if (metrics_) {
-                metrics_->increment_decode_error(slot);
-            }
-        }
+    try {
+        processPackets(std::move(packets));
+    } catch (std::runtime_error& e) {
+        // TODO: increment other metrics
     }
 }
 
-auto UpperMac::processPackets(UpperMacPackets&& packets,
-                              std::optional<UpperMacFragmentation>& stealling_channel_fragmentation) -> void {
+auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
+    // the fragmentation reconstructor for over two stealing channel in the same burst
+    auto& fragmentation = *fragmentation_;
+    auto stealling_channel_fragmentation =
+        UpperMacFragmentation(fragmentation_metrics_stealing_channel_, /*continuation_fragments_allowed=*/false);
+
     for (const auto& packet : packets.c_plane_signalling_packets_) {
         if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
             /// populate the fragmenter for stealing channel
-            if (packet.fragmentation_on_stealling_channel_ && !stealling_channel_fragmentation) {
-                stealling_channel_fragmentation = UpperMacFragmentation{};
-            }
-
-            // select the correct fragment reconstructor
-            auto& fragmentation = fragmentation_;
-            if (stealling_channel_fragmentation) {
-                fragmentation = *stealling_channel_fragmentation;
+            if (packet.fragmentation_on_stealling_channel_) {
+                fragmentation = stealling_channel_fragmentation;
             }
 
             auto reconstructed_fragment = fragmentation.push_fragment(packet);
@@ -113,6 +111,11 @@ auto UpperMac::processPackets(UpperMacPackets&& packets,
             auto data = BitVector(*packet.tm_sdu_);
             logical_link_control_->process(packet.address_, data);
         }
+    }
+
+    /// increment the reconstruction error counter if we could not complete the fragmentation over stealing channel
+    if (!stealling_channel_fragmentation.is_in_start_state() && fragmentation_metrics_stealing_channel_) {
+        fragmentation_metrics_stealing_channel_->increment_fragment_reconstruction_error();
     }
 
     /// increment the packet counter
