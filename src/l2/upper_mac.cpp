@@ -61,11 +61,6 @@ auto UpperMac::process(const Slots& slots) -> void {
     for (const auto& slot : concreate_slots) {
         UpperMacPackets packets;
 
-        std::cout << to_string(slot.logical_channel_data_and_crc.channel) << std::endl;
-        std::cout << to_string(slot.burst_type) << std::endl;
-        std::cout << slot.logical_channel_data_and_crc.data << std::endl;
-        std::cout << slot.logical_channel_data_and_crc.crc_ok << std::endl;
-
         // increment the total count and crc error count metrics
         if (metrics_) {
             metrics_->increment(slot);
