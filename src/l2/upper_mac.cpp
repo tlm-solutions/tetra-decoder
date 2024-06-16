@@ -100,6 +100,11 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     std::vector<UpperMacCPlaneSignallingPacket> c_plane_packets;
 
     for (const auto& packet : packets.c_plane_signalling_packets_) {
+        // increment the packets for the mac packet type
+        if (metrics_) {
+            metrics_->increment_c_plane_packet_counters(packet);
+        }
+
         if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
             /// populate the fragmenter for stealing channel
             if (packet.fragmentation_on_stealling_channel_) {
@@ -108,7 +113,7 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
 
             auto reconstructed_fragment = fragmentation.push_fragment(packet);
             if (reconstructed_fragment) {
-                c_plane_packets.emplace_back(std::move(reconstructed_fragment));
+                c_plane_packets.emplace_back(std::move(*reconstructed_fragment));
             }
         } else if (packet.tm_sdu_) {
             c_plane_packets.emplace_back(packet);

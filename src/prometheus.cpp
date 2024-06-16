@@ -71,3 +71,11 @@ auto PrometheusExporter::upper_mac_fragment_count() noexcept -> prometheus::Fami
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::c_plane_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("c_plane_packet_count")
+        .Help("Incrementing counter of the number of packets in the C-Plane.")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}
