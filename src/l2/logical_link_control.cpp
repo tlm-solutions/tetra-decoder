@@ -36,7 +36,7 @@ void LogicalLinkControl::process(const Address address, BitVector& vec) {
     const auto& pdu_name = llc_pdu_description_.at(pdu_type);
 
     // Skip incrementing the metrics for Supplementary LLC PDU and Layer 2 signalling PDU
-    if (metrics_ && (pdu_type != 13) && (pdu_type != 14)) {
+    if (metrics_ && (pdu_type != kSupplementaryLlcPdu) && (pdu_type != kLayer2SignallingPdu)) {
         metrics_->increment(pdu_name);
     }
 

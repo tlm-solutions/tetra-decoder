@@ -68,6 +68,9 @@ class LogicalLinkControl {
     friend auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;
 
   private:
+    static const auto kSupplementaryLlcPdu = 13;
+    static const auto kLayer2SignallingPdu = 14;
+
     std::array<std::string, 16> llc_pdu_description_;
     std::array<std::string, 4> supplementary_llc_pdu_description_;
     std::array<std::string, 16> layer_2_signalling_pdu_description_;
