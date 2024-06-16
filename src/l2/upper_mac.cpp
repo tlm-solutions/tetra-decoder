@@ -9,11 +9,13 @@
 #include "l2/upper_mac.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
+#include "l2/upper_mac_packet.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
 #include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #if defined(__linux__)
 #include <pthread.h>
@@ -95,6 +97,8 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     auto stealling_channel_fragmentation =
         UpperMacFragmentation(fragmentation_metrics_stealing_channel_, /*continuation_fragments_allowed=*/false);
 
+    std::vector<UpperMacCPlaneSignallingPacket> c_plane_packets;
+
     for (const auto& packet : packets.c_plane_signalling_packets_) {
         if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
             /// populate the fragmenter for stealing channel
@@ -104,12 +108,10 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
 
             auto reconstructed_fragment = fragmentation.push_fragment(packet);
             if (reconstructed_fragment) {
-                auto data = BitVector(*reconstructed_fragment->tm_sdu_);
-                logical_link_control_->process(reconstructed_fragment->address_, data);
+                c_plane_packets.emplace_back(std::move(reconstructed_fragment));
             }
         } else if (packet.tm_sdu_) {
-            auto data = BitVector(*packet.tm_sdu_);
-            logical_link_control_->process(packet.address_, data);
+            c_plane_packets.emplace_back(packet);
         }
     }
 
@@ -121,5 +123,10 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     /// increment the packet counter
     if (metrics_) {
         metrics_->increment_packet_counters(packets);
+    }
+
+    for (const auto& packet : c_plane_packets) {
+        auto data = BitVector(*packet.tm_sdu_);
+        logical_link_control_->process(packet.address_, data);
     }
 }
