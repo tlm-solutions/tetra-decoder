@@ -16,3 +16,4 @@ Following metrics are supported:
 | `upper_mac_packet_count` | Counter | Counters for all received upper mac packets | `packet_type`: The type of receivesd upper mac packet. |
 | `upper_mac_fragment_count` | Counter | Counters for all received c-plane fragments | `type`: Any of `Continous` or `Stealing Channel`. `counter_type`: Any of `All` or `Reconstuction Error`. If there was a disallowed state transition in the reconstruction, the counter is incremented. Additional for  `Stealing Channel` the counter is incremented if the fragment was not finalized across the stealing channel. |
 | `c_plane_packet_count` | Counter | Counters for all received c-plane packets before fragment reconstruction. | `packet_type`: The mac packet type for c-plane packets. (Start fragments are seperated) |
+| `logical_link_control_packet_count` | Counter | Couter for all logical link control packets. | `pdu_type`: The LLC packet type. |

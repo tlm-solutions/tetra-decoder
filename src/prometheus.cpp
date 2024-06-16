@@ -79,3 +79,11 @@ auto PrometheusExporter::c_plane_packet_count() noexcept -> prometheus::Family<p
         .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
+
+auto PrometheusExporter::logical_link_control_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+    return prometheus::BuildCounter()
+        .Name("logical_link_control_packet_count")
+        .Help("Incrementing counter of the number of logical link control packets.")
+        .Labels({{"name", prometheus_name_}})
+        .Register(*registry_);
+}

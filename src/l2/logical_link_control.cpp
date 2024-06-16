@@ -32,26 +32,15 @@ void LogicalLinkControl::process(const Address address, BitVector& vec) {
     std::cout << "  Address: " << address << std::endl;
     std::cout << "  Data: " << vec << std::endl;
 
-    std::string llc_pdu[] = {"BL-ADATA without FCS",
-                             "BL-DATA without FCS",
-                             "BL-UDATA without FCS",
-                             "BL-ACK without FCS",
-                             "BL-ADATA with FCS",
-                             "BL-DATA with FCS",
-                             "BL-UDATA with FCS",
-                             "BL-ACK with FCS",
-                             "AL-SETUP",
-                             "AL-DATA/AL-DATA-AR/AL-FINAL/AL-FINAL-AR",
-                             "AL-UDATA/AL-UFINAL",
-                             "AL-ACK/AL-RNR",
-                             "AL-RECONNECT",
-                             "Supplementary LLC PDU",
-                             "Layer 2 signalling PDU",
-                             "AL-DISC"};
-
     auto pdu_type = vec.take<4>();
+    const auto& pdu_name = llc_pdu_description_.at(pdu_type);
 
-    std::cout << "  " << llc_pdu[pdu_type] << std::endl;
+    // Skip incrementing the metrics for Supplementary LLC PDU and Layer 2 signalling PDU
+    if (metrics_ && (pdu_type != 13) && (pdu_type != 14)) {
+        metrics_->increment(pdu_name);
+    }
+
+    std::cout << "  " << pdu_name << std::endl;
 
     switch (pdu_type) {
     case 0b0000:
@@ -88,6 +77,10 @@ void LogicalLinkControl::process(const Address address, BitVector& vec) {
         break;
     case 0b1101:
         process_supplementary_llc_pdu(address, vec);
+        break;
+    case 0b1110:
+        process_layer_2_signalling_pdu(address, vec);
+        break;
     default:
         break;
     }
@@ -158,13 +151,15 @@ void LogicalLinkControl::process_bl_ack_with_fcs(const Address address, BitVecto
 }
 
 void LogicalLinkControl::process_supplementary_llc_pdu(const Address address, BitVector& vec) {
-    std::string supplementary_llc_pdu[] = {"AL-X-DATA/AL-X-DATA-AR/AL-X-FINAL/AL-X-FINAL-AR", "AL-X-UDATA/AL-X-UFINAL",
-                                           "AL-X-UDATA/AL-X-UFINAL", "AL-X-ACK/AL-X-RNR", "Reserved"};
-
     auto pdu_type = vec.take<2>();
+    const auto& pdu_name = supplementary_llc_pdu_description_.at(pdu_type);
 
-    std::cout << "  " << supplementary_llc_pdu[pdu_type] << std::endl;
+    std::cout << "  " << pdu_name << std::endl;
     std::cout << "  Data: " << vec << std::endl;
+
+    if (metrics_) {
+        metrics_->increment(pdu_name);
+    }
 
     switch (pdu_type) {
     case 0b00:
@@ -175,6 +170,15 @@ void LogicalLinkControl::process_supplementary_llc_pdu(const Address address, Bi
         break;
     case 0b11:
         break;
+    }
+}
+
+void LogicalLinkControl::process_layer_2_signalling_pdu(const Address address, BitVector& vec) {
+    auto pdu_type = vec.take<4>();
+    const auto& pdu_name = layer_2_signalling_pdu_description_.at(pdu_type);
+
+    if (metrics_) {
+        metrics_->increment(pdu_name);
     }
 }
 

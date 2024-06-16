@@ -7,6 +7,7 @@
  */
 
 #include "l2/upper_mac.hpp"
+#include "l2/logical_link_control.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
 #include "l2/upper_mac_packet.hpp"
@@ -25,7 +26,7 @@ UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecuto
                    const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
                    bool is_downlink)
     : input_queue_(input_queue)
-    , logical_link_control_(MobileLinkEntity(std::move(reporter), is_downlink)) {
+    , logical_link_control_(prometheus_exporter, MobileLinkEntity(std::move(reporter), is_downlink)) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
         fragmentation_metrics_continous_ =

@@ -38,6 +38,9 @@ class PrometheusExporter {
     auto upper_mac_fragment_count() noexcept -> prometheus::Family<prometheus::Counter>&;
     /// The family of counters for all received c-plane packets
     auto c_plane_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+
+    /// The family of counters for all received LLC packets
+    auto logical_link_control_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H
