@@ -14,7 +14,6 @@
 #include "l2/slot.hpp"
 #include "l2/timebase_counter.hpp"
 #include "prometheus.h"
-#include "reporter.hpp"
 #include "utils/viter_bi_codec.hpp"
 #include <cstdint>
 #include <memory>

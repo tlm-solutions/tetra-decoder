@@ -1,7 +1,7 @@
 #include "prometheus.h"
 
 PrometheusExporter::PrometheusExporter(const std::string& prometheus_host, const std::string& prometheus_name) noexcept
-    : prometheus_name_(std::move(prometheus_name)) {
+    : prometheus_name_(prometheus_name) {
     exposer_ = std::make_unique<prometheus::Exposer>(prometheus_host);
     registry_ = std::make_shared<prometheus::Registry>();
 

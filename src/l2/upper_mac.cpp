@@ -28,7 +28,7 @@ UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecuto
     , logical_link_control_(
           std::make_unique<LogicalLinkControl>(reporter, std::make_shared<MobileLinkEntity>(reporter, is_downlink))) {
     if (prometheus_exporter) {
-        metrics_ = std::make_unique<UpperMacPrometheusCounters>(prometheus_exporter);
+        metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
         fragmentation_metrics_continous_ =
             std::make_shared<UpperMacFragmentsPrometheusCounters>(prometheus_exporter, "Continous");
         fragmentation_metrics_stealing_channel_ =
