@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -8,22 +8,18 @@
 
 #pragma once
 
+#include "l3/mobile_link_entity.hpp"
+#include "utils/address.hpp"
+#include "utils/bit_vector.hpp"
 #include <cstdint>
 #include <iostream>
-#include <memory>
-#include <utility>
 #include <vector>
-
-#include <l3/mobile_link_entity.hpp>
-#include <reporter.hpp>
-#include <utils/address.hpp>
-#include <utils/bit_vector.hpp>
 
 class LogicalLinkControl {
   public:
-    LogicalLinkControl(std::shared_ptr<Reporter> reporter, std::shared_ptr<MobileLinkEntity> mle)
-        : reporter_(std::move(reporter))
-        , mle_(std::move(mle)){};
+    LogicalLinkControl() = delete;
+    explicit LogicalLinkControl(MobileLinkEntity&& mle)
+        : mle_(mle){};
     ~LogicalLinkControl() noexcept = default;
 
     void process(Address address, BitVector& vec);
@@ -50,8 +46,7 @@ class LogicalLinkControl {
     static auto compute_fcs(std::vector<uint8_t> const& data) -> uint32_t;
     static auto check_fcs(BitVector& vec) -> bool;
 
-    std::shared_ptr<Reporter> reporter_{};
-    std::shared_ptr<MobileLinkEntity> mle_{};
+    MobileLinkEntity mle_;
 };
 
-std::ostream& operator<<(std::ostream& stream, const LogicalLinkControl& llc);
+auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;

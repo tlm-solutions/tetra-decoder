@@ -1,10 +1,17 @@
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ */
+
+#include "l3/short_data_service.hpp"
 #include <bitset>
 #include <cassert>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-
-#include <l3/short_data_service.hpp>
 
 void ShortDataService::process(const Address to_address, const Address from_address, BitVector& vec) {
     message_ = {};
@@ -46,7 +53,7 @@ void ShortDataService::process(const Address to_address, const Address from_addr
         break;
     }
 
-    reporter_->emit_report(message_);
+    reporter_.emit_report(message_);
 }
 
 void ShortDataService::process_default(const Address to_address, const Address from_address, BitVector& vec) {

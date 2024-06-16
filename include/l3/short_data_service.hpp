@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -8,15 +8,15 @@
 
 #pragma once
 
-#include <reporter.hpp>
-#include <utility>
-#include <utils/address.hpp>
-#include <utils/bit_vector.hpp>
+#include "reporter.hpp"
+#include "utils/address.hpp"
+#include "utils/bit_vector.hpp"
 
 class ShortDataService {
   public:
-    ShortDataService(std::shared_ptr<Reporter> reporter)
-        : reporter_(std::move(reporter)){};
+    ShortDataService() = delete;
+    ShortDataService(Reporter&& reporter)
+        : reporter_(reporter){};
     ~ShortDataService() noexcept = default;
 
     void process(Address to_address, Address from_address, BitVector& vec);
@@ -27,5 +27,5 @@ class ShortDataService {
     void process_default(Address to_address, Address from_address, BitVector& vec);
 
     nlohmann::json message_;
-    std::shared_ptr<Reporter> reporter_{};
+    Reporter reporter_;
 };

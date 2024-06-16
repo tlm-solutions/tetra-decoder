@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -8,15 +8,12 @@
 
 #pragma once
 
-#include <memory>
-
-#include <reporter.hpp>
-#include <utils/address.hpp>
-#include <utils/bit_vector.hpp>
+#include "utils/address.hpp"
+#include "utils/bit_vector.hpp"
 
 class MobileManagement {
   public:
-    MobileManagement(){};
+    MobileManagement() = default;
     ~MobileManagement() noexcept = default;
 
     void process(bool is_downlink, Address address, BitVector& vec);

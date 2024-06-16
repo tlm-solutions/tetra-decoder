@@ -1,6 +1,14 @@
-#include <cassert>
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
 
-#include <l3/mobile_link_entity.hpp>
+#include "l3/mobile_link_entity.hpp"
+#include <cassert>
 
 void MobileLinkEntity::service_user_pdu(const Address address, BitVector& vec) {
     std::string mle_pdu[] = {"Reserved",
@@ -22,10 +30,10 @@ void MobileLinkEntity::service_user_pdu(const Address address, BitVector& vec) {
 
     switch (pdu_type) {
     case 0b001:
-        mm_->process(is_downlink_, address, vec);
+        mm_.process(is_downlink_, address, vec);
         break;
     case 0b010:
-        cmce_->process(is_downlink_, address, vec);
+        cmce_.process(is_downlink_, address, vec);
         break;
     case 0b101:
         service_data_pdu(address, vec);

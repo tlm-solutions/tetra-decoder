@@ -30,8 +30,7 @@ class UpperMac {
     /// mac
     /// \param is_downlink true if this channel is on the downlink
     UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-             const std::shared_ptr<PrometheusExporter>& prometheus_exporter, const std::shared_ptr<Reporter>& reporter,
-             bool is_downlink);
+             const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter, bool is_downlink);
     ~UpperMac();
 
   private:
@@ -57,7 +56,7 @@ class UpperMac {
     std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_continous_;
     std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_stealing_channel_;
 
-    std::unique_ptr<LogicalLinkControl> logical_link_control_;
+    LogicalLinkControl logical_link_control_;
 
     std::unique_ptr<UpperMacFragmentation> fragmentation_;
 

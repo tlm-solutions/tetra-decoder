@@ -22,11 +22,10 @@
 #endif
 
 UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
-                   const std::shared_ptr<Reporter>& reporter, bool is_downlink)
+                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
+                   bool is_downlink)
     : input_queue_(input_queue)
-    , logical_link_control_(
-          std::make_unique<LogicalLinkControl>(reporter, std::make_shared<MobileLinkEntity>(reporter, is_downlink))) {
+    , logical_link_control_(MobileLinkEntity(std::move(reporter), is_downlink)) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
         fragmentation_metrics_continous_ =
@@ -138,6 +137,6 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
 
     for (const auto& packet : c_plane_packets) {
         auto data = BitVector(*packet.tm_sdu_);
-        logical_link_control_->process(packet.address_, data);
+        logical_link_control_.process(packet.address_, data);
     }
 }

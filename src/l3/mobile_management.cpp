@@ -1,10 +1,16 @@
-#include <bitset>
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ */
+
+#include "l3/mobile_management.hpp"
 #include <cassert>
 #include <iostream>
 
-#include <l3/mobile_management.hpp>
-
-void MobileManagement::process(bool is_downlink, const Address address, BitVector& vec) {
+void MobileManagement::process(bool is_downlink, const Address /*address*/, BitVector& vec) {
     std::string mm_downlink_pdu[] = {"D-OTAR",
                                      "D-AUTHENTICATION",
                                      "D-CK CHANGE DEMAND",
