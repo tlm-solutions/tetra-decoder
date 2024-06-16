@@ -83,34 +83,36 @@ Decoder::~Decoder() {
 }
 
 void Decoder::main_loop() {
-    uint8_t rx_buffer[kRX_BUFFER_SIZE];
+    std::array<uint8_t, kRX_BUFFER_SIZE> rx_buffer{};
 
-    auto bytes_read = read(input_fd_, rx_buffer, sizeof(rx_buffer));
+    auto bytes_read = read(input_fd_, rx_buffer.data(), sizeof(rx_buffer));
 
     if (errno == EINTR) {
-        stop = 1;
+        stop = true;
         return;
-    } else if (bytes_read < 0) {
-        throw std::runtime_error("Read error");
-    } else if (bytes_read == 0) {
-        stop = 1;
+    }
+    if (bytes_read < 0) {
+        throw std::runtime_error("Read error.");
+    }
+    if (bytes_read == 0) {
+        stop = true;
         return;
     }
 
     if (output_file_fd_.has_value()) {
-        if (write(*output_file_fd_, rx_buffer, bytes_read) != bytes_read) {
-            // unable to write to output TODO: possible log or fail hard
-            stop = 1;
+        if (write(*output_file_fd_, rx_buffer.data(), bytes_read) != bytes_read) {
+            throw std::runtime_error("Could not write to output file.");
+            stop = true;
             return;
         }
     }
 
     if (iq_or_bit_stream_) {
-        std::complex<float>* rx_buffer_complex = reinterpret_cast<std::complex<float>*>(rx_buffer);
+        const auto* rx_buffer_complex = reinterpret_cast<std::complex<float>*>(rx_buffer.data());
 
-        assert(("Size of rx_buffer is not a multiple of std::complex<float>",
-                bytes_read % sizeof(*rx_buffer_complex) == 0));
-        auto size = bytes_read / sizeof(*rx_buffer_complex);
+        assert((bytes_read % sizeof(*rx_buffer_complex) == 0) &&
+               "Size of rx_buffer is not a multiple of std::complex<float>");
+        const auto size = bytes_read / sizeof(*rx_buffer_complex);
 
         for (auto i = 0; i < size; i++) {
             iq_stream_decoder_->process_complex(rx_buffer_complex[i]);
@@ -119,10 +121,10 @@ void Decoder::main_loop() {
         for (auto i = 0; i < bytes_read; i++) {
             if (packed_) {
                 for (auto j = 0; j < 8; j++) {
-                    bit_stream_decoder_->process_bit((rx_buffer[i] >> j) & 0x1);
+                    bit_stream_decoder_->process_bit((rx_buffer.at(i) >> j) & 0x1);
                 }
             } else {
-                bit_stream_decoder_->process_bit(rx_buffer[i]);
+                bit_stream_decoder_->process_bit(rx_buffer.at(i));
             }
         }
     }

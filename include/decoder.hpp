@@ -72,5 +72,5 @@ class Decoder {
     // bit stream -> false
     bool iq_or_bit_stream_;
 
-    const std::size_t kRX_BUFFER_SIZE = 4096;
+    static const std::size_t kRX_BUFFER_SIZE = 4096;
 };
