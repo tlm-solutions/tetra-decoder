@@ -34,7 +34,7 @@ LowerMac::LowerMac(const std::shared_ptr<PrometheusExporter>& prometheus_exporte
     }
 
     if (prometheus_exporter) {
-        metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
+        metrics_ = std::make_unique<LowerMacMetrics>(prometheus_exporter);
     }
 }
 
