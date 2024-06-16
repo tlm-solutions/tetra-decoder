@@ -87,7 +87,13 @@ auto UpperMac::process(const Slots& slots) -> void {
     try {
         processPackets(std::move(packets));
     } catch (std::runtime_error& e) {
-        // TODO: increment other metrics
+        if (metrics_) {
+            // if there was an error decoding the packets, report the error in the slots where the packets orginated
+            // from
+            for (const auto& slot : concreate_slots) {
+                metrics_->increment_decode_error(slot);
+            }
+        }
     }
 }
 
