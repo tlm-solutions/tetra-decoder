@@ -1,9 +1,17 @@
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
+
+#include "reporter.hpp"
 #include <ctime>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <sstream>
-
-#include <reporter.hpp>
 
 Reporter::Reporter(unsigned send_port) {
     // output file descriptor for the udp socket
@@ -39,7 +47,7 @@ void Reporter::emit_report(nlohmann::json& message) {
                          reinterpret_cast<struct sockaddr*>(&(this->destination_)), sizeof(destination_));
 
     if (n_bytes < 0) {
-        fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "[ERROR] could not send data over UDP socket");
+        fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "[ERROR] could not send data over UDP socket\n");
         // TODO: handle error
     }
 }

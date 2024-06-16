@@ -55,13 +55,12 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
         inet_aton("127.0.0.1", &addr.sin_addr);
 
         input_fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (bind(input_fd_, (struct sockaddr*)&addr, sizeof(struct sockaddr)) < 0) {
-            fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "ERROR cannot bind to input socket");
-            // TODO: handle error
-        }
-
         if (input_fd_ < 0) {
             throw std::runtime_error("Couldn't create input socket");
+        }
+
+        if (bind(input_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(struct sockaddr)) < 0) {
+            throw std::runtime_error("ERROR cannot bind to input socket");
         }
     }
 
