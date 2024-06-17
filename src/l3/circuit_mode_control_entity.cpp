@@ -43,19 +43,25 @@ void CircuitModeControlEntity::process_d_sds_data(const Address to_address, BitV
     std::cout << "  Address: " << from_address << std::endl;
     std::cout << "  short_data_type_identifier: " << static_cast<unsigned>(short_data_type_identifier) << std::endl;
 
-    if (short_data_type_identifier == 3) {
-        auto length_identifier = vec.take<11>();
-        std::cout << "  length_identifier: " << static_cast<unsigned>(length_identifier) << std::endl;
-        /// XXX: we do not account for the length identifier. External subscriber number or DM-MS address could be
-        /// present here. The problem is that the fragmentation is somehow broken, we do not know the reason yet.
-        // auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
-        std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        // sds_->process(to_address, from_address, sds);
-        sds_.process(to_address, from_address, vec);
-    } else {
-        // XXX: we should take the length_identifier into account...
-        sds_.process(to_address, from_address, vec);
+    unsigned length_identifier = 0;
+    switch (short_data_type_identifier) {
+    case 0b00:
+        length_identifier = 16;
+        break;
+    case 0b01:
+        length_identifier = 32;
+        break;
+    case 0b10:
+        length_identifier = 64;
+        break;
+    case 0b11:
+        length_identifier = vec.take<11>();
+        break;
     }
+    std::cout << "  length_identifier: " << static_cast<unsigned>(length_identifier) << std::endl;
+    auto sds_data = vec.take_vector(length_identifier);
+    sds_.process(to_address, from_address, sds_data);
+    std::cout << "  leftover: " << vec << std::endl;
 }
 
 void CircuitModeControlEntity::process_u_sds_data(const Address from_address, BitVector& vec) {
@@ -79,17 +85,23 @@ void CircuitModeControlEntity::process_u_sds_data(const Address from_address, Bi
     std::cout << "  Address: " << to_address << std::endl;
     std::cout << "  short_data_type_identifier: " << static_cast<unsigned>(short_data_type_identifier) << std::endl;
 
-    if (short_data_type_identifier == 3) {
-        auto length_identifier = vec.take<11>();
-        std::cout << "  length_identifier: " << static_cast<unsigned>(length_identifier) << std::endl;
-        /// XXX: we do not account for the length identifier. External subscriber number or DM-MS address could be
-        /// present here. The problem is that the fragmentation is somehow broken, we do not know the reason yet.
-        // auto sds = BitVector(vec.take_vector(length_identifier), length_identifier);
-        std::cout << "  BitsLeft = " << vec.bits_left() << " " << vec << std::endl;
-        // sds_->process(to_address, from_address, sds);
-        sds_.process(to_address, from_address, vec);
-    } else {
-        // XXX: we should take the length_identifier into account...
-        sds_.process(to_address, from_address, vec);
+    unsigned length_identifier = 0;
+    switch (short_data_type_identifier) {
+    case 0b00:
+        length_identifier = 16;
+        break;
+    case 0b01:
+        length_identifier = 32;
+        break;
+    case 0b10:
+        length_identifier = 64;
+        break;
+    case 0b11:
+        length_identifier = vec.take<11>();
+        break;
     }
+    std::cout << "  length_identifier: " << static_cast<unsigned>(length_identifier) << std::endl;
+    auto sds_data = vec.take_vector(length_identifier);
+    sds_.process(to_address, from_address, sds_data);
+    std::cout << "  leftover: " << vec << std::endl;
 }
