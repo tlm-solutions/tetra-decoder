@@ -11,31 +11,27 @@
 #include <cassert>
 
 void MobileLinkEntity::service_user_pdu(const Address address, BitVector& vec) {
-    std::string mle_pdu[] = {"Reserved",
-                             "MM protocol",
-                             "CMCE protocol",
-                             "Reserved",
-                             "SNDCP protocol",
-                             "MLE protocol",
-                             "TETRA management entity protocol",
-                             "Reserved for testing"};
-
     if (vec.bits_left() == 0) {
         return;
     }
 
     auto pdu_type = vec.take<3>();
+    const auto& pdu_name = protocol_discriminator_description_.at(pdu_type);
 
-    std::cout << "MLE " << mle_pdu[pdu_type] << " " << vec << std::endl;
+    std::cout << "MLE " << pdu_name << " " << vec << std::endl;
+
+    if (metrics_ && pdu_type != kMleProtocol) {
+        metrics_->increment(pdu_name);
+    }
 
     switch (pdu_type) {
     case 0b001:
-        mm_.process(is_downlink_, address, vec);
+        mm_.process(address, vec);
         break;
     case 0b010:
-        cmce_.process(is_downlink_, address, vec);
+        cmce_.process(address, vec);
         break;
-    case 0b101:
+    case kMleProtocol:
         service_data_pdu(address, vec);
         break;
     default:
@@ -44,41 +40,29 @@ void MobileLinkEntity::service_user_pdu(const Address address, BitVector& vec) {
 }
 
 void MobileLinkEntity::service_data_pdu(const Address address, BitVector& vec) {
-
-    std::string mle_downlink_pdu_type[] = {
-        "D-NEW-CELL",    "D-PREPARE-FAIL", "D-NWRK-BROADCAST",   "D-NWRK-BROADCAST EXTENSION",
-        "D-RESTORE-ACK", "D-RESTORE-FAIL", "D-CHANNEL RESPONSE", "Extended PDU"};
-    std::string mle_uplink_pdu_type[] = {
-        "U-PREPARE", "U-PREPARE-DA", "U-IRREGULAR CHANNEL ADVICE", "U-CHANNEL CLASS ADVICE",
-        "U-RESTORE", "Reserved",     "U-CHANNEL REQUEST",          "Extended PDU"};
-
-    std::string mle_downlink_pdu_type_extension[] = {"D-NWRK-BROADCAST-DA",
-                                                     "D-NWRK-BROADCAST REMOVE",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved",
-                                                     "Reserved"};
-    std::string mle_uplink_pdu_type_extension[] = {
-        "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
-        "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
-    };
-
     if (vec.bits_left() == 0) {
         return;
     }
 
     auto pdu_type = vec.take<3>();
+    const auto& pdu_name = mle_pdu_description_.at(pdu_type);
 
-    std::cout << "  " << mle_uplink_pdu_type[pdu_type] << " or " << mle_downlink_pdu_type[pdu_type] << std::endl;
+    if (metrics_ && pdu_type != kExtendedPdu) {
+        metrics_->increment(pdu_name);
+    }
+
+    std::cout << "  " << pdu_name << std::endl;
     std::cout << "  " << vec << std::endl;
+
+    if (pdu_type == kExtendedPdu) {
+        auto pdu_type = vec.take<4>();
+        const auto& pdu_name = mle_pdu_extension_description_.at(pdu_type);
+
+        if (metrics_) {
+            metrics_->increment(pdu_name);
+        }
+
+        std::cout << "  " << pdu_name << std::endl;
+        std::cout << "  " << vec << std::endl;
+    }
 }

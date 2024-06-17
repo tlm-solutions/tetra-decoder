@@ -20,8 +20,9 @@
 class LogicalLinkControl {
   public:
     LogicalLinkControl() = delete;
-    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, MobileLinkEntity&& mle)
-        : mle_(mle) {
+    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
+                       bool is_downlink)
+        : mle_(prometheus_exporter, std::move(reporter), is_downlink) {
         llc_pdu_description_ = {"BL-ADATA without FCS",
                                 "BL-DATA without FCS",
                                 "BL-UDATA without FCS",

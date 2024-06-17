@@ -3,52 +3,26 @@
 
 #include <l3/circuit_mode_control_entity.hpp>
 
-void CircuitModeControlEntity::process(bool is_downlink, const Address address, BitVector& vec) {
-    std::string cmce_downlink_pdu[] = {"D-ALERT",        "D-CALL-PROCEEDING",
-                                       "D-CONNECT",      "D-CONNECT ACKNOWLEDGE",
-                                       "D-DISCONNECT",   "D-INFO",
-                                       "D-RELEASE",      "D-SETUP",
-                                       "D-STATUS",       "D-TX CEASED",
-                                       "D-TX CONTINUE",  "D-TX GRANTED",
-                                       "D-TX WAIT",      "D-TX INTERRUPT",
-                                       "D-CALL-RESTORE", "D-SDS-DATA",
-                                       "D-FACILITY",     "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "Reserved",
-                                       "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
-    std::string cmce_uplink_pdu[] = {"U-ALERT",      "Reserved",    "U-CONNECT",      "Reserved",
-                                     "U-DISCONNECT", "U-INFO",      "U-RELEASE",      "U-SETUP",
-                                     "U-STATUS",     "U-TX CEASED", "U-TX DEMAND",    "Reserved",
-                                     "Reserved",     "Reserved",    "U-CALL-RESTORE", "U-SDS-DATA",
-                                     "U-FACILITY",   "Reserved",    "Reserved",       "Reserved",
-                                     "Reserved",     "Reserved",    "Reserved",       "Reserved",
-                                     "Reserved",     "Reserved",    "Reserved",       "Reserved",
-                                     "Reserved",     "Reserved",    "Reserved",       "CMCE FUNCTION NOT SUPPORTED"};
-
+void CircuitModeControlEntity::process(const Address address, BitVector& vec) {
     auto pdu_type = vec.take<5>();
 
-    if (is_downlink) {
-        std::cout << "CMCE " << cmce_downlink_pdu[pdu_type] << std::endl;
-        switch (pdu_type) {
-        case 0b01111:
+    const auto& pdu_name = cmce_pdu_description_.at(pdu_type);
+    std::cout << "CMCE " << pdu_name << std::endl;
+
+    if (metrics_) {
+        metrics_->increment(pdu_name);
+    }
+
+    switch (pdu_type) {
+    case kSdsData:
+        if (is_downlink_) {
             process_d_sds_data(address, vec);
-            break;
-        default:
-            break;
-        }
-    } else {
-        std::cout << "CMCE " << cmce_uplink_pdu[pdu_type] << std::endl;
-        switch (pdu_type) {
-        case 0b01111:
+        } else {
             process_u_sds_data(address, vec);
-            break;
-        default:
-            break;
         }
+        break;
+    default:
+        break;
     }
 }
 

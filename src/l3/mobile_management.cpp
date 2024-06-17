@@ -10,53 +10,18 @@
 #include <cassert>
 #include <iostream>
 
-void MobileManagement::process(bool is_downlink, const Address /*address*/, BitVector& vec) {
-    std::string mm_downlink_pdu[] = {"D-OTAR",
-                                     "D-AUTHENTICATION",
-                                     "D-CK CHANGE DEMAND",
-                                     "D-DISABLE",
-                                     "D-ENABLE",
-                                     "D-LOCATION UPDATE ACCEPT",
-                                     "D-LOCATION UPDATE COMMAND",
-                                     "D-LOCATION UPDATE REJECT",
-                                     "Reserved",
-                                     "D-LOCATION UPDATE PROCEEDING",
-                                     "D-LOCATION UPDATE PROCEEDING",
-                                     "D-ATTACH/DETACH GROUP IDENTITY ACK",
-                                     "D-MM STATUS",
-                                     "Reserved",
-                                     "Reserved",
-                                     "MM PDU/FUNCTION NOT SUPPORTED"};
-    std::string mm_uplink_pdu[] = {"U-AUTHENTICATION",
-                                   "U-ITSI DETACH",
-                                   "U-LOCATION UPDATE DEMAND",
-                                   "U-MM STATUS",
-                                   "U-CK CHANGE RESULT",
-                                   "U-OTAR",
-                                   "U-INFORMATION PROVIDE",
-                                   "U-ATTACH/DETACH GROUP IDENTITY",
-                                   "U-ATTACH/DETACH GROUP IDENTITY ACK",
-                                   "U-TEI PROVIDE",
-                                   "Reserved",
-                                   "U-DISABLE STATUS",
-                                   "Reserved",
-                                   "Reserved",
-                                   "Reserved",
-                                   "MM PDU/FUNCTION NOT SUPPORTED"};
+void MobileManagement::process(const Address /*address*/, BitVector& vec) {
 
     auto pdu_type = vec.take<4>();
+    const auto& pdu_name = mm_pdu_description_.at(pdu_type);
 
-    if (is_downlink) {
-        std::cout << "MM " << mm_downlink_pdu[pdu_type] << std::endl;
-        switch (pdu_type) {
-        default:
-            break;
-        }
-    } else {
-        std::cout << "MM " << mm_uplink_pdu[pdu_type] << std::endl;
-        switch (pdu_type) {
-        default:
-            break;
-        }
+    if (metrics_) {
+        metrics_->increment(pdu_name);
+    }
+
+    std::cout << "MM " << pdu_name << std::endl;
+    switch (pdu_type) {
+    default:
+        break;
     }
 }
