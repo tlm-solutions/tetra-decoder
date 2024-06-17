@@ -101,8 +101,8 @@ class UpperMacMetrics {
               {{"logical_channel", "SignallingChannelFull"}, {"error_type", "Decode Error"}}))
         , stealing_channel_received_count_decoding_error_(
               slot_error_count_family_.Add({{"logical_channel", "StealingChannel"}, {"error_type", "Decode Error"}}))
-        , upper_mac_packet_metrics_(prometheus_exporter_, "Upper Mac")
-        , c_plane_signalling_packet_metrics_(prometheus_exporter_, "C-Plane Signalling"){};
+        , upper_mac_packet_metrics_(prometheus_exporter_, "upper_mac")
+        , c_plane_signalling_packet_metrics_(prometheus_exporter_, "c_plane_signalling"){};
 
     /// This function is called for every slot once it is passed up from the lower MAC
     /// \param slot the content of the slot
