@@ -80,7 +80,7 @@ class ShortDataService {
     nlohmann::json message_;
     Reporter reporter_;
 
-    std::array<std::string, 64> sds_pdu_description_;
+    std::array<std::string, 256> sds_pdu_description_;
 
     std::unique_ptr<PacketCounterMetrics> metrics_;
 };
