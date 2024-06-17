@@ -56,14 +56,6 @@ auto PrometheusExporter::upper_mac_slot_error_count() noexcept -> prometheus::Fa
         .Register(*registry_);
 }
 
-auto PrometheusExporter::upper_mac_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
-    return prometheus::BuildCounter()
-        .Name("upper_mac_packet_count")
-        .Help("Incrementing counter of the number of received packets in the upper MAC.")
-        .Labels({{"name", prometheus_name_}})
-        .Register(*registry_);
-}
-
 auto PrometheusExporter::upper_mac_fragment_count() noexcept -> prometheus::Family<prometheus::Counter>& {
     return prometheus::BuildCounter()
         .Name("upper_mac_fragment_count")
@@ -72,18 +64,11 @@ auto PrometheusExporter::upper_mac_fragment_count() noexcept -> prometheus::Fami
         .Register(*registry_);
 }
 
-auto PrometheusExporter::c_plane_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
+auto PrometheusExporter::packet_count(const std::string& protocol) noexcept
+    -> prometheus::Family<prometheus::Counter>& {
     return prometheus::BuildCounter()
-        .Name("c_plane_packet_count")
-        .Help("Incrementing counter of the number of packets in the C-Plane.")
-        .Labels({{"name", prometheus_name_}})
-        .Register(*registry_);
-}
-
-auto PrometheusExporter::logical_link_control_packet_count() noexcept -> prometheus::Family<prometheus::Counter>& {
-    return prometheus::BuildCounter()
-        .Name("logical_link_control_packet_count")
-        .Help("Incrementing counter of the number of logical link control packets.")
-        .Labels({{"name", prometheus_name_}})
+        .Name("packet_count")
+        .Help("Incrementing counter of the number of received packets in a protocol layer.")
+        .Labels({{"name", prometheus_name_}, {"protocol", protocol}})
         .Register(*registry_);
 }

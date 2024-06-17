@@ -13,6 +13,7 @@
 #include "l2/upper_mac_packet.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
 #include "prometheus.h"
+#include "utils/packet_counter_metrics.hpp"
 #include <memory>
 #include <stdexcept>
 
@@ -62,45 +63,13 @@ class UpperMacMetrics {
     /// The counter for received StealingChannel with decoding errors
     prometheus::Counter& stealing_channel_received_count_decoding_error_;
 
-    /// The family of counters for all received upper mac packets
-    prometheus::Family<prometheus::Counter>& packet_count_family_;
-    /// The counters for all received c-plane signalling packets
-    prometheus::Counter& c_plane_signalling_packet_count_;
-    /// The counters for all received u-plane signalling packets
-    prometheus::Counter& u_plane_signalling_packet_count_;
-    /// The counters for all received u-plane traffic packets
-    prometheus::Counter& u_plane_traffic_packet_count_;
-    /// The counters for all received broadcast packets
-    prometheus::Counter& broadcast_packet_count_;
-
-    /// The family of counters for all received upper mac c-plane packets
-    prometheus::Family<prometheus::Counter>& c_plane_packet_count_family_;
-    /// The counter for all received upper mac c-plane MacResource
-    prometheus::Counter& c_plane_packet_count_mac_resource_;
-    /// The counter for all received upper mac c-plane MacResource for fragments
-    prometheus::Counter& c_plane_packet_count_mac_resource_fragments_;
-    /// The counter for all received upper mac c-plane MacFragmentDownlink
-    prometheus::Counter& c_plane_packet_count_mac_fragment_downlink_;
-    /// The counter for all received upper mac c-plane MacEndDownlink
-    prometheus::Counter& c_plane_packet_count_mac_end_downlink_;
-    /// The counter for all received upper mac c-plane MacDBlck
-    prometheus::Counter& c_plane_packet_count_mac_d_blck_;
-    /// The counter for all received upper mac c-plane MacAccess
-    prometheus::Counter& c_plane_packet_count_mac_access_;
-    /// The counter for all received upper mac c-plane MacEndHu
-    prometheus::Counter& c_plane_packet_count_mac_end_hu_;
-    /// The counter for all received upper mac c-plane MacData
-    prometheus::Counter& c_plane_packet_count_mac_data_;
-    /// The counter for all received upper mac c-plane MacData for fragments
-    prometheus::Counter& c_plane_packet_count_mac_data_fragments_;
-    /// The counter for all received upper mac c-plane MacFragmentUplink
-    prometheus::Counter& c_plane_packet_count_mac_fragment_uplink_;
-    /// The counter for all received upper mac c-plane MacEndUplink
-    prometheus::Counter& c_plane_packet_count_mac_end_uplink_;
-    /// The counter for all received upper mac c-plane MacUBlck
-    prometheus::Counter& c_plane_packet_count_mac_u_blck_;
-
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+
+    /// the class for the upper mac packet counters
+    PacketCounterMetrics upper_mac_packet_metrics_;
+
+    /// the class for the c-plane signalling packet counters
+    PacketCounterMetrics c_plane_signalling_packet_metrics_;
 
   public:
     UpperMacMetrics() = delete;
@@ -132,28 +101,8 @@ class UpperMacMetrics {
               {{"logical_channel", "SignallingChannelFull"}, {"error_type", "Decode Error"}}))
         , stealing_channel_received_count_decoding_error_(
               slot_error_count_family_.Add({{"logical_channel", "StealingChannel"}, {"error_type", "Decode Error"}}))
-        , packet_count_family_(prometheus_exporter_->upper_mac_packet_count())
-        , c_plane_signalling_packet_count_(packet_count_family_.Add({{"packet_type", "C-Plane Signalling"}}))
-        , u_plane_signalling_packet_count_(packet_count_family_.Add({{"packet_type", "U-Plane Signalling"}}))
-        , u_plane_traffic_packet_count_(packet_count_family_.Add({{"packet_type", "U-Plane Traffic"}}))
-        , broadcast_packet_count_(packet_count_family_.Add({{"packet_type", "Broadcast"}}))
-        , c_plane_packet_count_family_(prometheus_exporter_->c_plane_packet_count())
-        , c_plane_packet_count_mac_resource_(c_plane_packet_count_family_.Add({{"packet_type", "MacResource"}}))
-        , c_plane_packet_count_mac_resource_fragments_(
-              c_plane_packet_count_family_.Add({{"packet_type", "MacResource fragments"}}))
-        , c_plane_packet_count_mac_fragment_downlink_(
-              c_plane_packet_count_family_.Add({{"packet_type", "MacFragmentDownlink"}}))
-        , c_plane_packet_count_mac_end_downlink_(c_plane_packet_count_family_.Add({{"packet_type", "MacEnd"}}))
-        , c_plane_packet_count_mac_d_blck_(c_plane_packet_count_family_.Add({{"packet_type", "MacDBlck"}}))
-        , c_plane_packet_count_mac_access_(c_plane_packet_count_family_.Add({{"packet_type", "MacAccess"}}))
-        , c_plane_packet_count_mac_end_hu_(c_plane_packet_count_family_.Add({{"packet_type", "MacEndHu"}}))
-        , c_plane_packet_count_mac_data_(c_plane_packet_count_family_.Add({{"packet_type", "MacData"}}))
-        , c_plane_packet_count_mac_data_fragments_(
-              c_plane_packet_count_family_.Add({{"packet_type", "MacData fragments"}}))
-        , c_plane_packet_count_mac_fragment_uplink_(
-              c_plane_packet_count_family_.Add({{"packet_type", "MacFragmentUplink"}}))
-        , c_plane_packet_count_mac_end_uplink_(c_plane_packet_count_family_.Add({{"packet_type", "MacEndUplink"}}))
-        , c_plane_packet_count_mac_u_blck_(c_plane_packet_count_family_.Add({{"packet_type", "MacUBlck"}})){};
+        , upper_mac_packet_metrics_(prometheus_exporter_, "Upper Mac")
+        , c_plane_signalling_packet_metrics_(prometheus_exporter_, "C-Plane Signalling"){};
 
     /// This function is called for every slot once it is passed up from the lower MAC
     /// \param slot the content of the slot
@@ -220,56 +169,57 @@ class UpperMacMetrics {
     /// This function is called for all decoded packets in the upper mac
     /// \param packets the datastructure that contains all the successfully decoded packets
     auto increment_packet_counters(const UpperMacPackets& packets) -> void {
-        c_plane_signalling_packet_count_.Increment(static_cast<double>(packets.c_plane_signalling_packets_.size()));
-        u_plane_signalling_packet_count_.Increment(static_cast<double>(packets.u_plane_signalling_packet_.size()));
+        upper_mac_packet_metrics_.increment("C-Plane Signalling", packets.c_plane_signalling_packets_.size());
+        upper_mac_packet_metrics_.increment("U-Plane Signalling", packets.u_plane_signalling_packet_.size());
         if (packets.u_plane_traffic_packet_) {
-            u_plane_traffic_packet_count_.Increment();
+            upper_mac_packet_metrics_.increment("U-Plane Traffic");
         }
         if (packets.broadcast_packet_) {
-            broadcast_packet_count_.Increment();
+            upper_mac_packet_metrics_.increment("Broadcast");
         }
     }
+
     /// This function is called for all c-plane packets in the upper mac
     /// \param packet the c-plane packet for which we want to increment the counters
     auto increment_c_plane_packet_counters(const UpperMacCPlaneSignallingPacket& packet) -> void {
         switch (packet.type_) {
         case MacPacketType::kMacResource:
             if (packet.is_downlink_fragment()) {
-                c_plane_packet_count_mac_resource_fragments_.Increment();
+                c_plane_signalling_packet_metrics_.increment("MacResource fragments");
             } else {
-                c_plane_packet_count_mac_resource_.Increment();
+                c_plane_signalling_packet_metrics_.increment("MacResource");
             }
             break;
         case MacPacketType::kMacFragmentDownlink:
-            c_plane_packet_count_mac_fragment_downlink_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacFragmentDownlink");
             break;
         case MacPacketType::kMacEndDownlink:
-            c_plane_packet_count_mac_end_downlink_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacEndDownlink");
             break;
         case MacPacketType::kMacDBlck:
-            c_plane_packet_count_mac_d_blck_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacDBlck");
         case MacPacketType::kMacBroadcast:
             throw std::runtime_error("C-Plane signalling may not be of type MacBroadcast");
         case MacPacketType::kMacAccess:
-            c_plane_packet_count_mac_access_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacAccess");
             break;
         case MacPacketType::kMacEndHu:
-            c_plane_packet_count_mac_end_hu_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacEndHu");
             break;
         case MacPacketType::kMacData:
             if (packet.is_uplink_fragment()) {
-                c_plane_packet_count_mac_data_fragments_.Increment();
+                c_plane_signalling_packet_metrics_.increment("MacData fragments");
             } else {
-                c_plane_packet_count_mac_data_.Increment();
+                c_plane_signalling_packet_metrics_.increment("MacData");
             }
             break;
         case MacPacketType::kMacFragmentUplink:
-            c_plane_packet_count_mac_fragment_uplink_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacResource");
             break;
         case MacPacketType::kMacEndUplink:
-            c_plane_packet_count_mac_end_uplink_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacEndUplink");
         case MacPacketType::kMacUBlck:
-            c_plane_packet_count_mac_u_blck_.Increment();
+            c_plane_signalling_packet_metrics_.increment("MacUBlck");
         case MacPacketType::kMacUSignal:
             throw std::runtime_error("C-Plane signalling may not be of type MacUSignal");
         }

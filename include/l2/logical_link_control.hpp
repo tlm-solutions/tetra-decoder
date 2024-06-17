@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include "l2/logical_link_control_metrics.hpp"
 #include "l3/mobile_link_entity.hpp"
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
+#include "utils/packet_counter_metrics.hpp"
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -58,7 +58,7 @@ class LogicalLinkControl {
                                                "ReservedLayer2SignallingPdu14",
                                                "ReservedLayer2SignallingPdu15"};
         if (prometheus_exporter) {
-            metrics_ = std::make_unique<LogicalLinkControlMetrics>(prometheus_exporter);
+            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "Logical Link Control");
         }
     };
     ~LogicalLinkControl() noexcept = default;
@@ -97,7 +97,7 @@ class LogicalLinkControl {
 
     MobileLinkEntity mle_;
 
-    std::unique_ptr<LogicalLinkControlMetrics> metrics_;
+    std::unique_ptr<PacketCounterMetrics> metrics_;
 };
 
 auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;

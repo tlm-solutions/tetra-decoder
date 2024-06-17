@@ -6,6 +6,7 @@
 #include <prometheus/counter.h>
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
+#include <string>
 
 class PrometheusExporter {
   private:
@@ -31,16 +32,11 @@ class PrometheusExporter {
     /// The family of counters for all received slots with errors
     auto upper_mac_slot_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 
-    /// The family of counters for all received upper mac packets
-    auto upper_mac_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
-
     /// The family of counters for all received c-plane fragments
     auto upper_mac_fragment_count() noexcept -> prometheus::Family<prometheus::Counter>&;
-    /// The family of counters for all received c-plane packets
-    auto c_plane_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
 
-    /// The family of counters for all received LLC packets
-    auto logical_link_control_packet_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+    /// The family of counters for all received packets in a protocol layer.
+    auto packet_count(const std::string& protocol) noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H
