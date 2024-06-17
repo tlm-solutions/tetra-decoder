@@ -21,7 +21,7 @@ class CircuitModeControlEntity {
     CircuitModeControlEntity() = delete;
     explicit CircuitModeControlEntity(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
                                       Reporter&& reporter, bool is_downlink)
-        : sds_(ShortDataService(std::move(reporter)))
+        : sds_(ShortDataService(prometheus_exporter, std::move(reporter)))
         , is_downlink_(is_downlink) {
         if (is_downlink) {
             cmce_pdu_description_ = {"D-ALERT",        "D-CALL-PROCEEDING",

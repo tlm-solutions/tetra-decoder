@@ -14,15 +14,20 @@
 #include <iostream>
 
 void ShortDataService::process(const Address to_address, const Address from_address, BitVector& vec) {
+    auto protocol_identifier = vec.take<8>();
+    const auto& protocol_identifier_name = sds_pdu_description_.at(protocol_identifier);
+
+    if (metrics_) {
+        metrics_->increment(protocol_identifier_name);
+    }
+
     message_ = {};
 
     message_["type"] = "SDS";
     message_["to"] = to_address;
     message_["from"] = from_address;
 
-    uint8_t protocol_identifier = vec.take<8>();
-
-    message_["protocol_identifier"] = protocol_identifier;
+    message_["protocol_identifier"] = static_cast<unsigned>(protocol_identifier);
 
     std::cout << "SDS " << std::bitset<8>(protocol_identifier) << std::endl;
     std::cout << "  From: " << from_address << "To: " << to_address << std::endl;
