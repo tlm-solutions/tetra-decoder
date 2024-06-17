@@ -52,7 +52,7 @@ class CircuitModeControlEntity {
         }
 
         if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "Circuit Mode Control Entity");
+            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "circuit_mode_control_entity");
         }
     };
     ~CircuitModeControlEntity() noexcept = default;

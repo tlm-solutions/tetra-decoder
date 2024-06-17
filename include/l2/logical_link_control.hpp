@@ -59,7 +59,7 @@ class LogicalLinkControl {
                                                "ReservedLayer2SignallingPdu14",
                                                "ReservedLayer2SignallingPdu15"};
         if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "Logical Link Control");
+            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "logical_link_control");
         }
     };
     ~LogicalLinkControl() noexcept = default;

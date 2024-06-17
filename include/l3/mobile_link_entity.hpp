@@ -55,7 +55,7 @@ class MobileLinkEntity {
         }
 
         if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "Mobile Link Entity");
+            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "mobile_link_entity");
         }
     };
     ~MobileLinkEntity() noexcept = default;

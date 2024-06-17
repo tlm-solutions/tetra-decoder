@@ -54,7 +54,7 @@ class MobileManagement {
                                    "U-MM PDU/FUNCTION NOT SUPPORTED"};
         }
         if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "Mobile Management");
+            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "mobile_management");
         }
     }
     ~MobileManagement() noexcept = default;

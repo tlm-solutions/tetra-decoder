@@ -67,8 +67,8 @@ auto PrometheusExporter::upper_mac_fragment_count() noexcept -> prometheus::Fami
 auto PrometheusExporter::packet_count(const std::string& protocol) noexcept
     -> prometheus::Family<prometheus::Counter>& {
     return prometheus::BuildCounter()
-        .Name("packet_count")
+        .Name(protocol + "_packet_count")
         .Help("Incrementing counter of the number of received packets in a protocol layer.")
-        .Labels({{"name", prometheus_name_}, {"protocol", protocol}})
+        .Labels({{"name", prometheus_name_}})
         .Register(*registry_);
 }
