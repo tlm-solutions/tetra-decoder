@@ -23,9 +23,10 @@
 #endif
 
 UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
-                   bool is_downlink)
+                   std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+                   Reporter&& reporter, bool is_downlink)
     : input_queue_(input_queue)
+    , termination_flag_(termination_flag)
     , logical_link_control_(prometheus_exporter, std::move(reporter), is_downlink) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
@@ -47,13 +48,17 @@ UpperMac::~UpperMac() { worker_thread_.join(); }
 
 void UpperMac::worker() {
     for (;;) {
-        const auto return_value = input_queue_->get();
+        const auto return_value = input_queue_->get_or_null();
 
-        if (std::holds_alternative<TerminationToken>(return_value)) {
-            return;
+        if (!return_value) {
+            if (termination_flag_.load() && input_queue_->empty()) {
+                break;
+            }
+
+            continue;
         }
 
-        const auto slots = std::get<LowerMac::return_type>(return_value);
+        const auto& slots = *return_value;
         if (slots) {
             this->process(*slots);
         }

@@ -27,13 +27,15 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
                  std::optional<std::string> output_file, bool iq_or_bit_stream,
                  std::optional<unsigned int> uplink_scrambling_code,
                  const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-    : lower_mac_work_queue_(std::make_shared<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>(4))
+    : lower_mac_work_queue_(std::make_shared<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>(
+          termination_flag_, upper_mac_termination_flag_, 4))
     , packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code)
     , iq_or_bit_stream_(iq_or_bit_stream) {
     auto is_uplink = uplink_scrambling_code_.has_value();
     auto lower_mac = std::make_shared<LowerMac>(prometheus_exporter, uplink_scrambling_code);
-    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, prometheus_exporter, Reporter(send_port),
+    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, upper_mac_termination_flag_, prometheus_exporter,
+                                            Reporter(send_port),
                                             /*is_downlink=*/!is_uplink);
     bit_stream_decoder_ =
         std::make_shared<BitStreamDecoder>(lower_mac_work_queue_, lower_mac, uplink_scrambling_code_.has_value());
@@ -78,8 +80,8 @@ Decoder::~Decoder() {
     if (output_file_fd_.has_value()) {
         close(*output_file_fd_);
     }
-    /// Send the termination token to the upper mac worker
-    lower_mac_work_queue_->queue_work([]() { return TerminationToken{}; });
+    /// Terminate the lower mac work queue
+    termination_flag_ = true;
 }
 
 void Decoder::main_loop() {

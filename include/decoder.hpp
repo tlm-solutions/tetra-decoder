@@ -9,15 +9,14 @@
 
 #pragma once
 
+#include "bit_stream_decoder.hpp"
+#include "iq_stream_decoder.hpp"
+#include "l2/lower_mac.hpp"
 #include "l2/upper_mac.hpp"
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <bit_stream_decoder.hpp>
-#include <iq_stream_decoder.hpp>
-#include <l2/lower_mac.hpp>
-#include <reporter.hpp>
 
 /**
  * Tetra downlink decoder for PI/4-DQPSK modulation
@@ -48,6 +47,13 @@ class Decoder {
     void main_loop();
 
   private:
+    /// This flag is set when the program should termiate. It is pass down to the next stage in the chain when
+    /// processing is done in the current stage.
+    std::atomic_bool termination_flag_ = false;
+
+    /// This flag is passed for the StreamingOrderedOutputThreadPoolExecutor to the upper mac.
+    std::atomic_bool upper_mac_termination_flag_ = false;
+
     /// The worker queue for the lower mac
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> lower_mac_work_queue_;
 

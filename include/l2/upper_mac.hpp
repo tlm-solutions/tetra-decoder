@@ -18,6 +18,7 @@
 #include "prometheus.h"
 #include "reporter.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <atomic>
 #include <memory>
 #include <thread>
 
@@ -26,11 +27,14 @@ class UpperMac {
     UpperMac() = delete;
     ///
     /// \param queue the input queue from the lower mac
+    /// \param termination_flag the flag that indicates that the worker thread should stop execution after all work is
+    /// finished
     /// \param prometheus_exporter the reference to the prometheus exporter that is used for the metrics in the upper
     /// mac
     /// \param is_downlink true if this channel is on the downlink
     UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-             const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter, bool is_downlink);
+             std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+             Reporter&& reporter, bool is_downlink);
     ~UpperMac();
 
   private:
@@ -48,6 +52,8 @@ class UpperMac {
 
     /// The input queue
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;
+    /// The termination flag
+    std::atomic_bool& termination_flag_;
 
     /// The prometheus metrics
     std::unique_ptr<UpperMacMetrics> metrics_;
