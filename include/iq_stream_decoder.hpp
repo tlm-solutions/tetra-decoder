@@ -11,7 +11,6 @@
 
 #include <complex>
 #include <memory>
-#include <thread>
 
 #include <bit_stream_decoder.hpp>
 #include <fixed_queue.hpp>
@@ -26,16 +25,16 @@
  */
 class IQStreamDecoder {
   public:
-    IQStreamDecoder(std::shared_ptr<LowerMac> lower_mac, std::shared_ptr<BitStreamDecoder> bit_stream_decoder,
-                    bool is_uplink);
-    ~IQStreamDecoder();
+    IQStreamDecoder(
+        const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& lower_mac_worker_queue,
+        const std::shared_ptr<LowerMac>& lower_mac, const std::shared_ptr<BitStreamDecoder>& bit_stream_decoder,
+        bool is_uplink);
+    ~IQStreamDecoder() = default;
 
     void process_complex(std::complex<float> symbol) noexcept;
 
   private:
     using QueueT = FixedQueue<std::complex<float>, 300>;
-
-    void upperMacWorker();
 
     static std::complex<float> hard_decision(std::complex<float> const& symbol);
 
@@ -71,7 +70,5 @@ class IQStreamDecoder {
 
     bool is_uplink_{};
 
-    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<std::vector<std::function<void()>>>> thread_pool_;
-
-    std::thread upper_mac_worker_thread_;
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> lower_mac_worker_queue_;
 };

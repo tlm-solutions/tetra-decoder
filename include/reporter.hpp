@@ -1,9 +1,10 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
  *   Marenz Schmidl
+ *   Tassilo Tanneberger
  */
 
 #pragma once
@@ -11,11 +12,10 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <nlohmann/json.hpp>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <nlohmann/json.hpp>
 
 class Reporter {
   public:

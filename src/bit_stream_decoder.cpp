@@ -7,10 +7,12 @@
  *   Tassilo Tanneberger
  */
 
+#include "l2/lower_mac.hpp"
 #include <bit_stream_decoder.hpp>
 #include <burst_type.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
     assert(symbol <= 1);
@@ -86,22 +88,12 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
         }
 
         if (score_ssn <= 4) {
-            auto funcs = lower_mac_->process(frame_, burst_type);
-            for (const auto& func : funcs) {
-                func();
-            }
+            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
 
-            if (funcs.size() > 0) {
-                std::vector<uint8_t>(frame_.begin() + 200, frame_.end()).swap(frame_);
-            } else {
-                frame_.erase(frame_.begin());
-            }
+            std::vector<uint8_t>(frame_.begin() + 200, frame_.end()).swap(frame_);
         } else if (minimum_score <= 2) {
             // valid burst found, send it to lower MAC
-            auto funcs = lower_mac_->process(frame_, burst_type);
-            for (const auto& func : funcs) {
-                func();
-            }
+            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
 
             frame_.erase(frame_.begin());
             // std::vector<uint8_t>(frame_.begin()+462, frame_.end()).swap(frame_);
@@ -136,10 +128,7 @@ void BitStreamDecoder::process_downlink_frame() noexcept {
 
     if (minimum_score <= 5) {
         // valid burst found, send it to lower MAC
-        auto funcs = lower_mac_->process(frame_, burst_type);
-        for (const auto& func : funcs) {
-            func();
-        }
+        lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
     }
 }
 

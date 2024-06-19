@@ -9,43 +9,57 @@
 
 #pragma once
 
+#include "l2/logical_link_control.hpp"
+#include "l2/lower_mac.hpp"
+#include "l2/slot.hpp"
 #include "l2/upper_mac_fragments.hpp"
+#include "l2/upper_mac_metrics.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
-#include <l2/logical_link_control.hpp>
-#include <l3/mobile_link_entity.hpp>
-#include <reporter.hpp>
+#include "prometheus.h"
+#include "reporter.hpp"
+#include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <memory>
+#include <thread>
 
 class UpperMac {
   public:
     UpperMac() = delete;
-    UpperMac(std::shared_ptr<Reporter> reporter, bool is_downlink)
-        : reporter_(std::move(reporter))
-        , mobile_link_entity_(std::make_shared<MobileLinkEntity>(reporter_, is_downlink))
-        , logical_link_control_(std::make_unique<LogicalLinkControl>(reporter_, mobile_link_entity_)){};
-    ~UpperMac() noexcept = default;
+    ///
+    /// \param queue the input queue from the lower mac
+    /// \param prometheus_exporter the reference to the prometheus exporter that is used for the metrics in the upper
+    /// mac
+    /// \param is_downlink true if this channel is on the downlink
+    UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
+             const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter, bool is_downlink);
+    ~UpperMac();
+
+  private:
+    /// The thread function for continously process incomming packets for the lower MAC and passing it into the upper
+    /// layers.
+    auto worker() -> void;
+
+    /// process the slots from the lower MAC
+    /// \param slots the slots from the lower MAC
+    auto process(const Slots& slots) -> void;
 
     /// process Upper MAC packets and perform fragment reconstruction and pass it to the upper layers
     /// \param packets the packets that were parsed in the upper MAC layer
-    auto process(UpperMacPackets&& packets) -> void {
-        for (const auto& packet : packets.c_plane_signalling_packets_) {
-            // TODO: handle fragmentation over STCH
-            if (packet.is_downlink_fragment() || packet.is_uplink_fragment()) {
-                auto reconstructed_fragment = fragmentation_.push_fragment(packet);
-                if (reconstructed_fragment) {
-                    auto data = BitVector(*reconstructed_fragment->tm_sdu_);
-                    logical_link_control_->process(reconstructed_fragment->address_, data);
-                }
-            } else if (packet.tm_sdu_) {
-                auto data = BitVector(*packet.tm_sdu_);
-                logical_link_control_->process(packet.address_, data);
-            }
-        }
-    };
+    auto processPackets(UpperMacPackets&& packets) -> void;
 
-  private:
-    std::shared_ptr<Reporter> reporter_;
-    std::shared_ptr<MobileLinkEntity> mobile_link_entity_;
-    std::unique_ptr<LogicalLinkControl> logical_link_control_;
+    /// The input queue
+    std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;
 
-    UpperMacFragmentation fragmentation_;
+    /// The prometheus metrics
+    std::unique_ptr<UpperMacMetrics> metrics_;
+
+    /// The prometheus metrics for the fragmentation
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_continous_;
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_stealing_channel_;
+
+    LogicalLinkControl logical_link_control_;
+
+    std::unique_ptr<UpperMacFragmentation> fragmentation_;
+
+    /// The worker thread
+    std::thread worker_thread_;
 };

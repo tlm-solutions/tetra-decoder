@@ -9,7 +9,6 @@
 #include "l2/upper_mac_packet_builder.hpp"
 #include "burst_type.hpp"
 #include "l2/logical_channel.hpp"
-#include "l2/slot.hpp"
 #include "l2/upper_mac_packet.hpp"
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
@@ -40,33 +39,15 @@ auto operator<<(std::ostream& stream, const UpperMacPackets& packets) -> std::os
     return stream;
 }
 
-auto UpperMacPacketBuilder::parse_slots(Slots& slots) -> UpperMacPackets {
-    UpperMacPackets packets;
-
-    {
-        const auto& first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
-        packets.merge(parse_slot(slots.get_burst_type(), first_slot));
-    }
-
-    if (slots.has_second_slot()) {
-        const auto& second_slot = slots.get_second_slot().get_logical_channel_data_and_crc();
-        packets.merge(parse_slot(slots.get_burst_type(), second_slot));
-    }
-
-    return packets;
-}
-
-auto UpperMacPacketBuilder::parse_slot(const BurstType burst_type,
-                                       const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
-    -> UpperMacPackets {
-    const auto& channel = logical_channel_data_and_crc.channel;
-    auto data = BitVector(logical_channel_data_and_crc.data);
+auto UpperMacPacketBuilder::parse_slot(const ConcreateSlot& slot) -> UpperMacPackets {
+    const auto& channel = slot.logical_channel_data_and_crc.channel;
+    auto data = BitVector(slot.logical_channel_data_and_crc.data);
     if (channel == LogicalChannel::kTrafficChannel) {
         return UpperMacPackets{.u_plane_traffic_packet_ = parse_u_plane_traffic(channel, std::move(data))};
     }
 
     // filter out signalling packets with a wrong crc
-    if (!logical_channel_data_and_crc.crc_ok) {
+    if (!slot.logical_channel_data_and_crc.crc_ok) {
         return UpperMacPackets{};
     }
 
@@ -81,20 +62,20 @@ auto UpperMacPacketBuilder::parse_slot(const BurstType burst_type,
             return UpperMacPackets{.u_plane_signalling_packet_ = {parse_u_plane_signalling(channel, std::move(data))}};
         }
         return UpperMacPackets{.c_plane_signalling_packets_ =
-                                   parse_c_plane_signalling(burst_type, channel, std::move(data))};
+                                   parse_c_plane_signalling(slot.burst_type, channel, std::move(data))};
     }
 
     if (pdu_type == 0b10) {
         // Broadcast
         // TMB-SAP
-        if (is_downlink_burst(burst_type)) {
+        if (is_downlink_burst(slot.burst_type)) {
             return UpperMacPackets{.broadcast_packet_ = parse_broadcast(channel, std::move(data))};
         }
         throw std::runtime_error("Broadcast may only be sent on downlink.");
     }
 
     return UpperMacPackets{.c_plane_signalling_packets_ =
-                               parse_c_plane_signalling(burst_type, channel, std::move(data))};
+                               parse_c_plane_signalling(slot.burst_type, channel, std::move(data))};
 }
 
 auto UpperMacPacketBuilder::parse_broadcast(LogicalChannel channel, BitVector&& data) -> UpperMacBroadcastPacket {
@@ -164,13 +145,14 @@ auto UpperMacPacketBuilder::extract_tm_sdu(BitVector& data, std::size_t preproce
     return data.take_vector(payload_length);
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type, LogicalChannel channel,
                                                             BitVector& data) -> UpperMacCPlaneSignallingPacket {
     auto preprocessing_bit_count = data.bits_left();
 
-    if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
+    if (channel == LogicalChannel::kSignallingChannelHalfUplink) {
         if (is_downlink_burst(burst_type)) {
-            throw std::runtime_error("SignalingChannelHalfUplink may only be set on uplink.");
+            throw std::runtime_error("SignallingChannelHalfUplink may only be set on uplink.");
         }
 
         auto pdu_type = data.take<1>();
@@ -329,7 +311,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("Supplementary MAC PDU subtype 0b1 is reserved.");
             }
 
-            if (channel != LogicalChannel::kSignalingChannelFull) {
+            if (channel != LogicalChannel::kSignallingChannelFull) {
                 throw std::runtime_error("MAC-U-BLCK may only be sent on SCH/F.");
             }
 
@@ -483,7 +465,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("Supplementary MAC PDU subtype 0b1 is reserved.");
             }
 
-            if (channel != LogicalChannel::kSignalingChannelFull) {
+            if (channel != LogicalChannel::kSignallingChannelFull) {
                 throw std::runtime_error("MAC-D-BLCK may only be sent on SCH/F.");
             }
 
@@ -525,9 +507,9 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling(const BurstType burst_type,
     if (is_downlink_burst(burst_type)) {
         min_bit_count = 16;
     } else {
-        if (channel == LogicalChannel::kSignalingChannelHalfUplink) {
+        if (channel == LogicalChannel::kSignallingChannelHalfUplink) {
             min_bit_count = 36;
-        } else if (channel == LogicalChannel::kSignalingChannelFull || channel == LogicalChannel::kStealingChannel) {
+        } else if (channel == LogicalChannel::kSignallingChannelFull || channel == LogicalChannel::kStealingChannel) {
             min_bit_count = 37;
         }
     }

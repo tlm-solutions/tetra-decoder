@@ -9,7 +9,6 @@ add_executable(tetra-decoder
                src/main.cpp
                src/reporter.cpp
         src/decoder.cpp
-        src/streaming_ordered_output_thread_pool_executor.cpp
         src/bit_stream_decoder.cpp
         src/iq_stream_decoder.cpp
         src/prometheus.cpp
@@ -19,6 +18,7 @@ add_executable(tetra-decoder
         src/l2/lower_mac.cpp
         src/l2/slot.cpp
         src/l2/timebase_counter.cpp
+        src/l2/upper_mac.cpp
         src/l2/upper_mac_packet.cpp
         src/l2/upper_mac_packet_builder.cpp
         src/l2/upper_mac_packet_formatter.cpp

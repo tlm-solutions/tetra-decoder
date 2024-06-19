@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -7,35 +7,38 @@
  *   Tassilo Tanneberger
  */
 
+#include "decoder.hpp"
+#include "l2/upper_mac.hpp"
 #include <arpa/inet.h>
 #include <cassert>
 #include <complex>
 #include <cstring>
 #include <fcntl.h>
+#include <fmt/color.h>
+#include <fmt/core.h>
+#include <memory>
 #include <netinet/in.h>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <burst_type.hpp>
-#include <decoder.hpp>
-#include <fmt/color.h>
-#include <fmt/core.h>
-
 Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
                  std::optional<std::string> output_file, bool iq_or_bit_stream,
                  std::optional<unsigned int> uplink_scrambling_code,
-                 std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-    : reporter_(std::make_shared<Reporter>(send_port))
+                 const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+    : lower_mac_work_queue_(std::make_shared<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>(4))
     , packed_(packed)
     , uplink_scrambling_code_(uplink_scrambling_code)
     , iq_or_bit_stream_(iq_or_bit_stream) {
-
-    lower_mac_ = std::make_shared<LowerMac>(reporter_, prometheus_exporter, uplink_scrambling_code);
-    bit_stream_decoder_ = std::make_shared<BitStreamDecoder>(lower_mac_, uplink_scrambling_code_.has_value());
+    auto is_uplink = uplink_scrambling_code_.has_value();
+    auto lower_mac = std::make_shared<LowerMac>(prometheus_exporter, uplink_scrambling_code);
+    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, prometheus_exporter, Reporter(send_port),
+                                            /*is_downlink=*/!is_uplink);
+    bit_stream_decoder_ =
+        std::make_shared<BitStreamDecoder>(lower_mac_work_queue_, lower_mac, uplink_scrambling_code_.has_value());
     iq_stream_decoder_ =
-        std::make_unique<IQStreamDecoder>(lower_mac_, bit_stream_decoder_, uplink_scrambling_code_.has_value());
+        std::make_unique<IQStreamDecoder>(lower_mac_work_queue_, lower_mac, bit_stream_decoder_, is_uplink);
 
     // read input file from file or from socket
     if (input_file.has_value()) {
@@ -52,13 +55,12 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
         inet_aton("127.0.0.1", &addr.sin_addr);
 
         input_fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (bind(input_fd_, (struct sockaddr*)&addr, sizeof(struct sockaddr)) < 0) {
-            fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "ERROR cannot bind to input socket");
-            // TODO: handle error
-        }
-
         if (input_fd_ < 0) {
             throw std::runtime_error("Couldn't create input socket");
+        }
+
+        if (bind(input_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(struct sockaddr)) < 0) {
+            throw std::runtime_error("ERROR cannot bind to input socket");
         }
     }
 
@@ -76,37 +78,41 @@ Decoder::~Decoder() {
     if (output_file_fd_.has_value()) {
         close(*output_file_fd_);
     }
+    /// Send the termination token to the upper mac worker
+    lower_mac_work_queue_->queue_work([]() { return TerminationToken{}; });
 }
 
 void Decoder::main_loop() {
-    uint8_t rx_buffer[kRX_BUFFER_SIZE];
+    std::array<uint8_t, kRX_BUFFER_SIZE> rx_buffer{};
 
-    auto bytes_read = read(input_fd_, rx_buffer, sizeof(rx_buffer));
+    auto bytes_read = read(input_fd_, rx_buffer.data(), sizeof(rx_buffer));
 
     if (errno == EINTR) {
-        stop = 1;
+        stop = true;
         return;
-    } else if (bytes_read < 0) {
-        throw std::runtime_error("Read error");
-    } else if (bytes_read == 0) {
-        stop = 1;
+    }
+    if (bytes_read < 0) {
+        throw std::runtime_error("Read error.");
+    }
+    if (bytes_read == 0) {
+        stop = true;
         return;
     }
 
     if (output_file_fd_.has_value()) {
-        if (write(*output_file_fd_, rx_buffer, bytes_read) != bytes_read) {
-            // unable to write to output TODO: possible log or fail hard
-            stop = 1;
+        if (write(*output_file_fd_, rx_buffer.data(), bytes_read) != bytes_read) {
+            throw std::runtime_error("Could not write to output file.");
+            stop = true;
             return;
         }
     }
 
     if (iq_or_bit_stream_) {
-        std::complex<float>* rx_buffer_complex = reinterpret_cast<std::complex<float>*>(rx_buffer);
+        const auto* rx_buffer_complex = reinterpret_cast<std::complex<float>*>(rx_buffer.data());
 
-        assert(("Size of rx_buffer is not a multiple of std::complex<float>",
-                bytes_read % sizeof(*rx_buffer_complex) == 0));
-        auto size = bytes_read / sizeof(*rx_buffer_complex);
+        assert((bytes_read % sizeof(*rx_buffer_complex) == 0) &&
+               "Size of rx_buffer is not a multiple of std::complex<float>");
+        const auto size = bytes_read / sizeof(*rx_buffer_complex);
 
         for (auto i = 0; i < size; i++) {
             iq_stream_decoder_->process_complex(rx_buffer_complex[i]);
@@ -115,10 +121,10 @@ void Decoder::main_loop() {
         for (auto i = 0; i < bytes_read; i++) {
             if (packed_) {
                 for (auto j = 0; j < 8; j++) {
-                    bit_stream_decoder_->process_bit((rx_buffer[i] >> j) & 0x1);
+                    bit_stream_decoder_->process_bit((rx_buffer.at(i) >> j) & 0x1);
                 }
             } else {
-                bit_stream_decoder_->process_bit(rx_buffer[i]);
+                bit_stream_decoder_->process_bit(rx_buffer.at(i));
             }
         }
     }

@@ -1,7 +1,14 @@
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ */
+
+#include "l2/logical_link_control.hpp"
 #include <bitset>
 #include <cassert>
-
-#include <l2/logical_link_control.hpp>
 
 auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
     // remove last 32 bits
@@ -14,10 +21,10 @@ auto LogicalLinkControl::check_fcs(BitVector& vec) -> bool {
         std::cout << "    FCS           0b" << fcs << std::endl;
         std::cout << "    computed FCS: 0b" << computed_fcs << std::endl;
         return false;
-    } else {
-        std::cout << "  FCS good" << std::endl;
-        return true;
     }
+
+    std::cout << "  FCS good" << std::endl;
+    return true;
 }
 
 void LogicalLinkControl::process(const Address address, BitVector& vec) {
@@ -25,26 +32,15 @@ void LogicalLinkControl::process(const Address address, BitVector& vec) {
     std::cout << "  Address: " << address << std::endl;
     std::cout << "  Data: " << vec << std::endl;
 
-    std::string llc_pdu[] = {"BL-ADATA without FCS",
-                             "BL-DATA without FCS",
-                             "BL-UDATA without FCS",
-                             "BL-ACK without FCS",
-                             "BL-ADATA with FCS",
-                             "BL-DATA with FCS",
-                             "BL-UDATA with FCS",
-                             "BL-ACK with FCS",
-                             "AL-SETUP",
-                             "AL-DATA/AL-DATA-AR/AL-FINAL/AL-FINAL-AR",
-                             "AL-UDATA/AL-UFINAL",
-                             "AL-ACK/AL-RNR",
-                             "AL-RECONNECT",
-                             "Supplementary LLC PDU",
-                             "Layer 2 signalling PDU",
-                             "AL-DISC"};
-
     auto pdu_type = vec.take<4>();
+    const auto& pdu_name = llc_pdu_description_.at(pdu_type);
 
-    std::cout << "  " << llc_pdu[pdu_type] << std::endl;
+    // Skip incrementing the metrics for Supplementary LLC PDU and Layer 2 signalling PDU
+    if (metrics_ && (pdu_type != kSupplementaryLlcPdu) && (pdu_type != kLayer2SignallingPdu)) {
+        metrics_->increment(pdu_name);
+    }
+
+    std::cout << "  " << pdu_name << std::endl;
 
     switch (pdu_type) {
     case 0b0000:
@@ -81,6 +77,10 @@ void LogicalLinkControl::process(const Address address, BitVector& vec) {
         break;
     case 0b1101:
         process_supplementary_llc_pdu(address, vec);
+        break;
+    case 0b1110:
+        process_layer_2_signalling_pdu(address, vec);
+        break;
     default:
         break;
     }
@@ -93,25 +93,25 @@ void LogicalLinkControl::process_bl_adata_without_fcs(const Address address, Bit
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
-    mle_->service_user_pdu(address, vec);
+    mle_.service_user_pdu(address, vec);
 }
 
 void LogicalLinkControl::process_bl_data_without_fcs(const Address address, BitVector& vec) {
     auto n_s = vec.take<1>();
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
-    mle_->service_user_pdu(address, vec);
+    mle_.service_user_pdu(address, vec);
 }
 
 void LogicalLinkControl::process_bl_udata_without_fcs(const Address address, BitVector& vec) {
-    mle_->service_user_pdu(address, vec);
+    mle_.service_user_pdu(address, vec);
 }
 
 void LogicalLinkControl::process_bl_ack_without_fcs(const Address address, BitVector& vec) {
     auto n_r = vec.take<1>();
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
-    mle_->service_user_pdu(address, vec);
+    mle_.service_user_pdu(address, vec);
 }
 
 void LogicalLinkControl::process_bl_adata_with_fcs(const Address address, BitVector& vec) {
@@ -122,7 +122,7 @@ void LogicalLinkControl::process_bl_adata_with_fcs(const Address address, BitVec
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
     if (LogicalLinkControl::check_fcs(vec)) {
-        mle_->service_user_pdu(address, vec);
+        mle_.service_user_pdu(address, vec);
     }
 }
 
@@ -131,13 +131,13 @@ void LogicalLinkControl::process_bl_data_with_fcs(const Address address, BitVect
     std::cout << "  N(S) = 0b" << std::bitset<1>(n_s) << std::endl;
 
     if (LogicalLinkControl::check_fcs(vec)) {
-        mle_->service_user_pdu(address, vec);
+        mle_.service_user_pdu(address, vec);
     }
 }
 
 void LogicalLinkControl::process_bl_udata_with_fcs(const Address address, BitVector& vec) {
     if (LogicalLinkControl::check_fcs(vec)) {
-        mle_->service_user_pdu(address, vec);
+        mle_.service_user_pdu(address, vec);
     }
 }
 
@@ -146,18 +146,20 @@ void LogicalLinkControl::process_bl_ack_with_fcs(const Address address, BitVecto
     std::cout << "  N(R) = 0b" << std::bitset<1>(n_r) << std::endl;
 
     if (LogicalLinkControl::check_fcs(vec)) {
-        mle_->service_user_pdu(address, vec);
+        mle_.service_user_pdu(address, vec);
     }
 }
 
 void LogicalLinkControl::process_supplementary_llc_pdu(const Address address, BitVector& vec) {
-    std::string supplementary_llc_pdu[] = {"AL-X-DATA/AL-X-DATA-AR/AL-X-FINAL/AL-X-FINAL-AR", "AL-X-UDATA/AL-X-UFINAL",
-                                           "AL-X-UDATA/AL-X-UFINAL", "AL-X-ACK/AL-X-RNR", "Reserved"};
-
     auto pdu_type = vec.take<2>();
+    const auto& pdu_name = supplementary_llc_pdu_description_.at(pdu_type);
 
-    std::cout << "  " << supplementary_llc_pdu[pdu_type] << std::endl;
+    std::cout << "  " << pdu_name << std::endl;
     std::cout << "  Data: " << vec << std::endl;
+
+    if (metrics_) {
+        metrics_->increment(pdu_name);
+    }
 
     switch (pdu_type) {
     case 0b00:
@@ -168,6 +170,15 @@ void LogicalLinkControl::process_supplementary_llc_pdu(const Address address, Bi
         break;
     case 0b11:
         break;
+    }
+}
+
+void LogicalLinkControl::process_layer_2_signalling_pdu(const Address address, BitVector& vec) {
+    auto pdu_type = vec.take<4>();
+    const auto& pdu_name = layer_2_signalling_pdu_description_.at(pdu_type);
+
+    if (metrics_) {
+        metrics_->increment(pdu_name);
     }
 }
 

@@ -89,14 +89,6 @@ class UpperMacPacketBuilder {
                                              unsigned _BitInt(1) fill_bit_indication,
                                              std::optional<std::size_t> length = std::nullopt) -> BitVector;
 
-    /// Parse a slot (singular) and extract all the contained packets
-    /// \param burst_type which burst was used to send this slot
-    /// \param logical_channel_data_and_crc the data passed from the lower mac for this slot
-    /// \return the extracted packets
-    [[nodiscard]] static auto parse_slot(BurstType burst_type,
-                                         const LogicalChannelDataAndCrc& logical_channel_data_and_crc)
-        -> UpperMacPackets;
-
     /// Parse the broadcast packet contained in a BitVector
     /// \param channel the logical channel on which the broadcast packet is sent
     /// \param data the BitVector which holds the MAC broadcast packet
@@ -136,9 +128,9 @@ class UpperMacPacketBuilder {
   public:
     UpperMacPacketBuilder() = default;
 
-    /// TODO: make this function take a const Slots reference.
-    /// Parse the slots from the lower mac and extract all the contained packets
-    /// \param slots the datastructure that contains all the information from the lower mact
+    /// Parse a slot (singular) and extract all the contained packets
+    /// \param burst_type which burst was used to send this slot
+    /// \param slot the data passed from the lower mac for this slot
     /// \return the extracted packets
-    static auto parse_slots(Slots& slots) -> UpperMacPackets;
+    [[nodiscard]] static auto parse_slot(const ConcreateSlot& slot) -> UpperMacPackets;
 };

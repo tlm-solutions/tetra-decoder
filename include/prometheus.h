@@ -6,6 +6,7 @@
 #include <prometheus/counter.h>
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
+#include <string>
 
 class PrometheusExporter {
   private:
@@ -23,6 +24,19 @@ class PrometheusExporter {
     auto burst_lower_mac_decode_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
     /// The family of counters for mismatched number of bursts in the downlink lower MAC
     auto burst_lower_mac_mismatch_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+    /// The family of gauges for the network time
+    auto lower_mac_time_gauge() noexcept -> prometheus::Family<prometheus::Gauge>&;
+
+    /// The family of counters for all received slots
+    auto upper_mac_total_slot_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+    /// The family of counters for all received slots with errors
+    auto upper_mac_slot_error_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+
+    /// The family of counters for all received c-plane fragments
+    auto upper_mac_fragment_count() noexcept -> prometheus::Family<prometheus::Counter>&;
+
+    /// The family of counters for all received packets in a protocol layer.
+    auto packet_count(const std::string& protocol) noexcept -> prometheus::Family<prometheus::Counter>&;
 };
 
 #endif // PROMETHEUS_H

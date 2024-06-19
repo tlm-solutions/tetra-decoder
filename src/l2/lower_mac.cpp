@@ -1,26 +1,31 @@
+/*
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
+ * All rights reserved.
+ *
+ * Authors:
+ *   Marenz Schmidl
+ *   Tassilo Tanneberger
+ */
+
+#include "l2/lower_mac.hpp"
 #include "burst_type.hpp"
 #include "l2/access_assignment_channel.hpp"
 #include "l2/broadcast_synchronization_channel.hpp"
 #include "l2/logical_channel.hpp"
 #include "l2/lower_mac_coding.hpp"
 #include "l2/slot.hpp"
-#include "l2/upper_mac_packet_builder.hpp"
 #include "utils/bit_vector.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
-#include <exception>
-#include <l2/lower_mac.hpp>
 #include <optional>
 #include <stdexcept>
-#include <utility>
 
 #include <fmt/color.h>
 #include <fmt/core.h>
 
-LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<PrometheusExporter>& prometheus_exporter,
-                   std::optional<uint32_t> scrambling_code)
-    : reporter_(std::move(reporter)) {
+LowerMac::LowerMac(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
+                   std::optional<uint32_t> scrambling_code) {
     // For decoupled uplink processing we need to inject a scrambling code. Inject it into the correct place that would
     // normally be filled by a Synchronization Burst
     if (scrambling_code.has_value()) {
@@ -28,10 +33,8 @@ LowerMac::LowerMac(std::shared_ptr<Reporter> reporter, std::shared_ptr<Prometheu
         sync_->scrambling_code = *scrambling_code;
     }
 
-    upper_mac_ = std::make_shared<UpperMac>(reporter_, /*is_downlink=*/!scrambling_code.has_value());
-
     if (prometheus_exporter) {
-        metrics_ = std::make_unique<LowerMacPrometheusCounters>(prometheus_exporter);
+        metrics_ = std::make_unique<LowerMacMetrics>(prometheus_exporter);
     }
 }
 
@@ -78,7 +81,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         slots = Slots(burst_type, SlotsType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
-                          .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                          .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                           .data = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124)),
                           .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits),
                       }));
@@ -119,7 +122,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // ✅done
             slots = Slots(burst_type, SlotsType::kFullSlot,
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelFull,
+                              .channel = LogicalChannel::kSignallingChannelFull,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits),
                           }));
@@ -181,12 +184,12 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // SCH/HD + BNCH
             slots = Slots(burst_type, SlotsType::kTwoSubslots,
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                              .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn1_bits),
                           }),
                           Slot(LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelHalfDownlink,
+                              .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                               .data = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<140>(bkn2_bits),
                           }));
@@ -205,7 +208,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         // SCH/HU
         slots = Slots(burst_type, SlotsType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
-                          .channel = LogicalChannel::kSignalingChannelHalfUplink,
+                          .channel = LogicalChannel::kSignallingChannelHalfUplink,
                           .data = BitVector(std::vector(cb_bits.cbegin(), cb_bits.cbegin() + 92)),
                           .crc_ok = LowerMacCoding::check_crc_16_ccitt<108>(cb_bits),
                       }));
@@ -226,7 +229,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         slots = Slots(burst_type, SlotsType::kFullSlot,
                       Slot({
                           LogicalChannelDataAndCrc{
-                              .channel = LogicalChannel::kSignalingChannelFull,
+                              .channel = LogicalChannel::kSignallingChannelFull,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268)),
                               .crc_ok = LowerMacCoding::check_crc_16_ccitt<284>(bkn1_bits),
                           },
@@ -281,7 +284,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     return *slots;
 }
 
-auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) -> std::vector<std::function<void()>> {
+auto LowerMac::process(std::vector<uint8_t> frame, BurstType burst_type) -> LowerMac::return_type {
     // Set to true if there was some decoding error in the lower MAC
     bool decode_error = false;
 
@@ -291,6 +294,9 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
     // We do not have any time handling for uplink processing.
     if (sync_ && is_downlink_burst(burst_type)) {
         sync_->time.increment();
+        if (metrics_) {
+            metrics_->set_time(sync_->time);
+        }
     }
 
     if (burst_type == BurstType::SynchronizationBurst) {
@@ -316,40 +322,19 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
 
         // Update the mismatching received number of bursts metrics
         if (current_sync && sync_ && metrics_) {
-            metrics_->increment(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
+            metrics_->set_time(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
         }
         sync_ = current_sync;
     }
 
-    std::vector<std::function<void()>> callbacks{};
+    std::optional<Slots> slots;
 
     // We got a sync, continue with further processing of channels
     if (sync_) {
-        auto slots = processChannels(frame, burst_type, *sync_);
+        slots = processChannels(frame, burst_type, *sync_);
 
         // check if we have crc decode errors in the lower mac
-        decode_error |= slots.has_crc_error();
-
-        callbacks.emplace_back([this, slots_ref = slots] {
-            auto slots = Slots(slots_ref);
-            // std::cout << slots;
-            UpperMacPackets packets;
-            try {
-                packets = UpperMacPacketBuilder::parse_slots(slots);
-                // if (packets.has_user_or_control_plane_data()) {
-                //     std::cout << packets << std::endl;
-                // }
-            } catch (std::runtime_error& e) {
-                std::cout << "Error decoding packets: " << e.what() << std::endl;
-                return;
-            }
-            try {
-                upper_mac_->process(std::move(packets));
-
-            } catch (std::runtime_error& e) {
-                std::cout << "Error decoding in upper mac: " << e.what() << std::endl;
-            }
-        });
+        decode_error |= slots->has_crc_error();
     }
 
     // Update the received burst type metrics
@@ -357,5 +342,5 @@ auto LowerMac::process(const std::vector<uint8_t>& frame, BurstType burst_type) 
         metrics_->increment(burst_type, decode_error);
     }
 
-    return callbacks;
+    return slots;
 }
