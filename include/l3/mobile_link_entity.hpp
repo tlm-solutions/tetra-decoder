@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "l2/logical_link_control_packet.hpp"
 #include "l3/circuit_mode_control_entity.hpp"
 #include "l3/mobile_management.hpp"
 #include "prometheus.h"
@@ -60,11 +61,9 @@ class MobileLinkEntity {
     };
     ~MobileLinkEntity() noexcept = default;
 
-    void service_user_pdu(Address address, BitVector& vec);
+    auto process(const LogicalLinkControlPacket& packet) -> std::unique_ptr<LogicalLinkControlPacket>;
 
   private:
-    void service_data_pdu(Address address, BitVector& vec);
-
     CircuitModeControlEntity cmce_;
     MobileManagement mm_;
 

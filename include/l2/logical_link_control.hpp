@@ -8,21 +8,18 @@
 
 #pragma once
 
+#include "l2/logical_link_control_packet_builder.hpp"
+#include "l2/upper_mac_packet.hpp"
 #include "l3/mobile_link_entity.hpp"
-#include "utils/address.hpp"
-#include "utils/bit_vector.hpp"
 #include "utils/packet_counter_metrics.hpp"
-#include <cstdint>
-#include <iostream>
 #include <memory>
-#include <vector>
 
 class LogicalLinkControl {
   public:
     LogicalLinkControl() = delete;
     LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
                        bool is_downlink)
-        : mle_(prometheus_exporter, std::move(reporter), is_downlink) {
+        : packet_builder_(prometheus_exporter, std::move(reporter), is_downlink) {
         llc_pdu_description_ = {"BL-ADATA without FCS",
                                 "BL-DATA without FCS",
                                 "BL-UDATA without FCS",
@@ -64,9 +61,7 @@ class LogicalLinkControl {
     };
     ~LogicalLinkControl() noexcept = default;
 
-    void process(Address address, BitVector& vec);
-
-    friend auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;
+    auto process(const UpperMacCPlaneSignallingPacket& packet) -> std::unique_ptr<UpperMacCPlaneSignallingPacket>;
 
   private:
     static const auto kSupplementaryLlcPdu = 13;
@@ -76,29 +71,6 @@ class LogicalLinkControl {
     std::array<std::string, 4> supplementary_llc_pdu_description_;
     std::array<std::string, 16> layer_2_signalling_pdu_description_;
 
-    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
-    void process_bl_adata_without_fcs(Address address, BitVector& vec);
-    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
-    void process_bl_data_without_fcs(Address address, BitVector& vec);
-    void process_bl_udata_without_fcs(Address address, BitVector& vec);
-    void process_bl_ack_without_fcs(Address address, BitVector& vec);
-
-    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
-    void process_bl_adata_with_fcs(Address address, BitVector& vec);
-    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
-    void process_bl_data_with_fcs(Address address, BitVector& vec);
-    void process_bl_udata_with_fcs(Address address, BitVector& vec);
-    void process_bl_ack_with_fcs(Address address, BitVector& vec);
-
-    void process_supplementary_llc_pdu(Address address, BitVector& vec);
-    void process_layer_2_signalling_pdu(Address address, BitVector& vec);
-
-    static auto compute_fcs(std::vector<uint8_t> const& data) -> uint32_t;
-    static auto check_fcs(BitVector& vec) -> bool;
-
-    MobileLinkEntity mle_;
-
+    LogicalLinkControlPacketBuilder packet_builder_;
     std::unique_ptr<PacketCounterMetrics> metrics_;
 };
-
-auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;

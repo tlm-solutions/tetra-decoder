@@ -409,6 +409,8 @@ struct UpperMacCPlaneSignallingPacket {
                (type_ == MacPacketType::kMacFragmentUplink) || (type_ == MacPacketType::kMacEndUplink);
     };
 
+    UpperMacCPlaneSignallingPacket(const UpperMacCPlaneSignallingPacket&) = default;
+
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;
 };
 

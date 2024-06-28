@@ -142,7 +142,7 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     }
 
     for (const auto& packet : c_plane_packets) {
-        auto data = BitVector(*packet.tm_sdu_);
-        logical_link_control_.process(packet.address_, data);
+        auto parsed_packet = logical_link_control_.process(packet);
+        /// TODO: send this packet to borzoi
     }
 }
