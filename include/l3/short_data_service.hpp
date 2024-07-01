@@ -10,14 +10,13 @@
 
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
-#include "utils/packet_counter_metrics.hpp"
-#include <array>
-#include <string>
+#include "utils/packet_parser.hpp"
 
-class ShortDataService {
+class ShortDataServiceParser : public PacketParser<CircuitModeControlEntityPacket, ShortDataServicePacket> {
   public:
-    ShortDataService() = delete;
-    ShortDataService(const std::shared_ptr<PrometheusExporter>& prometheus_exporter) {
+    ShortDataServiceParser() = delete;
+    explicit ShortDataServiceParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "short_data_service") {
         sds_pdu_description_[0] = "Reserved 0";
         sds_pdu_description_[1] = "OTAK (Over The Air re-Keying for end to end encryption)";
         sds_pdu_description_[2] = "Simple Text Messaging";
@@ -61,17 +60,16 @@ class ShortDataService {
             sds_pdu_description_[i] = "Available for user application definition " + std::to_string(i);
         }
         sds_pdu_description_[255] = "Reserved for extension";
-
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "short_data_service");
-        }
     };
-    ~ShortDataService() noexcept = default;
-
-    auto process(const CircuitModeControlEntityPacket& packet) -> std::unique_ptr<ShortDataServicePacket>;
 
   private:
-    std::array<std::string, 256> sds_pdu_description_;
+    auto packet_name(const ShortDataServicePacket& packet) -> std::string override {
+        return sds_pdu_description_.at(packet.protocol_identifier_);
+    }
 
-    std::unique_ptr<PacketCounterMetrics> metrics_;
+    auto forward(const ShortDataServicePacket& packet) -> std::unique_ptr<ShortDataServicePacket> override {
+        return std::make_unique<ShortDataServicePacket>(packet);
+    };
+
+    std::array<std::string, 256> sds_pdu_description_;
 };

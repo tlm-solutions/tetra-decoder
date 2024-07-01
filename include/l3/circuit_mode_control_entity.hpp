@@ -28,11 +28,11 @@ class CircuitModeControlEntityParser : public PacketParser<MobileLinkEntityPacke
     auto forward(const CircuitModeControlEntityPacket& packet)
         -> std::unique_ptr<CircuitModeControlEntityPacket> override {
         if (packet.sds_data_) {
-            return sds_.process(packet);
+            return sds_.parse(packet);
         }
 
         return std::make_unique<CircuitModeControlEntityPacket>(packet);
     };
 
-    ShortDataService sds_;
+    ShortDataServiceParser sds_;
 };
