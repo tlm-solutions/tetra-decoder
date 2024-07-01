@@ -65,7 +65,7 @@ class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, Mob
         case MobileLinkEntityProtocolDiscriminator::kMmProtocol:
             return mm_.parse(packet);
         case MobileLinkEntityProtocolDiscriminator::kCmceProtocol:
-            return cmce_.process(packet);
+            return cmce_.parse(packet);
 
         // Fall through for all other unimplemented packet types
         case MobileLinkEntityProtocolDiscriminator::kReserved0:
@@ -78,7 +78,7 @@ class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, Mob
         }
     };
 
-    CircuitModeControlEntity cmce_;
+    CircuitModeControlEntityParser cmce_;
     MobileManagementParser mm_;
 
     static const auto kExtendedPdu = 7;

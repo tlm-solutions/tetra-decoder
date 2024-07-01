@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Transit Live Mapping Solutions
+ * Copyright (C) 2022-2024 Transit Live Mapping Solutions
  * All rights reserved.
  *
  * Authors:
@@ -9,24 +9,30 @@
 #pragma once
 
 #include "l3/circuit_mode_control_entity_packet.hpp"
-#include "l3/circuit_mode_control_entity_packet_builder.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
-#include "utils/packet_counter_metrics.hpp"
+#include "l3/short_data_service.hpp"
+#include "utils/packet_parser.hpp"
 
-class CircuitModeControlEntity {
+class CircuitModeControlEntityParser : public PacketParser<MobileLinkEntityPacket, CircuitModeControlEntityPacket> {
   public:
-    CircuitModeControlEntity() = delete;
-    explicit CircuitModeControlEntity(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : packet_builder_(prometheus_exporter) {
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "circuit_mode_control_entity");
-        }
-    };
-    ~CircuitModeControlEntity() noexcept = default;
-
-    auto process(const MobileLinkEntityPacket& packet) -> std::unique_ptr<CircuitModeControlEntityPacket>;
+    CircuitModeControlEntityParser() = delete;
+    explicit CircuitModeControlEntityParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "circuit_mode_control_entity")
+        , sds_(prometheus_exporter){};
 
   private:
-    CircuitModeControlEntityPacketBuilder packet_builder_;
-    std::unique_ptr<PacketCounterMetrics> metrics_;
+    auto packet_name(const CircuitModeControlEntityPacket& packet) -> std::string override {
+        return to_string(packet.packet_type_);
+    };
+
+    auto forward(const CircuitModeControlEntityPacket& packet)
+        -> std::unique_ptr<CircuitModeControlEntityPacket> override {
+        if (packet.sds_data_) {
+            return sds_.process(packet);
+        }
+
+        return std::make_unique<CircuitModeControlEntityPacket>(packet);
+    };
+
+    ShortDataService sds_;
 };

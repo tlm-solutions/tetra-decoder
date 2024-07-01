@@ -20,7 +20,6 @@ add_executable(tetra-decoder
         src/l2/upper_mac_packet.cpp
         src/l2/upper_mac_packet_builder.cpp
         src/l2/upper_mac_packet_formatter.cpp
-        src/l3/circuit_mode_control_entity.cpp
         src/l3/short_data_service.cpp
         src/utils/address.cpp
         src/utils/bit_vector.cpp
