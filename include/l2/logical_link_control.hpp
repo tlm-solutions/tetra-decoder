@@ -73,12 +73,12 @@ class LogicalLinkControlParser : public PacketParser<UpperMacCPlaneSignallingPac
 
     auto forward(const LogicalLinkControlPacket& packet) -> std::unique_ptr<LogicalLinkControlPacket> override {
         if (packet.basic_link_information_ && packet.tl_sdu_.bits_left() > 0) {
-            return mle_.process(packet);
+            return mle_.parse(packet);
         }
         return std::make_unique<LogicalLinkControlPacket>(packet);
     };
 
-    MobileLinkEntity mle_;
+    MobileLinkEntityParser mle_;
 
     static const auto kSupplementaryLlcPdu = 13;
     static const auto kLayer2SignallingPdu = 14;

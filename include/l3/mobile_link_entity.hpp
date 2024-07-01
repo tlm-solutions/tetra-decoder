@@ -10,16 +10,18 @@
 #pragma once
 
 #include "l2/logical_link_control_packet.hpp"
-#include "l3/mobile_link_entity_packet_builder.hpp"
-#include "prometheus.h"
-#include "utils/packet_counter_metrics.hpp"
-#include <memory>
+#include "l3/circuit_mode_control_entity.hpp"
+#include "l3/mobile_link_entity_packet.hpp"
+#include "l3/mobile_management.hpp"
+#include "utils/packet_parser.hpp"
 
-class MobileLinkEntity {
+class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, MobileLinkEntityPacket> {
   public:
-    MobileLinkEntity() = delete;
-    MobileLinkEntity(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : packet_builder_(prometheus_exporter) {
+    MobileLinkEntityParser() = delete;
+    explicit MobileLinkEntityParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "mobile_link_entity")
+        , cmce_(prometheus_exporter)
+        , mm_(prometheus_exporter) {
         downlink_mle_pdu_description_ = {
             "D-NEW-CELL",    "D-PREPARE-FAIL", "D-NWRK-BROADCAST",   "D-NWRK-BROADCAST EXTENSION",
             "D-RESTORE-ACK", "D-RESTORE-FAIL", "D-CHANNEL RESPONSE", "Extended PDU"};
@@ -38,17 +40,48 @@ class MobileLinkEntity {
                                                  "U-Reserved4",  "U-Reserved5",  "U-Reserved6",  "U-Reserved7",
                                                  "U-Reserved8",  "U-Reserved9",  "U-Reserved10", "U-Reserved11",
                                                  "U-Reserved12", "U-Reserved13", "U-Reserved14", "U-Reserved15"};
-
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "mobile_link_entity");
-        }
     };
-    ~MobileLinkEntity() noexcept = default;
-
-    auto process(const LogicalLinkControlPacket& packet) -> std::unique_ptr<LogicalLinkControlPacket>;
 
   private:
-    static const auto kMleProtocol = 5;
+    auto packet_name(const MobileLinkEntityPacket& packet) -> std::string override {
+        if (packet.mle_protocol_ == MobileLinkEntityProtocolDiscriminator::kMleProtocol) {
+            auto pdu_type = packet.sdu_.look<3>(0);
+
+            if (pdu_type == kExtendedPdu) {
+                auto pdu_type = packet.sdu_.look<4>(3);
+                return (packet.is_downlink() ? downlink_mle_pdu_extension_description_
+                                             : uplink_mle_pdu_extension_description_)
+                    .at(pdu_type);
+            }
+
+            return (packet.is_downlink() ? downlink_mle_pdu_description_ : uplink_mle_pdu_description_).at(pdu_type);
+        }
+
+        return to_string(packet.mle_protocol_);
+    };
+
+    auto forward(const MobileLinkEntityPacket& packet) -> std::unique_ptr<MobileLinkEntityPacket> override {
+        // TODO: currently we only handle CMCE and MM
+        switch (packet.mle_protocol_) {
+        case MobileLinkEntityProtocolDiscriminator::kMmProtocol:
+            return mm_.process(packet);
+        case MobileLinkEntityProtocolDiscriminator::kCmceProtocol:
+            return cmce_.process(packet);
+
+        // Fall through for all other unimplemented packet types
+        case MobileLinkEntityProtocolDiscriminator::kReserved0:
+        case MobileLinkEntityProtocolDiscriminator::kReserved3:
+        case MobileLinkEntityProtocolDiscriminator::kSndcpProtocol:
+        case MobileLinkEntityProtocolDiscriminator::kMleProtocol:
+        case MobileLinkEntityProtocolDiscriminator::kTetraManagementEntityProtocol:
+        case MobileLinkEntityProtocolDiscriminator::kReservedForTesting:
+            return std::make_unique<MobileLinkEntityPacket>(packet);
+        }
+    };
+
+    CircuitModeControlEntity cmce_;
+    MobileManagement mm_;
+
     static const auto kExtendedPdu = 7;
 
     std::array<std::string, 8> downlink_mle_pdu_description_;
@@ -56,7 +89,4 @@ class MobileLinkEntity {
 
     std::array<std::string, 8> uplink_mle_pdu_description_;
     std::array<std::string, 16> uplink_mle_pdu_extension_description_;
-
-    MobileLinkEntityPacketBuilder packet_builder_;
-    std::unique_ptr<PacketCounterMetrics> metrics_;
 };
