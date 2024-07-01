@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "l2/logical_link_control_packet.hpp"
 #include "l3/circuit_mode_control_entity.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management.hpp"
@@ -64,7 +63,7 @@ class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, Mob
         // TODO: currently we only handle CMCE and MM
         switch (packet.mle_protocol_) {
         case MobileLinkEntityProtocolDiscriminator::kMmProtocol:
-            return mm_.process(packet);
+            return mm_.parse(packet);
         case MobileLinkEntityProtocolDiscriminator::kCmceProtocol:
             return cmce_.process(packet);
 
@@ -80,7 +79,7 @@ class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, Mob
     };
 
     CircuitModeControlEntity cmce_;
-    MobileManagement mm_;
+    MobileManagementParser mm_;
 
     static const auto kExtendedPdu = 7;
 

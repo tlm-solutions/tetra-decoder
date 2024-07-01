@@ -8,16 +8,14 @@
 
 #pragma once
 
-#include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management_packet.hpp"
-#include "utils/packet_counter_metrics.hpp"
-#include <array>
-#include <string>
+#include "utils/packet_parser.hpp"
 
-class MobileManagement {
+class MobileManagementParser : public PacketParser<MobileLinkEntityPacket, MobileManagementPacket> {
   public:
-    MobileManagement() = delete;
-    explicit MobileManagement(const std::shared_ptr<PrometheusExporter>& prometheus_exporter) {
+    MobileManagementParser() = delete;
+    explicit MobileManagementParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "mobile_management") {
         downlink_mm_pdu_description_ = {"D-OTAR",
                                         "D-AUTHENTICATION",
                                         "D-CK CHANGE DEMAND",
@@ -50,17 +48,18 @@ class MobileManagement {
                                       "U-Reserved13",
                                       "U-Reserved14",
                                       "U-MM PDU/FUNCTION NOT SUPPORTED"};
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "mobile_management");
-        }
-    }
-    ~MobileManagement() noexcept = default;
-
-    auto process(const MobileLinkEntityPacket& packet) -> std::unique_ptr<MobileManagementPacket>;
+    };
 
   private:
+    auto packet_name(const MobileManagementPacket& packet) -> std::string override {
+        auto pdu_type = packet.sdu_.look<4>(0);
+        return (packet.is_downlink() ? downlink_mm_pdu_description_ : uplink_mm_pdu_description_).at(pdu_type);
+    }
+
+    auto forward(const MobileManagementPacket& packet) -> std::unique_ptr<MobileManagementPacket> override {
+        return std::make_unique<MobileManagementPacket>(packet);
+    };
+
     std::array<std::string, 16> downlink_mm_pdu_description_;
     std::array<std::string, 16> uplink_mm_pdu_description_;
-
-    std::unique_ptr<PacketCounterMetrics> metrics_;
 };
