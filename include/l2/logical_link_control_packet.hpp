@@ -124,8 +124,13 @@ struct LogicalLinkControlPacket : public UpperMacCPlaneSignallingPacket {
     explicit LogicalLinkControlPacket(const UpperMacCPlaneSignallingPacket& packet)
         : UpperMacCPlaneSignallingPacket(packet) {
         auto data = BitVector(*tm_sdu_);
-        basic_link_information_ = BasicLinkInformation(data);
-        tl_sdu_ = data;
+        auto pdu_type = data.look<4>(0);
+
+        /// We only implemented packet parsing for Basic Link PDUs at this point in time
+        if (pdu_type <= 0b1000) {
+            basic_link_information_ = BasicLinkInformation(data);
+            tl_sdu_ = data;
+        }
     }
 };
 

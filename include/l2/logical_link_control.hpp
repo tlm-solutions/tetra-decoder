@@ -8,16 +8,15 @@
 
 #pragma once
 
-#include "l2/logical_link_control_packet_builder.hpp"
-#include "l2/upper_mac_packet.hpp"
-#include "utils/packet_counter_metrics.hpp"
-#include <memory>
+#include "l3/mobile_link_entity.hpp"
+#include "utils/packet_parser.hpp"
 
-class LogicalLinkControl {
+class LogicalLinkControlParser : public PacketParser<UpperMacCPlaneSignallingPacket, LogicalLinkControlPacket> {
   public:
-    LogicalLinkControl() = delete;
-    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : packet_builder_(prometheus_exporter) {
+    LogicalLinkControlParser() = delete;
+    explicit LogicalLinkControlParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "logical_link_control")
+        , mle_(prometheus_exporter) {
         llc_pdu_description_ = {"BL-ADATA without FCS",
                                 "BL-DATA without FCS",
                                 "BL-UDATA without FCS",
@@ -53,22 +52,38 @@ class LogicalLinkControl {
                                                "ReservedLayer2SignallingPdu13",
                                                "ReservedLayer2SignallingPdu14",
                                                "ReservedLayer2SignallingPdu15"};
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "logical_link_control");
-        }
     };
-    ~LogicalLinkControl() noexcept = default;
-
-    auto process(const UpperMacCPlaneSignallingPacket& packet) -> std::unique_ptr<UpperMacCPlaneSignallingPacket>;
 
   private:
+    auto packet_name(const LogicalLinkControlPacket& packet) -> std::string override {
+        auto pdu_type = packet.tm_sdu_->look<4>(0);
+
+        if (pdu_type == kSupplementaryLlcPdu) {
+            auto pdu_type = packet.tm_sdu_->look<2>(4);
+            return supplementary_llc_pdu_description_.at(pdu_type);
+        }
+
+        if (pdu_type == kLayer2SignallingPdu) {
+            auto pdu_type = packet.tm_sdu_->look<4>(4);
+            return layer_2_signalling_pdu_description_.at(pdu_type);
+        }
+
+        return llc_pdu_description_.at(pdu_type);
+    };
+
+    auto forward(const LogicalLinkControlPacket& packet) -> std::unique_ptr<LogicalLinkControlPacket> override {
+        if (packet.basic_link_information_ && packet.tl_sdu_.bits_left() > 0) {
+            return mle_.process(packet);
+        }
+        return std::make_unique<LogicalLinkControlPacket>(packet);
+    };
+
+    MobileLinkEntity mle_;
+
     static const auto kSupplementaryLlcPdu = 13;
     static const auto kLayer2SignallingPdu = 14;
 
     std::array<std::string, 16> llc_pdu_description_;
     std::array<std::string, 4> supplementary_llc_pdu_description_;
     std::array<std::string, 16> layer_2_signalling_pdu_description_;
-
-    LogicalLinkControlPacketBuilder packet_builder_;
-    std::unique_ptr<PacketCounterMetrics> metrics_;
 };

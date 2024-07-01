@@ -59,7 +59,7 @@ class UpperMac {
     std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_continous_;
     std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_stealing_channel_;
 
-    LogicalLinkControl logical_link_control_;
+    LogicalLinkControlParser logical_link_control_;
 
     std::unique_ptr<UpperMacFragmentation> fragmentation_;
 

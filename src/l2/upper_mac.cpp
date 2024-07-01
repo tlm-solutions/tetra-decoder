@@ -144,7 +144,7 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     }
 
     for (const auto& packet : c_plane_packets) {
-        auto parsed_packet = logical_link_control_.process(packet);
+        auto parsed_packet = logical_link_control_.parse(packet);
 
         if (auto* llc = dynamic_cast<LogicalLinkControlPacket*>(parsed_packet.get())) {
             if (llc->basic_link_information_ &&

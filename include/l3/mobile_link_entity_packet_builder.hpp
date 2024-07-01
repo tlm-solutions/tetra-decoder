@@ -13,7 +13,6 @@
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management.hpp"
 #include <memory>
-#include <optional>
 
 /// The packet that is parsed in the logical link control layer. Currently we only implement basic link.
 class MobileLinkEntityPacketBuilder {
@@ -31,8 +30,6 @@ class MobileLinkEntityPacketBuilder {
     [[nodiscard]] auto parse_logical_link_control(const LogicalLinkControlPacket& packet)
         -> std::unique_ptr<MobileLinkEntityPacket> {
         auto mle_packet = MobileLinkEntityPacket(packet);
-
-        auto pdu_type = packet.tm_sdu_->look<4>(0);
 
         // TODO: currently we only handle CMCE and MM
         switch (mle_packet.mle_protocol_) {
