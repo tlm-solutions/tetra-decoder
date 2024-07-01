@@ -10,16 +10,14 @@
 
 #include "l2/logical_link_control_packet_builder.hpp"
 #include "l2/upper_mac_packet.hpp"
-#include "l3/mobile_link_entity.hpp"
 #include "utils/packet_counter_metrics.hpp"
 #include <memory>
 
 class LogicalLinkControl {
   public:
     LogicalLinkControl() = delete;
-    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
-                       bool is_downlink)
-        : packet_builder_(prometheus_exporter, std::move(reporter), is_downlink) {
+    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : packet_builder_(prometheus_exporter) {
         llc_pdu_description_ = {"BL-ADATA without FCS",
                                 "BL-DATA without FCS",
                                 "BL-UDATA without FCS",

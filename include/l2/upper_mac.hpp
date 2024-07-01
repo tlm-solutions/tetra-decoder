@@ -31,10 +31,8 @@ class UpperMac {
     /// finished
     /// \param prometheus_exporter the reference to the prometheus exporter that is used for the metrics in the upper
     /// mac
-    /// \param is_downlink true if this channel is on the downlink
     UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-             std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
-             Reporter&& reporter, bool is_downlink);
+             std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~UpperMac();
 
   private:

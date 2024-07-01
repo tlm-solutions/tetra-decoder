@@ -22,9 +22,8 @@ class LogicalLinkControlPacketBuilder {
   public:
     LogicalLinkControlPacketBuilder() = delete;
 
-    explicit LogicalLinkControlPacketBuilder(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
-                                             Reporter&& reporter, bool is_downlink)
-        : mle_(prometheus_exporter, std::move(reporter), is_downlink){};
+    explicit LogicalLinkControlPacketBuilder(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : mle_(prometheus_exporter){};
 
     [[nodiscard]] auto parse_c_plane_signalling(const UpperMacCPlaneSignallingPacket& packet)
         -> std::unique_ptr<UpperMacCPlaneSignallingPacket> {

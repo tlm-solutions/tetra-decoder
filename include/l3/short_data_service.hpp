@@ -8,9 +8,8 @@
 
 #pragma once
 
-#include "reporter.hpp"
-#include "utils/address.hpp"
-#include "utils/bit_vector.hpp"
+#include "l3/circuit_mode_control_entity_packet.hpp"
+#include "l3/short_data_service_packet.hpp"
 #include "utils/packet_counter_metrics.hpp"
 #include <array>
 #include <string>
@@ -18,8 +17,7 @@
 class ShortDataService {
   public:
     ShortDataService() = delete;
-    ShortDataService(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter)
-        : reporter_(reporter) {
+    ShortDataService(const std::shared_ptr<PrometheusExporter>& prometheus_exporter) {
         sds_pdu_description_[0] = "Reserved 0";
         sds_pdu_description_[1] = "OTAK (Over The Air re-Keying for end to end encryption)";
         sds_pdu_description_[2] = "Simple Text Messaging";
@@ -70,16 +68,9 @@ class ShortDataService {
     };
     ~ShortDataService() noexcept = default;
 
-    void process(Address to_address, Address from_address, BitVector& vec);
+    auto process(const CircuitModeControlEntityPacket& packet) -> std::unique_ptr<ShortDataServicePacket>;
 
   private:
-    void process_simple_text_messaging(Address to_address, Address from_address, BitVector& vec);
-    void process_location_information_protocol(Address to_address, Address from_address, BitVector& vec);
-    void process_default(Address to_address, Address from_address, BitVector& vec);
-
-    nlohmann::json message_;
-    Reporter reporter_;
-
     std::array<std::string, 256> sds_pdu_description_;
 
     std::unique_ptr<PacketCounterMetrics> metrics_;

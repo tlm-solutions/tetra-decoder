@@ -10,6 +10,7 @@
 
 #include "l2/upper_mac_packet.hpp"
 #include "utils/bit_vector.hpp"
+#include <bitset>
 #include <optional>
 #include <stdexcept>
 
@@ -60,41 +61,35 @@ struct BasicLinkInformation {
 
         switch (pdu_type) {
         case 0b0000:
-            basic_link_type_ = BasicLinkType::kBlAdataWithoutFcs;
             n_r_ = data.take<1>();
             n_s_ = data.take<1>();
             break;
         case 0b0001:
-            basic_link_type_ = BasicLinkType::kBlDataWithoutFcs;
             n_s_ = data.take<1>();
             break;
         case 0b0010:
-            basic_link_type_ = BasicLinkType::kBlUdataWithoutFcs;
             break;
         case 0b0011:
-            basic_link_type_ = BasicLinkType::kBlAckWithoutFcs;
             n_r_ = data.take<1>();
             break;
         case 0b0100:
-            basic_link_type_ = BasicLinkType::kBlAdataWithFcs;
             n_r_ = data.take<1>();
             n_s_ = data.take<1>();
             break;
         case 0b0101:
-            basic_link_type_ = BasicLinkType::kBlDataWithFcs;
             n_s_ = data.take<1>();
             break;
         case 0b0110:
-            basic_link_type_ = BasicLinkType::kBlUdataWithFcs;
             break;
         case 0b0111:
-            basic_link_type_ = BasicLinkType::kBlAckWithFcs;
             n_r_ = data.take<1>();
             break;
         default:
             throw std::runtime_error(
                 "Did not expect something other than basic link in LogicalLinkControlPacket parser!");
         }
+
+        basic_link_type_ = BasicLinkType(pdu_type);
 
         if (pdu_type >= 0b0100) {
             auto fcs = data.take_last<32>();
@@ -104,7 +99,20 @@ struct BasicLinkInformation {
     }
 };
 
-auto operator<<(std::ostream& stream, const BasicLinkInformation& llc) -> std::ostream&;
+inline auto operator<<(std::ostream& stream, const BasicLinkInformation& bli) -> std::ostream& {
+    stream << "  Basic Link Information: " << to_string(bli.basic_link_type_);
+    if (bli.n_r_) {
+        stream << " N(R): " << std::bitset<1>(*bli.n_r_);
+    }
+    if (bli.n_s_) {
+        stream << " N(S): " << std::bitset<1>(*bli.n_s_);
+    }
+    if (bli.fcs_good_) {
+        stream << " FCS good: " << (*bli.fcs_good_ ? "true" : "false");
+    }
+    stream << std::endl;
+    return stream;
+}
 
 /// The packet that is parsed in the logical link control layer. Currently we only implement basic link.
 struct LogicalLinkControlPacket : public UpperMacCPlaneSignallingPacket {
@@ -121,4 +129,10 @@ struct LogicalLinkControlPacket : public UpperMacCPlaneSignallingPacket {
     }
 };
 
-auto operator<<(std::ostream& stream, const LogicalLinkControlPacket& llc) -> std::ostream&;
+inline auto operator<<(std::ostream& stream, const LogicalLinkControlPacket& llc) -> std::ostream& {
+    if (llc.basic_link_information_) {
+        stream << *llc.basic_link_information_;
+    }
+    stream << "  TL-SDU: " << llc.tl_sdu_ << std::endl;
+    return stream;
+}
