@@ -7,14 +7,12 @@ option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
 add_executable(tetra-decoder
                src/main.cpp
-               src/reporter.cpp
         src/decoder.cpp
         src/bit_stream_decoder.cpp
         src/iq_stream_decoder.cpp
         src/prometheus.cpp
         src/l2/access_assignment_channel.cpp
         src/l2/broadcast_synchronization_channel.cpp
-        src/l2/logical_link_control.cpp
         src/l2/lower_mac.cpp
         src/l2/slot.cpp
         src/l2/timebase_counter.cpp
@@ -22,10 +20,6 @@ add_executable(tetra-decoder
         src/l2/upper_mac_packet.cpp
         src/l2/upper_mac_packet_builder.cpp
         src/l2/upper_mac_packet_formatter.cpp
-        src/l3/mobile_link_entity.cpp
-        src/l3/mobile_management.cpp
-        src/l3/circuit_mode_control_entity.cpp
-        src/l3/short_data_service.cpp
         src/utils/address.cpp
         src/utils/bit_vector.cpp
         src/utils/viter_bi_codec.cpp)

@@ -8,61 +8,58 @@
 
 #pragma once
 
-#include "utils/address.hpp"
-#include "utils/bit_vector.hpp"
-#include "utils/packet_counter_metrics.hpp"
-#include <array>
-#include <string>
+#include "l3/mobile_management_packet.hpp"
+#include "utils/packet_parser.hpp"
 
-class MobileManagement {
+class MobileManagementParser : public PacketParser<MobileLinkEntityPacket, MobileManagementPacket> {
   public:
-    MobileManagement() = delete;
-    explicit MobileManagement(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, bool is_downlink) {
-        if (is_downlink) {
-            mm_pdu_description_ = {"D-OTAR",
-                                   "D-AUTHENTICATION",
-                                   "D-CK CHANGE DEMAND",
-                                   "D-DISABLE",
-                                   "D-ENABLE",
-                                   "D-LOCATION UPDATE ACCEPT",
-                                   "D-LOCATION UPDATE COMMAND",
-                                   "D-LOCATION UPDATE REJECT",
-                                   "D-Reserved8",
-                                   "D-LOCATION UPDATE PROCEEDING",
-                                   "D-LOCATION UPDATE PROCEEDING",
-                                   "D-ATTACH/DETACH GROUP IDENTITY ACK",
-                                   "D-MM STATUS",
-                                   "D-Reserved13",
-                                   "D-Reserved14",
-                                   "D-MM PDU/FUNCTION NOT SUPPORTED"};
-        } else {
-            mm_pdu_description_ = {"U-AUTHENTICATION",
-                                   "U-ITSI DETACH",
-                                   "U-LOCATION UPDATE DEMAND",
-                                   "U-MM STATUS",
-                                   "U-CK CHANGE RESULT",
-                                   "U-OTAR",
-                                   "U-INFORMATION PROVIDE",
-                                   "U-ATTACH/DETACH GROUP IDENTITY",
-                                   "U-ATTACH/DETACH GROUP IDENTITY ACK",
-                                   "U-TEI PROVIDE",
-                                   "U-Reserved10",
-                                   "U-DISABLE STATUS",
-                                   "U-Reserved12",
-                                   "U-Reserved13",
-                                   "U-Reserved14",
-                                   "U-MM PDU/FUNCTION NOT SUPPORTED"};
-        }
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "mobile_management");
-        }
-    }
-    ~MobileManagement() noexcept = default;
-
-    void process(Address address, BitVector& vec);
+    MobileManagementParser() = delete;
+    explicit MobileManagementParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "mobile_management") {
+        downlink_mm_pdu_description_ = {"D-OTAR",
+                                        "D-AUTHENTICATION",
+                                        "D-CK CHANGE DEMAND",
+                                        "D-DISABLE",
+                                        "D-ENABLE",
+                                        "D-LOCATION UPDATE ACCEPT",
+                                        "D-LOCATION UPDATE COMMAND",
+                                        "D-LOCATION UPDATE REJECT",
+                                        "D-Reserved8",
+                                        "D-LOCATION UPDATE PROCEEDING",
+                                        "D-LOCATION UPDATE PROCEEDING",
+                                        "D-ATTACH/DETACH GROUP IDENTITY ACK",
+                                        "D-MM STATUS",
+                                        "D-Reserved13",
+                                        "D-Reserved14",
+                                        "D-MM PDU/FUNCTION NOT SUPPORTED"};
+        uplink_mm_pdu_description_ = {"U-AUTHENTICATION",
+                                      "U-ITSI DETACH",
+                                      "U-LOCATION UPDATE DEMAND",
+                                      "U-MM STATUS",
+                                      "U-CK CHANGE RESULT",
+                                      "U-OTAR",
+                                      "U-INFORMATION PROVIDE",
+                                      "U-ATTACH/DETACH GROUP IDENTITY",
+                                      "U-ATTACH/DETACH GROUP IDENTITY ACK",
+                                      "U-TEI PROVIDE",
+                                      "U-Reserved10",
+                                      "U-DISABLE STATUS",
+                                      "U-Reserved12",
+                                      "U-Reserved13",
+                                      "U-Reserved14",
+                                      "U-MM PDU/FUNCTION NOT SUPPORTED"};
+    };
 
   private:
-    std::array<std::string, 16> mm_pdu_description_;
+    auto packet_name(const MobileManagementPacket& packet) -> std::string override {
+        auto pdu_type = packet.sdu_.look<4>(0);
+        return (packet.is_downlink() ? downlink_mm_pdu_description_ : uplink_mm_pdu_description_).at(pdu_type);
+    }
 
-    std::unique_ptr<PacketCounterMetrics> metrics_;
+    auto forward(const MobileManagementPacket& packet) -> std::unique_ptr<MobileManagementPacket> override {
+        return std::make_unique<MobileManagementPacket>(packet);
+    };
+
+    std::array<std::string, 16> downlink_mm_pdu_description_;
+    std::array<std::string, 16> uplink_mm_pdu_description_;
 };

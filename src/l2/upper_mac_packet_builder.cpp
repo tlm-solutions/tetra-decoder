@@ -160,7 +160,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
 
         if (pdu_type == 0b0) {
             // process MAC-ACCESS
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacAccess};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacAccess);
 
             packet.encrypted_ = (data.take<1>() == 1U);
             packet.address_ = Address::from_mac_access(data);
@@ -192,7 +192,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
 
         {
             // process MAC-END-HU
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacEndHu};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacEndHu);
 
             auto length_indictaion_or_capacity_request = data.take<1>();
             std::optional<unsigned _BitInt(4)> length_indication;
@@ -218,7 +218,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
         if (pdu_type == 0b00) {
             // MAC-DATA (uplink)
             // TMA-SAP
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacData};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacData);
 
             auto fill_bit_indication = data.take<1>();
 
@@ -265,8 +265,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                     throw std::runtime_error("MAC-FRAG may not be sent on stealing channel.");
                 }
 
-                UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel,
-                                                      .type_ = MacPacketType::kMacFragmentUplink};
+                UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacFragmentUplink);
 
                 auto fill_bit_indication = data.take<1>();
                 packet.tm_sdu_ =
@@ -276,8 +275,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
             }
 
             {
-                UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel,
-                                                      .type_ = MacPacketType::kMacEndUplink};
+                UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacEndUplink);
 
                 auto fill_bit_indication = data.take<1>();
 
@@ -315,7 +313,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("MAC-U-BLCK may only be sent on SCH/F.");
             }
 
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacUBlck};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacUBlck);
 
             auto fill_bit_indication = data.take<1>();
             packet.encrypted_ = (data.take<1>() == 1U);
@@ -335,7 +333,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
         if (pdu_type == 0b00) {
             // MAC-RESOURCE (downlink)
             // TMA-SAP
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacResource};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacResource);
 
             auto fill_bit_indication = data.take<1>();
 
@@ -406,8 +404,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                     throw std::runtime_error("MAC-FRAG may not be sent on stealing channel.");
                 }
 
-                UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel,
-                                                      .type_ = MacPacketType::kMacFragmentDownlink};
+                UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacFragmentDownlink);
 
                 auto fill_bit_indication = data.take<1>();
 
@@ -418,8 +415,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
             }
 
             {
-                UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel,
-                                                      .type_ = MacPacketType::kMacEndDownlink};
+                UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacEndDownlink);
 
                 auto fill_bit_indication = data.take<1>();
 
@@ -469,7 +465,7 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling_packet(BurstType burst_type
                 throw std::runtime_error("MAC-D-BLCK may only be sent on SCH/F.");
             }
 
-            UpperMacCPlaneSignallingPacket packet{.logical_channel_ = channel, .type_ = MacPacketType::kMacDBlck};
+            UpperMacCPlaneSignallingPacket packet(burst_type, channel, MacPacketType::kMacDBlck);
 
             auto fill_bit_indication = data.take<1>();
             auto encryption_mode = data.take<2>();

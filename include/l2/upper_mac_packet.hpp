@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "burst_type.hpp"
 #include "l2/logical_channel.hpp"
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
@@ -357,6 +358,8 @@ struct ChannelAllocationElement {
 auto operator<<(std::ostream& stream, const ChannelAllocationElement& element) -> std::ostream&;
 
 struct UpperMacCPlaneSignallingPacket {
+    /// the burst type which was used to send this pavket
+    BurstType burst_type_;
     /// the type of the logical channel on which this packet is sent
     LogicalChannel logical_channel_;
     /// the type of the mac packet
@@ -408,6 +411,20 @@ struct UpperMacCPlaneSignallingPacket {
                (type_ == MacPacketType::kMacData && fragmentation_on_stealling_channel_) ||
                (type_ == MacPacketType::kMacFragmentUplink) || (type_ == MacPacketType::kMacEndUplink);
     };
+
+    /// check if this packet is sent on downlink
+    [[nodiscard]] auto is_downlink() const -> bool { return is_downlink_burst(burst_type_); };
+
+    /// check if this packet is sent on uplink
+    [[nodiscard]] auto is_uplink() const -> bool { return is_uplink_burst(burst_type_); };
+
+    UpperMacCPlaneSignallingPacket(const UpperMacCPlaneSignallingPacket&) = default;
+    UpperMacCPlaneSignallingPacket(BurstType burst_type, LogicalChannel logical_channel, MacPacketType type)
+        : burst_type_(burst_type)
+        , logical_channel_(logical_channel)
+        , type_(type){};
+
+    virtual ~UpperMacCPlaneSignallingPacket() = default;
 
     friend auto operator<<(std::ostream& stream, const UpperMacCPlaneSignallingPacket& packet) -> std::ostream&;
 };

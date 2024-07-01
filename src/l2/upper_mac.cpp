@@ -8,14 +8,17 @@
 
 #include "l2/upper_mac.hpp"
 #include "l2/logical_link_control.hpp"
+#include "l2/logical_link_control_packet.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
 #include "l2/upper_mac_packet.hpp"
+#include "l3/circuit_mode_control_entity_packet.hpp"
+#include "l3/mobile_link_entity_packet.hpp"
+#include "l3/short_data_service_packet.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
 #include <memory>
 #include <optional>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #if defined(__linux__)
@@ -23,10 +26,10 @@
 #endif
 
 UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
-                   bool is_downlink)
+                   std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : input_queue_(input_queue)
-    , logical_link_control_(prometheus_exporter, std::move(reporter), is_downlink) {
+    , termination_flag_(termination_flag)
+    , logical_link_control_(prometheus_exporter) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
         fragmentation_metrics_continous_ =
@@ -47,13 +50,17 @@ UpperMac::~UpperMac() { worker_thread_.join(); }
 
 void UpperMac::worker() {
     for (;;) {
-        const auto return_value = input_queue_->get();
+        const auto return_value = input_queue_->get_or_null();
 
-        if (std::holds_alternative<TerminationToken>(return_value)) {
-            return;
+        if (!return_value) {
+            if (termination_flag_.load() && input_queue_->empty()) {
+                break;
+            }
+
+            continue;
         }
 
-        const auto slots = std::get<LowerMac::return_type>(return_value);
+        const auto& slots = *return_value;
         if (slots) {
             this->process(*slots);
         }
@@ -137,7 +144,30 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     }
 
     for (const auto& packet : c_plane_packets) {
-        auto data = BitVector(*packet.tm_sdu_);
-        logical_link_control_.process(packet.address_, data);
+        auto parsed_packet = logical_link_control_.parse(packet);
+
+        if (auto* llc = dynamic_cast<LogicalLinkControlPacket*>(parsed_packet.get())) {
+            if (llc->basic_link_information_ &&
+                (llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithoutFcs ||
+                 llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithFcs)) {
+                continue;
+            }
+            std::cout << *llc;
+            if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(llc)) {
+                std::cout << *mle;
+                if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(llc)) {
+                    std::cout << *cmce;
+                    if (auto* sds = dynamic_cast<ShortDataServicePacket*>(llc)) {
+                        std::cout << *sds;
+                    }
+                }
+                std::cout << std::endl;
+            }
+        }
+
+        // if (!parsed_packet->is_null_pdu()) {
+        //     std::cout << *parsed_packet << std::endl;
+        // }
+        /// TODO: send this packet to borzoi
     }
 }
