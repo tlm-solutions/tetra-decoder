@@ -16,7 +16,6 @@
 #include "l2/upper_mac_metrics.hpp"
 #include "l2/upper_mac_packet_builder.hpp"
 #include "prometheus.h"
-#include "reporter.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
 #include <atomic>
 #include <memory>

@@ -7,7 +7,6 @@ option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
 add_executable(tetra-decoder
                src/main.cpp
-               src/reporter.cpp
         src/decoder.cpp
         src/bit_stream_decoder.cpp
         src/iq_stream_decoder.cpp
