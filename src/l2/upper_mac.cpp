@@ -7,19 +7,11 @@
  */
 
 #include "l2/upper_mac.hpp"
-#include "l2/logical_link_control.hpp"
-#include "l2/logical_link_control_packet.hpp"
+#include "l2/logical_link_control_parser.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
-#include "l2/upper_mac_packet.hpp"
-#include "l3/circuit_mode_control_entity_packet.hpp"
-#include "l3/mobile_link_entity_packet.hpp"
-#include "l3/short_data_service_packet.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
-#include <memory>
-#include <optional>
 #include <utility>
-#include <vector>
 
 #if defined(__linux__)
 #include <pthread.h>

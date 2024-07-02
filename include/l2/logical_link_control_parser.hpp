@@ -8,8 +8,7 @@
 
 #pragma once
 
-#include "l3/mobile_link_entity.hpp"
-#include "utils/packet_parser.hpp"
+#include "l3/mobile_link_entity_parser.hpp"
 
 class LogicalLinkControlParser : public PacketParser<UpperMacCPlaneSignallingPacket, LogicalLinkControlPacket> {
   public:

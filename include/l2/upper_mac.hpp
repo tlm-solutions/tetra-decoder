@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "l2/logical_link_control.hpp"
+#include "l2/logical_link_control_parser.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/slot.hpp"
 #include "l2/upper_mac_fragments.hpp"

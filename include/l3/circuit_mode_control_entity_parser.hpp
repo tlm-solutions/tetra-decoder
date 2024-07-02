@@ -9,9 +9,7 @@
 #pragma once
 
 #include "l3/circuit_mode_control_entity_packet.hpp"
-#include "l3/mobile_link_entity_packet.hpp"
-#include "l3/short_data_service.hpp"
-#include "utils/packet_parser.hpp"
+#include "l3/short_data_service_parser.hpp"
 
 class CircuitModeControlEntityParser : public PacketParser<MobileLinkEntityPacket, CircuitModeControlEntityPacket> {
   public:
