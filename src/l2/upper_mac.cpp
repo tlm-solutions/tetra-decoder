@@ -18,9 +18,13 @@
 #endif
 
 UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-                   std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+                   ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& output_queue,
+                   std::atomic_bool& termination_flag, std::atomic_bool& output_termination_flag,
+                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : input_queue_(input_queue)
     , termination_flag_(termination_flag)
+    , output_termination_flag_(output_termination_flag)
+    , output_queue_(output_queue)
     , logical_link_control_(prometheus_exporter) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
@@ -52,11 +56,14 @@ void UpperMac::worker() {
             continue;
         }
 
-        const auto& slots = *return_value;
+        auto slots = *return_value;
         if (slots) {
             this->process(*slots);
         }
     }
+
+    // forward the termination to the next stage
+    output_termination_flag_.store(true);
 }
 
 auto UpperMac::process(const Slots& slots) -> void {
@@ -92,6 +99,8 @@ auto UpperMac::process(const Slots& slots) -> void {
             for (const auto& slot : concreate_slots) {
                 metrics_->increment_decode_error(slot);
             }
+            // send the broken slot to borzoi
+            output_queue_.push_back(slots);
         }
     }
 }
@@ -136,30 +145,8 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     }
 
     for (const auto& packet : c_plane_packets) {
-        auto parsed_packet = logical_link_control_.parse(packet);
+        auto llc = logical_link_control_.parse(packet);
 
-        if (auto* llc = dynamic_cast<LogicalLinkControlPacket*>(parsed_packet.get())) {
-            if (llc->basic_link_information_ &&
-                (llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithoutFcs ||
-                 llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithFcs)) {
-                continue;
-            }
-            std::cout << *llc;
-            if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(llc)) {
-                std::cout << *mle;
-                if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(llc)) {
-                    std::cout << *cmce;
-                    if (auto* sds = dynamic_cast<ShortDataServicePacket*>(llc)) {
-                        std::cout << *sds;
-                    }
-                }
-                std::cout << std::endl;
-            }
-        }
-
-        // if (!parsed_packet->is_null_pdu()) {
-        //     std::cout << *parsed_packet << std::endl;
-        // }
-        /// TODO: send this packet to borzoi
+        output_queue_.push_back(std::move(llc));
     }
 }

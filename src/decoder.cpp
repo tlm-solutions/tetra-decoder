@@ -8,6 +8,7 @@
  */
 
 #include "decoder.hpp"
+#include "borzoi_sender.hpp"
 #include "l2/upper_mac.hpp"
 #include <arpa/inet.h>
 #include <cassert>
@@ -34,7 +35,9 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
     , iq_or_bit_stream_(iq_or_bit_stream) {
     auto is_uplink = uplink_scrambling_code_.has_value();
     auto lower_mac = std::make_shared<LowerMac>(prometheus_exporter, uplink_scrambling_code);
-    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, upper_mac_termination_flag_, prometheus_exporter);
+    upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, bozoi_queue_, upper_mac_termination_flag_,
+                                            borzoi_sender_termination_flag_, prometheus_exporter);
+    borzoi_sender_ = std::make_unique<BorzoiSender>(bozoi_queue_, borzoi_sender_termination_flag_, send_port);
     bit_stream_decoder_ =
         std::make_shared<BitStreamDecoder>(lower_mac_work_queue_, lower_mac, uplink_scrambling_code_.has_value());
     iq_stream_decoder_ =

@@ -9,6 +9,7 @@ add_executable(tetra-decoder
                src/main.cpp
                src/decoder.cpp
                src/bit_stream_decoder.cpp
+               src/borzoi_sender.cpp
                src/iq_stream_decoder.cpp
                src/prometheus.cpp
                src/l2/access_assignment_channel.cpp

@@ -17,6 +17,7 @@
 #include "l2/upper_mac_packet_builder.hpp"
 #include "prometheus.h"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include "thread_safe_fifo.hpp"
 #include <atomic>
 #include <memory>
 #include <thread>
@@ -25,13 +26,17 @@ class UpperMac {
   public:
     UpperMac() = delete;
     ///
-    /// \param queue the input queue from the lower mac
+    /// \param input_queue the input queue from the lower mac
+    /// \param output_queue the queue where successfully parsed packets or failed slots are inserted
     /// \param termination_flag the flag that indicates that the worker thread should stop execution after all work is
     /// finished
+    /// \param output_termination_flag this flag is set when all work is finished and pushed into the queue
     /// \param prometheus_exporter the reference to the prometheus exporter that is used for the metrics in the upper
     /// mac
     UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-             std::atomic_bool& termination_flag, const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
+             ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& output_queue,
+             std::atomic_bool& termination_flag, std::atomic_bool& output_termination_flag,
+             const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~UpperMac();
 
   private:
@@ -51,6 +56,11 @@ class UpperMac {
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> input_queue_;
     /// The termination flag
     std::atomic_bool& termination_flag_;
+    /// the termination flag on the input for the next stage
+    std::atomic_bool& output_termination_flag_;
+
+    /// The output queue
+    ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& output_queue_;
 
     /// The prometheus metrics
     std::unique_ptr<UpperMacMetrics> metrics_;

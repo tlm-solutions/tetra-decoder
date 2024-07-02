@@ -10,9 +10,11 @@
 #pragma once
 
 #include "bit_stream_decoder.hpp"
+#include "borzoi_sender.hpp"
 #include "iq_stream_decoder.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac.hpp"
+#include "thread_safe_fifo.hpp"
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -54,11 +56,19 @@ class Decoder {
     /// This flag is passed for the StreamingOrderedOutputThreadPoolExecutor to the upper mac.
     std::atomic_bool upper_mac_termination_flag_ = false;
 
+    /// This flag is passed from the upper mac to the borzoi sender.
+    std::atomic_bool borzoi_sender_termination_flag_ = false;
+    /// This queue is used to pass data from the upper mac to the borzoi sender.
+    ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>> bozoi_queue_;
+
     /// The worker queue for the lower mac
     std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>> lower_mac_work_queue_;
 
     /// The reference to the upper mac thread class
     std::unique_ptr<UpperMac> upper_mac_;
+
+    /// The reference to the borzoi sender thread class
+    std::unique_ptr<BorzoiSender> borzoi_sender_;
 
     std::shared_ptr<BitStreamDecoder> bit_stream_decoder_;
     std::unique_ptr<IQStreamDecoder> iq_stream_decoder_;
