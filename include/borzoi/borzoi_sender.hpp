@@ -36,6 +36,7 @@ class BorzoiSender {
     auto worker() -> void;
 
     void send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet);
+    void send_failed_slots(const Slots& slots);
 
     /// The input queue
     ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& queue_;

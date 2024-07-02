@@ -59,6 +59,25 @@ void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& 
     }
 }
 
+void BorzoiSender::send_failed_slots(const Slots& slots) {
+    nlohmann::json json;
+    try {
+        json = BorzoiConverter::to_json(slots);
+        json["station"] = borzoi_uuid_;
+        /// TODO: add json to post request
+    } catch (std::exception& e) {
+        std::cout << "Failed to send packet to Borzoi. Error: " << e.what() << std::endl;
+        return;
+    }
+    cpr::Response resp =
+        cpr::Post(borzoi_url_failed_slots_, cpr::Body{json}, cpr::Header{{"Content-Type", "application/json"}});
+
+    if (resp.status_code != 200) {
+        std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message
+                  << std::endl;
+    }
+}
+
 void BorzoiSender::worker() {
     for (;;) {
         const auto return_value = queue_.get_or_null();
@@ -97,6 +116,7 @@ void BorzoiSender::worker() {
                     send_packet(arg);
                 } else if constexpr (std::is_same_v<T, Slots>) {
                     /// send out the slots which had an error while parsing
+                    send_failed_slots(arg);
                 }
             },
             *return_value);
