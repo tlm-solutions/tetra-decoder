@@ -7,6 +7,7 @@
 , nlohmann_json
 , prometheus-cpp
 , curlFull
+, libcpr
 }:
 clangStdenv.mkDerivation {
   name = "tetra-decoder";
@@ -21,6 +22,7 @@ clangStdenv.mkDerivation {
     nlohmann_json
     curlFull
     prometheus-cpp
+    libcpr
   ];
 
   cmakeFlags = [ "-DNIX_BUILD=ON" ];
