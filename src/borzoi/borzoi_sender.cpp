@@ -50,7 +50,7 @@ void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& 
             return;
         }
         cpr::Response resp =
-            cpr::Post(borzoi_url_sds_, cpr::Body{json}, cpr::Header{{"Content-Type", "application/json"}});
+            cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
         if (resp.status_code != 200) {
             std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message
@@ -70,7 +70,7 @@ void BorzoiSender::send_failed_slots(const Slots& slots) {
         return;
     }
     cpr::Response resp =
-        cpr::Post(borzoi_url_failed_slots_, cpr::Body{json}, cpr::Header{{"Content-Type", "application/json"}});
+        cpr::Post(borzoi_url_failed_slots_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
     if (resp.status_code != 200) {
         std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message

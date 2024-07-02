@@ -43,10 +43,10 @@ auto BorzoiConverter::to_json(const Slots& slots) -> nlohmann::json {
     auto message = nlohmann::json::object();
 
     message["time"] = get_time();
-    message["burst_type"] = slots.get_burst_type();
+    message["burst_type"] = static_cast<unsigned>(slots.get_burst_type());
     /// This may but should not throw.
     auto first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
-    message["first_slot_logical_channel"] = first_slot.channel;
+    message["first_slot_logical_channel"] = static_cast<unsigned>(first_slot.channel);
     message["first_slot_logical_data"] = nlohmann::json::array();
     while (first_slot.data.bits_left()) {
         unsigned bit = first_slot.data.take<1>();
@@ -57,7 +57,7 @@ auto BorzoiConverter::to_json(const Slots& slots) -> nlohmann::json {
     message["second_slot_present"] = second_slot_present;
     if (second_slot_present) {
         auto second_slot = slots.get_second_slot().get_logical_channel_data_and_crc();
-        message["second_slot_logical_channel"] = first_slot.channel;
+        message["second_slot_logical_channel"] = static_cast<unsigned>(first_slot.channel);
         message["second_slot_data"] = nlohmann::json::array();
         while (first_slot.data.bits_left()) {
             unsigned bit = first_slot.data.take<1>();
