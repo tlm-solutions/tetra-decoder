@@ -55,7 +55,7 @@ LogicalLinkControlPacket::LogicalLinkControlPacket(const UpperMacCPlaneSignallin
     auto pdu_type = data.look<4>(0);
 
     /// We only implemented packet parsing for Basic Link PDUs at this point in time
-    if (pdu_type <= 0b1000) {
+    if (pdu_type < 0b1000) {
         basic_link_information_ = BasicLinkInformation(data);
         tl_sdu_ = data;
     }
