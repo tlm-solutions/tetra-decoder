@@ -50,19 +50,7 @@ struct MobileLinkEntityPacket : public LogicalLinkControlPacket {
 
     MobileLinkEntityPacket() = delete;
 
-    explicit MobileLinkEntityPacket(const LogicalLinkControlPacket& packet)
-        : LogicalLinkControlPacket(packet) {
-        sdu_ = BitVector(tl_sdu_);
-
-        auto discriminator = sdu_.take<3>();
-        mle_protocol_ = MobileLinkEntityProtocolDiscriminator(discriminator);
-
-        // TODO: add the special handling for the MLE protocol
-    };
+    explicit MobileLinkEntityPacket(const LogicalLinkControlPacket& packet);
 };
 
-inline auto operator<<(std::ostream& stream, const MobileLinkEntityPacket& mle) -> std::ostream& {
-    stream << "  MLE: " << to_string(mle.mle_protocol_) << std::endl;
-    stream << "  SDU: " << mle.sdu_ << std::endl;
-    return stream;
-}
+auto operator<<(std::ostream& stream, const MobileLinkEntityPacket& mle) -> std::ostream&;

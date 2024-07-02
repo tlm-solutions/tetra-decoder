@@ -239,90 +239,16 @@ struct SdsData {
     /// TODO: The "External subscriber number" and "DM-MS address" is not parsed!
     BitVector unparsed_;
 
+  private:
+    SdsData() = default;
+
   public:
-    static auto from_d_sds_data(BitVector& data) -> SdsData {
-        SdsData sds;
-        auto calling_party_type_identifier = data.take<2>();
+    static auto from_d_sds_data(BitVector& data) -> SdsData;
 
-        if (calling_party_type_identifier == 1 || calling_party_type_identifier == 2) {
-            sds.address_.set_ssi(data.take<24>());
-        }
-        if (calling_party_type_identifier == 2) {
-            sds.address_.set_country_code(data.take<10>());
-            sds.address_.set_network_code(data.take<14>());
-        }
-
-        auto short_data_type_identifier = data.take<2>();
-
-        unsigned length_identifier = 0;
-        switch (short_data_type_identifier) {
-        case 0b00:
-            length_identifier = 16;
-            break;
-        case 0b01:
-            length_identifier = 32;
-            break;
-        case 0b10:
-            length_identifier = 64;
-            break;
-        case 0b11:
-            length_identifier = data.take<11>();
-            break;
-        }
-        sds.data_ = data.take_vector(length_identifier);
-        sds.unparsed_ = data.take_vector(data.bits_left());
-
-        return sds;
-    };
-
-    static auto from_u_sds_data(BitVector& data) -> SdsData {
-        SdsData sds;
-        sds.area_selection_ = data.take<4>();
-        auto calling_party_type_identifier = data.take<2>();
-
-        if (calling_party_type_identifier == 0) {
-            sds.address_.set_sna(data.take<8>());
-        }
-        if (calling_party_type_identifier == 1 || calling_party_type_identifier == 2) {
-            sds.address_.set_ssi(data.take<24>());
-        }
-        if (calling_party_type_identifier == 2) {
-            sds.address_.set_country_code(data.take<10>());
-            sds.address_.set_network_code(data.take<14>());
-        }
-
-        auto short_data_type_identifier = data.take<2>();
-        unsigned length_identifier = 0;
-        switch (short_data_type_identifier) {
-        case 0b00:
-            length_identifier = 16;
-            break;
-        case 0b01:
-            length_identifier = 32;
-            break;
-        case 0b10:
-            length_identifier = 64;
-            break;
-        case 0b11:
-            length_identifier = data.take<11>();
-            break;
-        }
-        sds.data_ = data.take_vector(length_identifier);
-        sds.unparsed_ = data.take_vector(data.bits_left());
-
-        return sds;
-    };
+    static auto from_u_sds_data(BitVector& data) -> SdsData;
 };
 
-inline auto operator<<(std::ostream& stream, const SdsData& sds) -> std::ostream& {
-    if (sds.area_selection_) {
-        stream << "  Area Selction: " << std::bitset<4>(*sds.area_selection_) << std::endl;
-    }
-    stream << "  SDS Address: " << sds.address_ << std::endl;
-    stream << "  Data: " << sds.data_ << std::endl;
-    stream << "  Unparsed: " << sds.unparsed_ << std::endl;
-    return stream;
-};
+auto operator<<(std::ostream& stream, const SdsData& sds) -> std::ostream&;
 
 struct CircuitModeControlEntityPacket : public MobileLinkEntityPacket {
     CircuitModeControlEntityPacketType packet_type_;
@@ -331,31 +257,7 @@ struct CircuitModeControlEntityPacket : public MobileLinkEntityPacket {
 
     CircuitModeControlEntityPacket() = delete;
 
-    explicit CircuitModeControlEntityPacket(const MobileLinkEntityPacket& packet)
-        : MobileLinkEntityPacket(packet) {
-        auto data = BitVector(sdu_);
-
-        auto pdu_type = data.take<5>();
-        if (is_downlink()) {
-            packet_type_ = CircuitModeControlEntityDownlinkPacketType(pdu_type);
-        } else {
-            packet_type_ = CircuitModeControlEntityUplinkPacketType(pdu_type);
-        }
-
-        if (packet_type_ == CircuitModeControlEntityPacketType(CircuitModeControlEntityDownlinkPacketType::kDSdsData)) {
-            sds_data_ = SdsData::from_d_sds_data(data);
-        }
-
-        if (packet_type_ == CircuitModeControlEntityPacketType(CircuitModeControlEntityUplinkPacketType::kUSdsData)) {
-            sds_data_ = SdsData::from_u_sds_data(data);
-        }
-    }
+    explicit CircuitModeControlEntityPacket(const MobileLinkEntityPacket& packet);
 };
 
-inline auto operator<<(std::ostream& stream, const CircuitModeControlEntityPacket& cmce) -> std::ostream& {
-    stream << "  CMCE: " << to_string(cmce.packet_type_) << std::endl;
-    if (cmce.sds_data_) {
-        stream << *cmce.sds_data_;
-    }
-    return stream;
-};
+auto operator<<(std::ostream& stream, const CircuitModeControlEntityPacket& cmce) -> std::ostream&;
