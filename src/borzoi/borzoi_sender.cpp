@@ -6,7 +6,7 @@
  *   Marenz Schmidl
  */
 
-#include "borzoi_sender.hpp"
+#include "borzoi/borzoi_sender.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
@@ -16,9 +16,11 @@
 #endif
 
 BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& queue,
-                           std::atomic_bool& termination_flag, unsigned borzoi_port)
+                           std::atomic_bool& termination_flag, const std::string& borzoi_url)
     : queue_(queue)
-    , termination_flag_(termination_flag) {
+    , termination_flag_(termination_flag)
+    , borzoi_url_sds_(borzoi_url + "/tetra")
+    , borzoi_url_failed_slots_(borzoi_url + "/tetra/failed_slots") {
     worker_thread_ = std::thread(&BorzoiSender::worker, this);
 
 #if defined(__linux__)

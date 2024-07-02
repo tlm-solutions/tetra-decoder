@@ -24,8 +24,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::optional<std::string> input_file,
-                 std::optional<std::string> output_file, bool iq_or_bit_stream,
+Decoder::Decoder(unsigned receive_port, const std::string& borzoi_url, bool packed,
+                 std::optional<std::string> input_file, std::optional<std::string> output_file, bool iq_or_bit_stream,
                  std::optional<unsigned int> uplink_scrambling_code,
                  const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : lower_mac_work_queue_(std::make_shared<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>(
@@ -37,7 +37,7 @@ Decoder::Decoder(unsigned receive_port, unsigned send_port, bool packed, std::op
     auto lower_mac = std::make_shared<LowerMac>(prometheus_exporter, uplink_scrambling_code);
     upper_mac_ = std::make_unique<UpperMac>(lower_mac_work_queue_, bozoi_queue_, upper_mac_termination_flag_,
                                             borzoi_sender_termination_flag_, prometheus_exporter);
-    borzoi_sender_ = std::make_unique<BorzoiSender>(bozoi_queue_, borzoi_sender_termination_flag_, send_port);
+    borzoi_sender_ = std::make_unique<BorzoiSender>(bozoi_queue_, borzoi_sender_termination_flag_, borzoi_url);
     bit_stream_decoder_ =
         std::make_shared<BitStreamDecoder>(lower_mac_work_queue_, lower_mac, uplink_scrambling_code_.has_value());
     iq_stream_decoder_ =

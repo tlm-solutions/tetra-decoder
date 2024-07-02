@@ -23,8 +23,9 @@ class BorzoiSender {
     /// \param queue the queue holds either the parsed packets (std::unique_ptr<LogicalLinkControlPacket>) or Slots that
     /// failed to decode
     /// \param termination_flag this flag is set when the sender should terminate after finishing all work
+    /// \param borzoi_url the URL of borzoi
     BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& queue,
-                 std::atomic_bool& termination_flag, unsigned borzoi_port);
+                 std::atomic_bool& termination_flag, const std::string& borzoi_url);
 
     ~BorzoiSender();
 
@@ -37,6 +38,10 @@ class BorzoiSender {
 
     /// The flag that is set when terminating the program
     std::atomic_bool& termination_flag_;
+
+    /// The urls of borzoi
+    std::string borzoi_url_sds_;
+    std::string borzoi_url_failed_slots_;
 
     /// The worker thread
     std::thread worker_thread_;
