@@ -46,7 +46,7 @@ template <typename T> class ThreadSafeFifo {
             std::unique_lock<std::mutex> lk(mutex_);
             cv_.wait_for(lk, 10ms, [&] {
                 if (!queue_.empty()) {
-                    auto result = std::forward<T>(queue_.front());
+                    result = std::forward<T>(queue_.front());
                     queue_.pop_front();
 
                     return true;
