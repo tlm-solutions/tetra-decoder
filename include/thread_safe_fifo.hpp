@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <deque>
 #include <mutex>
 #include <optional>
@@ -37,7 +38,18 @@ template <typename T> class ThreadSafeFifo {
             if (!queue_.empty()) {
                 result = std::forward<T>(queue_.front());
                 queue_.pop_front();
+
+                return result;
             }
+            cv_.wait_for(lk, 10ms, [&] {
+                if (!queue_.empty()) {
+                    auto result = std::forward<T>(queue_.front());
+                    queue_.pop_front();
+
+                    return true;
+                }
+                return false;
+            });
         }
 
         return result;
@@ -51,11 +63,15 @@ template <typename T> class ThreadSafeFifo {
     auto push_back(T&& element) -> void {
         std::lock_guard<std::mutex> lk(mutex_);
         queue_.push_back(std::forward<T>(element));
+        cv_.notify_one();
     };
 
   private:
     /// the mutex that is used to access the queue.
     std::mutex mutex_;
+
+    /// the condition variable that is set when an item was inserted
+    std::condition_variable cv_;
 
     /// the wrapped queue
     std::deque<T> queue_;
