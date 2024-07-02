@@ -64,8 +64,10 @@ template <typename T> class ThreadSafeFifo {
     };
 
     auto push_back(T&& element) -> void {
-        std::lock_guard<std::mutex> lk(mutex_);
-        queue_.push_back(std::forward<T>(element));
+        {
+            std::lock_guard<std::mutex> lk(mutex_);
+            queue_.push_back(std::forward<T>(element));
+        }
         cv_.notify_one();
     };
 
