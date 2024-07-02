@@ -20,6 +20,7 @@ auto main(int argc, char** argv) -> int {
     std::optional<std::string> input_file;
     std::optional<std::string> output_file;
     std::string borzoi_url;
+    std::string borzoi_uuid;
     std::optional<unsigned> uplink_scrambling_code;
     std::optional<std::string> prometheus_address;
     std::optional<std::string> prometheus_name;
@@ -38,6 +39,7 @@ auto main(int argc, char** argv) -> int {
 		("r,rx", "<UDP socket> receiving from phy", cxxopts::value<unsigned>()->default_value("42000"))
 		("t,tx", "<UDP socket> sending Json data", cxxopts::value<unsigned>()->default_value("42100"))		
 		("borzoi-url", "<borzoi-url> the base url of which borzoi is running", cxxopts::value<std::string>(borzoi_url)->default_value("http://localhost:3000"))
+		("borzoi-uuid", "<borzoi-uuid> the UUID of this tetra-decoder sending data to borzoi", cxxopts::value<std::string>(borzoi_uuid)->default_value("00000000-0000-0000-0000-000000000000"))
 		("i,infile", "<file> replay data from binary file instead of UDP", cxxopts::value<std::optional<std::string>>(input_file))
 		("o,outfile", "<file> record data to binary file (can be replayed with -i option)", cxxopts::value<std::optional<std::string>>(output_file))
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
@@ -70,7 +72,7 @@ auto main(int argc, char** argv) -> int {
         return EXIT_FAILURE;
     }
 
-    auto decoder = std::make_unique<Decoder>(receive_port, borzoi_url, packed, input_file, output_file,
+    auto decoder = std::make_unique<Decoder>(receive_port, borzoi_url, borzoi_uuid, packed, input_file, output_file,
                                              iq_or_bit_stream, uplink_scrambling_code, prometheus_exporter);
 
     if (input_file.has_value()) {

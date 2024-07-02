@@ -7,20 +7,27 @@
  */
 
 #include "borzoi/borzoi_sender.hpp"
+#include "borzoi/borzoi_converter.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
+#include <cpr/body.h>
+#include <cpr/cprtypes.h>
+#include <cpr/payload.h>
+#include <exception>
+#include <utility>
 
 #if defined(__linux__)
 #include <pthread.h>
 #endif
 
 BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& queue,
-                           std::atomic_bool& termination_flag, const std::string& borzoi_url)
+                           std::atomic_bool& termination_flag, const std::string& borzoi_url, std::string borzoi_uuid)
     : queue_(queue)
     , termination_flag_(termination_flag)
     , borzoi_url_sds_(borzoi_url + "/tetra")
-    , borzoi_url_failed_slots_(borzoi_url + "/tetra/failed_slots") {
+    , borzoi_url_failed_slots_(borzoi_url + "/tetra/failed_slots")
+    , borzoi_uuid_(std::move(borzoi_uuid)) {
     worker_thread_ = std::thread(&BorzoiSender::worker, this);
 
 #if defined(__linux__)
@@ -30,6 +37,27 @@ BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLi
 }
 
 BorzoiSender::~BorzoiSender() { worker_thread_.join(); }
+
+void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet) {
+    if (auto* sds = dynamic_cast<ShortDataServicePacket*>(packet.get())) {
+        nlohmann::json json;
+        try {
+            json = BorzoiConverter::to_json(sds);
+            json["station"] = borzoi_uuid_;
+            /// TODO: add json to post request
+        } catch (std::exception& e) {
+            std::cout << "Failed to send packet to Borzoi. Error: " << e.what() << std::endl;
+            return;
+        }
+        cpr::Response resp =
+            cpr::Post(borzoi_url_sds_, cpr::Body{json}, cpr::Header{{"Content-Type", "application/json"}});
+
+        if (resp.status_code != 200) {
+            std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message
+                      << std::endl;
+        }
+    }
+}
 
 void BorzoiSender::worker() {
     for (;;) {
@@ -44,7 +72,7 @@ void BorzoiSender::worker() {
         }
 
         std::visit(
-            [](auto&& arg) {
+            [this](const auto& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, std::unique_ptr<LogicalLinkControlPacket>>) {
                     /// process the parsed packet
@@ -66,6 +94,7 @@ void BorzoiSender::worker() {
                             std::cout << std::endl;
                         }
                     }
+                    send_packet(arg);
                 } else if constexpr (std::is_same_v<T, Slots>) {
                     /// send out the slots which had an error while parsing
                 }

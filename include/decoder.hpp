@@ -10,7 +10,7 @@
 #pragma once
 
 #include "bit_stream_decoder.hpp"
-#include "borzoi_sender.hpp"
+#include "borzoi/borzoi_sender.hpp"
 #include "iq_stream_decoder.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac.hpp"
@@ -40,7 +40,7 @@
  */
 class Decoder {
   public:
-    Decoder(unsigned int receive_port, const std::string& borzoi_url, bool packed,
+    Decoder(unsigned int receive_port, const std::string& borzoi_url, const std::string& borzoi_uuid, bool packed,
             std::optional<std::string> input_file, std::optional<std::string> output_file, bool iq_or_bit_stream,
             std::optional<unsigned int> uplink_scrambling_code,
             const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
