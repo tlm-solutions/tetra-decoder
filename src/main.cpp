@@ -1,9 +1,9 @@
 #include "decoder.hpp"
+#include "signal_handler.hpp"
 #include <csignal>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <memory>
-#include <signal_handler.hpp>
 
 volatile bool stop = false;
 

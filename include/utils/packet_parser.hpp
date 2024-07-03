@@ -10,7 +10,6 @@
 
 #include "prometheus.h"
 #include "utils/packet_counter_metrics.hpp"
-#include <cstddef>
 #include <memory>
 
 /// This is the template that is used to keep an consistent interface in the protocol parsing.

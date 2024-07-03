@@ -18,11 +18,10 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
-#include <optional>
-#include <stdexcept>
-
 #include <fmt/color.h>
 #include <fmt/core.h>
+#include <optional>
+#include <stdexcept>
 
 LowerMac::LowerMac(const std::shared_ptr<PrometheusExporter>& prometheus_exporter,
                    std::optional<uint32_t> scrambling_code) {

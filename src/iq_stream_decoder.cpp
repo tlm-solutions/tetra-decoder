@@ -7,10 +7,9 @@
  *   Tassilo Tanneberger
  */
 
+#include "iq_stream_decoder.hpp"
 #include "l2/lower_mac.hpp"
 #include <memory>
-
-#include <iq_stream_decoder.hpp>
 
 IQStreamDecoder::IQStreamDecoder(
     const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& lower_mac_worker_queue,

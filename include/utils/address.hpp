@@ -11,10 +11,9 @@
 #include "utils/bit_vector.hpp"
 #include <bitset>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
-
-#include <nlohmann/json.hpp>
 
 class Address {
   public:

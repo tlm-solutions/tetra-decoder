@@ -7,9 +7,9 @@
  *   Tassilo Tanneberger
  */
 
+#include "bit_stream_decoder.hpp"
+#include "burst_type.hpp"
 #include "l2/lower_mac.hpp"
-#include <bit_stream_decoder.hpp>
-#include <burst_type.hpp>
 #include <fmt/color.h>
 #include <fmt/core.h>
 #include <fmt/format.h>

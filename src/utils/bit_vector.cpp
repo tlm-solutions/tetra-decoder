@@ -7,15 +7,13 @@
  *   Tassilo Tanneberger
  */
 
+#include "utils/bit_vector.hpp"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
-#include <iterator>
 #include <stdexcept>
-
-#include <utils/bit_vector.hpp>
 
 auto BitVector::compute_fcs() -> uint32_t {
     uint32_t crc = 0xFFFFFFFF;

@@ -16,9 +16,7 @@
 #include <map>
 #include <mutex>
 #include <optional>
-#include <signal_handler.hpp>
 #include <thread>
-#include <variant>
 #include <vector>
 #if defined(__linux__)
 #include <pthread.h>
