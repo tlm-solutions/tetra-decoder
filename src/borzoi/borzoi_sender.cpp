@@ -46,15 +46,15 @@ void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& 
             json["station"] = borzoi_uuid_;
             /// TODO: add json to post request
         } catch (std::exception& e) {
-            std::cout << "Failed to send packet to Borzoi. Error: " << e.what() << std::endl;
+            std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
             return;
         }
         cpr::Response resp =
             cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
         if (resp.status_code != 200) {
-            std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message
-                      << std::endl;
+            std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
+                      << resp.error.message << std::endl;
         }
     }
 }
@@ -66,15 +66,15 @@ void BorzoiSender::send_failed_slots(const Slots& slots) {
         json["station"] = borzoi_uuid_;
         /// TODO: add json to post request
     } catch (std::exception& e) {
-        std::cout << "Failed to send packet to Borzoi. Error: " << e.what() << std::endl;
+        std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
         return;
     }
     cpr::Response resp =
         cpr::Post(borzoi_url_failed_slots_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
     if (resp.status_code != 200) {
-        std::cout << "Failed to send packet to Borzoi. Error: " << resp.status_code << " " << resp.error.message
-                  << std::endl;
+        std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
+                  << resp.error.message << std::endl;
     }
 }
 
