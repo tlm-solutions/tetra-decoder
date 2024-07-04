@@ -271,6 +271,7 @@ struct MobileManagementDownlinkLocationUpdateAccept {
 inline auto operator<<(std::ostream& stream, const MobileManagementDownlinkLocationUpdateAccept& packet)
     -> std::ostream& {
     stream << "D-LOCATION UPDATE ACCEPT " << to_string(packet.location_update_accept_type_) << std::endl;
+    stream << "  Address: " << packet.address_ << std::endl;
     if (packet.subscriber_class_) {
         stream << "  subscriber class: " << std::bitset<16>(*packet.subscriber_class_) << std::endl;
     }
