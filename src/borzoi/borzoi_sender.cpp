@@ -10,6 +10,7 @@
 #include "borzoi/borzoi_converter.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
+#include "l3/mobile_management_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
@@ -109,6 +110,9 @@ void BorzoiSender::worker() {
                                 if (auto* sds = dynamic_cast<ShortDataServicePacket*>(llc)) {
                                     std::cout << *sds;
                                 }
+                            }
+                            if (auto* mm = dynamic_cast<MobileManagementPacket*>(llc)) {
+                                std::cout << *mm;
                             }
                             std::cout << std::endl;
                         }

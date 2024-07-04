@@ -9,6 +9,10 @@
 #pragma once
 
 #include "l3/mobile_link_entity_packet.hpp"
+#include "utils/bit_vector.hpp"
+#include "utils/type234_parser.hpp"
+#include <bitset>
+#include <optional>
 #include <variant>
 
 enum class MobileManagementDownlinkPacketType {
@@ -129,10 +133,175 @@ constexpr auto to_string(MobileManagementPacketType type) -> const char* {
     return std::visit([](auto&& arg) { return to_string(arg); }, type);
 }
 
+enum class LocationUpdateType {
+    kRoamingLocationUpdating,
+    kMigrationLocationUpdating,
+    kPeriodicLocationUpdating,
+    kItsiAttach,
+    kServiceRestorationRoamingLocationUpdating,
+    kServiceRestorationMigratingLocationUpdating,
+    kDemandLocationUpdating,
+    kDisableMsUpdating,
+};
+
+constexpr auto to_string(LocationUpdateType type) -> const char* {
+    switch (type) {
+    case LocationUpdateType::kRoamingLocationUpdating:
+        return "Roaming location updating";
+    case LocationUpdateType::kMigrationLocationUpdating:
+        return "Migrating location updating";
+    case LocationUpdateType::kPeriodicLocationUpdating:
+        return "Periodic location updating";
+    case LocationUpdateType::kItsiAttach:
+        return "ITSI attach";
+    case LocationUpdateType::kServiceRestorationRoamingLocationUpdating:
+        return "Service restoration roaming location updating";
+    case LocationUpdateType::kServiceRestorationMigratingLocationUpdating:
+        return "Service restoration migrating location updating";
+    case LocationUpdateType::kDemandLocationUpdating:
+        return "Demand location updating";
+    case LocationUpdateType::kDisableMsUpdating:
+        return "Disabled MS updating";
+    }
+};
+
+enum class LocationUpdateAcceptType {
+    kRoamingLocationUpdating,
+    kTemporaryRegistration,
+    kPeriodicLocationUpdating,
+    kItsiAttach,
+    kServiceRestorationRoamingLocationUpdating,
+    kMigratingOrServiceRestorationMigratingLocationUpdating,
+    kDemandLocationUpdating,
+    kDisableMsUpdating,
+};
+
+constexpr auto to_string(LocationUpdateAcceptType type) -> const char* {
+    switch (type) {
+    case LocationUpdateAcceptType::kRoamingLocationUpdating:
+        return "Roaming location updating";
+    case LocationUpdateAcceptType::kTemporaryRegistration:
+        return "Temporary registration";
+    case LocationUpdateAcceptType::kPeriodicLocationUpdating:
+        return "Periodic location updating";
+    case LocationUpdateAcceptType::kItsiAttach:
+        return "ITSI attach";
+    case LocationUpdateAcceptType::kServiceRestorationRoamingLocationUpdating:
+        return "Service restoration roaming location updating";
+    case LocationUpdateAcceptType::kMigratingOrServiceRestorationMigratingLocationUpdating:
+        return "Migrating or service restoration migrating location updating";
+    case LocationUpdateAcceptType::kDemandLocationUpdating:
+        return "Demand location updating";
+    case LocationUpdateAcceptType::kDisableMsUpdating:
+        return "Disabled MS updating";
+    }
+};
+
+enum class MobileManagementDownlinkType34ElementIdentifiers {
+    kReservedForFutureExtension,
+    kDefaultGroupAttachLifetime,
+    kNewRegisteredArea,
+    kSecurityDownlink,
+    kGroupReportResponse,
+    kGroupIdentityLocationAccept,
+    kDmMsAddress,
+    kGroupIdentityDownlink,
+    kReserved8,
+    kReserved9,
+    kAuthenticationDownlink,
+    kReserved11,
+    kGroupIdentitySecurityRelatedInformation,
+    kCellTypeControl,
+    kReserved14,
+    kProprietary,
+};
+
+constexpr auto to_string(MobileManagementDownlinkType34ElementIdentifiers type) -> const char* {
+    switch (type) {
+    case MobileManagementDownlinkType34ElementIdentifiers::kReservedForFutureExtension:
+        return "Reserved for future extension";
+    case MobileManagementDownlinkType34ElementIdentifiers::kDefaultGroupAttachLifetime:
+        return "Default group attachment lifetime";
+    case MobileManagementDownlinkType34ElementIdentifiers::kNewRegisteredArea:
+        return "New registered area";
+    case MobileManagementDownlinkType34ElementIdentifiers::kSecurityDownlink:
+        return "Security downlink, see ETSI EN 300 392-7";
+    case MobileManagementDownlinkType34ElementIdentifiers::kGroupReportResponse:
+        return "Group report response";
+    case MobileManagementDownlinkType34ElementIdentifiers::kGroupIdentityLocationAccept:
+        return "Group identity location accept";
+    case MobileManagementDownlinkType34ElementIdentifiers::kDmMsAddress:
+        return "DM-MS address, see ETSI EN 300 396-5";
+    case MobileManagementDownlinkType34ElementIdentifiers::kGroupIdentityDownlink:
+        return "Group identity downlink";
+    case MobileManagementDownlinkType34ElementIdentifiers::kReserved8:
+        return "Reserved 8 for any future specified Type 3/4 element";
+    case MobileManagementDownlinkType34ElementIdentifiers::kReserved9:
+        return "Reserved 9 for any future specified Type 3/4 element";
+    case MobileManagementDownlinkType34ElementIdentifiers::kAuthenticationDownlink:
+        return "Authentication downlink, see ETSI EN 300 392-7";
+    case MobileManagementDownlinkType34ElementIdentifiers::kReserved11:
+        return "Reserved 11 for any future specified Type 3/4 element";
+    case MobileManagementDownlinkType34ElementIdentifiers::kGroupIdentitySecurityRelatedInformation:
+        return "Group Identity Security Related Information, see ETSI EN 300 392-7";
+    case MobileManagementDownlinkType34ElementIdentifiers::kCellTypeControl:
+        return "Cell type control";
+    case MobileManagementDownlinkType34ElementIdentifiers::kReserved14:
+        return "Reserved 14 for any future specified Type 3/4 element";
+    case MobileManagementDownlinkType34ElementIdentifiers::kProprietary:
+        return "Proprietary";
+    }
+};
+
+struct MobileManagementDownlinkLocationUpdateAccept {
+    LocationUpdateAcceptType location_update_accept_type_;
+    Address address_;
+    std::optional<unsigned _BitInt(16)> subscriber_class_;
+    std::optional<unsigned _BitInt(14)> energy_saving_information_;
+    std::optional<unsigned _BitInt(4)> scch_information_;
+    std::optional<unsigned _BitInt(2)> distribution_on_18th_frame_;
+
+    Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>::Map optional_elements_;
+
+    MobileManagementDownlinkLocationUpdateAccept() = delete;
+
+    explicit MobileManagementDownlinkLocationUpdateAccept(BitVector&);
+};
+
+inline auto operator<<(std::ostream& stream, const MobileManagementDownlinkLocationUpdateAccept& packet)
+    -> std::ostream& {
+    stream << "D-LOCATION UPDATE ACCEPT " << to_string(packet.location_update_accept_type_) << std::endl;
+    if (packet.subscriber_class_) {
+        stream << "  subscriber class: " << std::bitset<16>(*packet.subscriber_class_) << std::endl;
+    }
+    if (packet.energy_saving_information_) {
+        stream << "  energy saving information: " << std::bitset<14>(*packet.energy_saving_information_) << std::endl;
+    }
+    if (packet.scch_information_) {
+        stream << "  scch information: " << std::bitset<4>(*packet.scch_information_) << std::endl;
+    }
+    if (packet.distribution_on_18th_frame_) {
+        stream << "  distribution on 18th frame: " << std::bitset<2>(*packet.distribution_on_18th_frame_) << std::endl;
+    }
+    for (const auto& [key, value] : packet.optional_elements_) {
+        stream << "  " << to_string(key) << " " << value << std::endl;
+    }
+    return stream;
+};
+
 struct MobileManagementPacket : public MobileLinkEntityPacket {
     MobileManagementPacketType packet_type_;
+    std::optional<MobileManagementDownlinkLocationUpdateAccept> downlink_location_update_accept_;
 
     MobileManagementPacket() = delete;
 
     explicit MobileManagementPacket(const MobileLinkEntityPacket& packet);
+};
+
+inline auto operator<<(std::ostream& stream, const MobileManagementPacket& packet) -> std::ostream& {
+    stream << "MM " << to_string(packet.packet_type_) << std::endl;
+    if (packet.downlink_location_update_accept_) {
+        stream << *packet.downlink_location_update_accept_;
+    }
+    return stream;
 };
