@@ -28,6 +28,7 @@ add_executable(tetra-decoder
                src/l3/circuit_mode_control_entity_packet.cpp
                src/l3/mobile_link_entity_formatter.cpp
                src/l3/mobile_link_entity_packet.cpp
+               src/l3/mobile_management_formatter.cpp
                src/l3/mobile_management_packet.cpp
                src/l3/short_data_service_formatter.cpp
                src/l3/short_data_service_packet.cpp

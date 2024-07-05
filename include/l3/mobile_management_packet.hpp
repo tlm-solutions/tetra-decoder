@@ -253,6 +253,32 @@ constexpr auto to_string(MobileManagementDownlinkType34ElementIdentifiers type) 
     }
 };
 
+enum class GroupIdentityAcceptReject {
+    kAllAttachmentDetachmentsAccepted,
+    kAtLeastOneAttachmentDetachmentRejected,
+};
+
+constexpr auto to_string(GroupIdentityAcceptReject type) -> const char* {
+    switch (type) {
+    case GroupIdentityAcceptReject::kAllAttachmentDetachmentsAccepted:
+        return "All attachment/detachments accepted";
+    case GroupIdentityAcceptReject::kAtLeastOneAttachmentDetachmentRejected:
+        return "At least one attachment/detachment rejected";
+    }
+};
+
+struct MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement {
+    GroupIdentityAcceptReject group_identity_accept_reject_;
+    Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>::Map optional_elements_;
+
+    MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement() = delete;
+
+    explicit MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement(BitVector&);
+};
+
+auto operator<<(std::ostream& stream, const MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement& packet)
+    -> std::ostream&;
+
 struct MobileManagementDownlinkLocationUpdateAccept {
     LocationUpdateAcceptType location_update_accept_type_;
     Address address_;
@@ -268,41 +294,17 @@ struct MobileManagementDownlinkLocationUpdateAccept {
     explicit MobileManagementDownlinkLocationUpdateAccept(BitVector&);
 };
 
-inline auto operator<<(std::ostream& stream, const MobileManagementDownlinkLocationUpdateAccept& packet)
-    -> std::ostream& {
-    stream << "D-LOCATION UPDATE ACCEPT " << to_string(packet.location_update_accept_type_) << std::endl;
-    stream << "  Address: " << packet.address_ << std::endl;
-    if (packet.subscriber_class_) {
-        stream << "  subscriber class: " << std::bitset<16>(*packet.subscriber_class_) << std::endl;
-    }
-    if (packet.energy_saving_information_) {
-        stream << "  energy saving information: " << std::bitset<14>(*packet.energy_saving_information_) << std::endl;
-    }
-    if (packet.scch_information_) {
-        stream << "  scch information: " << std::bitset<4>(*packet.scch_information_) << std::endl;
-    }
-    if (packet.distribution_on_18th_frame_) {
-        stream << "  distribution on 18th frame: " << std::bitset<2>(*packet.distribution_on_18th_frame_) << std::endl;
-    }
-    for (const auto& [key, value] : packet.optional_elements_) {
-        stream << "  " << to_string(key) << " " << value << std::endl;
-    }
-    return stream;
-};
+auto operator<<(std::ostream& stream, const MobileManagementDownlinkLocationUpdateAccept& packet) -> std::ostream&;
 
 struct MobileManagementPacket : public MobileLinkEntityPacket {
     MobileManagementPacketType packet_type_;
     std::optional<MobileManagementDownlinkLocationUpdateAccept> downlink_location_update_accept_;
+    std::optional<MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement>
+        downlink_attach_detach_group_identity_acknowledgement_;
 
     MobileManagementPacket() = delete;
 
     explicit MobileManagementPacket(const MobileLinkEntityPacket& packet);
 };
 
-inline auto operator<<(std::ostream& stream, const MobileManagementPacket& packet) -> std::ostream& {
-    stream << "MM " << to_string(packet.packet_type_) << std::endl;
-    if (packet.downlink_location_update_accept_) {
-        stream << *packet.downlink_location_update_accept_;
-    }
-    return stream;
-};
+auto operator<<(std::ostream& stream, const MobileManagementPacket& packet) -> std::ostream&;

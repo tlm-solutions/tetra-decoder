@@ -54,6 +54,17 @@ struct ScchInformationAndDistributionOn18ThFrame {
     unsigned _BitInt(2) distribution_on_18th_frame_;
 };
 
+MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement::
+    MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement(BitVector& data)
+    : group_identity_accept_reject_(GroupIdentityAcceptReject(data.take<1>())) {
+    auto reserved = data.take<1>();
+    auto parser = Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>(
+        data, {MobileManagementDownlinkType34ElementIdentifiers::kProprietary},
+        {MobileManagementDownlinkType34ElementIdentifiers::kGroupIdentityDownlink,
+         MobileManagementDownlinkType34ElementIdentifiers::kGroupIdentitySecurityRelatedInformation});
+    optional_elements_ = parser.parse_type34(data);
+};
+
 MobileManagementDownlinkLocationUpdateAccept::MobileManagementDownlinkLocationUpdateAccept(BitVector& data)
     : location_update_accept_type_(LocationUpdateAcceptType(data.take<4>())) {
     auto parser = Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>(
@@ -90,5 +101,10 @@ MobileManagementPacket::MobileManagementPacket(const MobileLinkEntityPacket& pac
 
     if (packet_type_ == MobileManagementPacketType(MobileManagementDownlinkPacketType::kDLocationUpdateAccept)) {
         downlink_location_update_accept_ = MobileManagementDownlinkLocationUpdateAccept(data);
+    }
+    if (packet_type_ ==
+        MobileManagementPacketType(MobileManagementDownlinkPacketType::kDAttachDetachGroupIdentityAck)) {
+        downlink_attach_detach_group_identity_acknowledgement_ =
+            MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement(data);
     }
 };
