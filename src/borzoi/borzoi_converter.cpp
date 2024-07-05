@@ -47,7 +47,7 @@ auto BorzoiConverter::to_json(const Slots& slots) -> nlohmann::json {
     /// This may but should not throw.
     auto first_slot = slots.get_first_slot().get_logical_channel_data_and_crc();
     message["first_slot_logical_channel"] = static_cast<unsigned>(first_slot.channel);
-    message["first_slot_logical_data"] = nlohmann::json::array();
+    message["first_slot_data"] = nlohmann::json::array();
     while (first_slot.data.bits_left()) {
         unsigned bit = first_slot.data.take<1>();
         message["first_slot_logical_data"].push_back(bit);
