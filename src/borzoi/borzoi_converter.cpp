@@ -38,9 +38,9 @@ auto BorzoiConverter::to_json(ShortDataServicePacket* packet) -> nlohmann::json 
     } else {
         message["arbitrary"]["bits_in_last_byte"] = 8;
     }
-    message["arbitrary"]["optional_fiels"] = nlohmann::json::object();
+    message["arbitrary"]["optional_fields"] = nlohmann::json::object();
     for (const auto& [key, value] : packet->sds_data_->optional_elements_) {
-        auto& vec = message["arbitrary"]["optional_fiels"][to_string(key)];
+        auto& vec = message["arbitrary"]["optional_fields"][to_string(key)];
         vec = nlohmann::json::object();
         vec["repeated_elements"] = value.repeated_elements;
         vec["unparsed_bits"] = nlohmann::json::array();
