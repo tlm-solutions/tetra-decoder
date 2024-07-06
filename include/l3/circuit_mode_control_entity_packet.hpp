@@ -11,6 +11,7 @@
 #include "l3/mobile_link_entity_packet.hpp"
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
+#include "utils/type234_parser.hpp"
 #include <optional>
 #include <variant>
 
@@ -229,6 +230,62 @@ constexpr auto to_string(CircuitModeControlEntityPacketType type) -> const char*
     return std::visit([](auto&& arg) { return to_string(arg); }, type);
 }
 
+enum class CircuitModeControlEntityType3ElementIdentifiers {
+    kReserved,
+    kDTMF,
+    kExternalSubsriberNumber,
+    kFacility,
+    kPollResponseAddresses,
+    kTemporaryAddress,
+    kDmMsAddress,
+    kReservedForAnyFutureSpecifiedType3Element7,
+    kReservedForAnyFutureSpecifiedType3Element8,
+    kReservedForAnyFutureSpecifiedType3Element9,
+    kReservedForAnyFutureSpecifiedType3Element10,
+    kReservedForAnyFutureSpecifiedType3Element11,
+    kReservedForAnyFutureSpecifiedType3Element12,
+    kReservedForAnyFutureSpecifiedType3Element13,
+    kReservedForAnyFutureSpecifiedType3Element14,
+    kProprietary,
+};
+
+constexpr auto to_string(CircuitModeControlEntityType3ElementIdentifiers type) -> const char* {
+    switch (type) {
+    case CircuitModeControlEntityType3ElementIdentifiers::kReserved:
+        return "Reserved";
+    case CircuitModeControlEntityType3ElementIdentifiers::kDTMF:
+        return "DTMF";
+    case CircuitModeControlEntityType3ElementIdentifiers::kExternalSubsriberNumber:
+        return "External subscriber number";
+    case CircuitModeControlEntityType3ElementIdentifiers::kFacility:
+        return "Facility";
+    case CircuitModeControlEntityType3ElementIdentifiers::kPollResponseAddresses:
+        return "Poll response addresses";
+    case CircuitModeControlEntityType3ElementIdentifiers::kTemporaryAddress:
+        return "Temporary address";
+    case CircuitModeControlEntityType3ElementIdentifiers::kDmMsAddress:
+        return "DM-MS address";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element7:
+        return "Reserved for any future specified Type 3 element 7";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element8:
+        return "Reserved for any future specified Type 3 element 8";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element9:
+        return "Reserved for any future specified Type 3 element 9";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element10:
+        return "Reserved for any future specified Type 3 element 10";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element11:
+        return "Reserved for any future specified Type 3 element 11";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element12:
+        return "Reserved for any future specified Type 3 element 12";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element13:
+        return "Reserved for any future specified Type 3 element 13";
+    case CircuitModeControlEntityType3ElementIdentifiers::kReservedForAnyFutureSpecifiedType3Element14:
+        return "Reserved for any future specified Type 3 element 14";
+    case CircuitModeControlEntityType3ElementIdentifiers::kProprietary:
+        return "Proprietary";
+    }
+};
+
 struct SdsData {
     /// the area selection that is present in the uplink sds
     std::optional<unsigned _BitInt(4)> area_selection_;
@@ -236,8 +293,8 @@ struct SdsData {
     Address address_;
     /// the sds data that is included int he cmce packet
     BitVector data_;
-    /// TODO: The "External subscriber number" and "DM-MS address" is not parsed!
-    BitVector unparsed_;
+    // This map may contain the "External subscriber number" and "DM-MS address"
+    Type234Parser<CircuitModeControlEntityType3ElementIdentifiers>::Map optional_elements_;
 
   private:
     SdsData() = default;

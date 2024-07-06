@@ -14,7 +14,9 @@ auto operator<<(std::ostream& stream, const SdsData& sds) -> std::ostream& {
     }
     stream << "  SDS Address: " << sds.address_ << std::endl;
     stream << "  Data: " << sds.data_ << std::endl;
-    stream << "  Unparsed: " << sds.unparsed_ << std::endl;
+    for (const auto& [key, value] : sds.optional_elements_) {
+        stream << "  " << to_string(key) << " " << value << std::endl;
+    }
     return stream;
 };
 

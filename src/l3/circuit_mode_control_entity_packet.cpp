@@ -38,7 +38,12 @@ auto SdsData::from_d_sds_data(BitVector& data) -> SdsData {
         break;
     }
     sds.data_ = data.take_vector(length_identifier);
-    sds.unparsed_ = data.take_vector(data.bits_left());
+    auto parser = Type234Parser<CircuitModeControlEntityType3ElementIdentifiers>(
+        data,
+        {CircuitModeControlEntityType3ElementIdentifiers::kExternalSubsriberNumber,
+         CircuitModeControlEntityType3ElementIdentifiers::kDmMsAddress},
+        {});
+    sds.optional_elements_ = parser.parse_type34(data);
 
     return sds;
 }
@@ -76,7 +81,12 @@ auto SdsData::from_u_sds_data(BitVector& data) -> SdsData {
         break;
     }
     sds.data_ = data.take_vector(length_identifier);
-    sds.unparsed_ = data.take_vector(data.bits_left());
+    auto parser = Type234Parser<CircuitModeControlEntityType3ElementIdentifiers>(
+        data,
+        {CircuitModeControlEntityType3ElementIdentifiers::kExternalSubsriberNumber,
+         CircuitModeControlEntityType3ElementIdentifiers::kDmMsAddress},
+        {});
+    sds.optional_elements_ = parser.parse_type34(data);
 
     return sds;
 }

@@ -32,8 +32,30 @@ auto BorzoiConverter::to_json(ShortDataServicePacket* packet) -> nlohmann::json 
         message["data"].push_back(bits);
     }
     message["arbitrary"] = nlohmann::json::object();
-    message["arbitrary"]["bits_in_last_byte"] = data.bits_left();
-    message["data"].push_back(data.take_all());
+    if (data.bits_left() > 0) {
+        message["arbitrary"]["bits_in_last_byte"] = data.bits_left();
+        message["data"].push_back(data.take_all());
+    } else {
+        message["arbitrary"]["bits_in_last_byte"] = 8;
+    }
+    message["arbitrary"]["optional_fiels"] = nlohmann::json::object();
+    for (const auto& [key, value] : packet->sds_data_->optional_elements_) {
+        auto& vec = message["arbitrary"]["optional_fiels"][to_string(key)];
+        vec = nlohmann::json::object();
+        vec["repeated_elements"] = value.repeated_elements;
+        vec["unparsed_bits"] = nlohmann::json::array();
+        auto data = BitVector(value.unparsed_bits);
+        while (data.bits_left() >= 8) {
+            unsigned bits = data.take<8>();
+            vec["unparsed_bits"].push_back(bits);
+        }
+        if (data.bits_left() > 0) {
+            vec["bits_in_last_byte"] = data.bits_left();
+            vec["unparsed_bits"].push_back(data.take_all());
+        } else {
+            vec["bits_in_last_byte"] = 8;
+        }
+    }
     message["time"] = get_time();
 
     return message;
