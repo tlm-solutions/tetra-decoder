@@ -7,28 +7,34 @@ option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
 add_executable(tetra-decoder
                src/main.cpp
-               src/reporter.cpp
-        src/decoder.cpp
-        src/bit_stream_decoder.cpp
-        src/iq_stream_decoder.cpp
-        src/prometheus.cpp
-        src/l2/access_assignment_channel.cpp
-        src/l2/broadcast_synchronization_channel.cpp
-        src/l2/logical_link_control.cpp
-        src/l2/lower_mac.cpp
-        src/l2/slot.cpp
-        src/l2/timebase_counter.cpp
-        src/l2/upper_mac.cpp
-        src/l2/upper_mac_packet.cpp
-        src/l2/upper_mac_packet_builder.cpp
-        src/l2/upper_mac_packet_formatter.cpp
-        src/l3/mobile_link_entity.cpp
-        src/l3/mobile_management.cpp
-        src/l3/circuit_mode_control_entity.cpp
-        src/l3/short_data_service.cpp
-        src/utils/address.cpp
-        src/utils/bit_vector.cpp
-        src/utils/viter_bi_codec.cpp)
+               src/decoder.cpp
+               src/bit_stream_decoder.cpp
+               src/iq_stream_decoder.cpp
+               src/prometheus.cpp
+               src/borzoi/borzoi_converter.cpp
+               src/borzoi/borzoi_sender.cpp
+               src/l2/access_assignment_channel.cpp
+               src/l2/broadcast_synchronization_channel.cpp        
+               src/l2/logical_link_control_formatter.cpp
+               src/l2/logical_link_control_packet.cpp
+               src/l2/lower_mac.cpp
+               src/l2/slot.cpp
+               src/l2/timebase_counter.cpp
+               src/l2/upper_mac.cpp
+               src/l2/upper_mac_packet.cpp
+               src/l2/upper_mac_packet_builder.cpp
+               src/l2/upper_mac_packet_formatter.cpp
+               src/l3/circuit_mode_control_entity_formatter.cpp
+               src/l3/circuit_mode_control_entity_packet.cpp
+               src/l3/mobile_link_entity_formatter.cpp
+               src/l3/mobile_link_entity_packet.cpp
+               src/l3/mobile_management_formatter.cpp
+               src/l3/mobile_management_packet.cpp
+               src/l3/short_data_service_formatter.cpp
+               src/l3/short_data_service_packet.cpp
+               src/utils/address.cpp
+               src/utils/bit_vector.cpp
+               src/utils/viter_bi_codec.cpp)
 
 add_executable(tetra-puncturing
                src/examples/tetra_puncturing.cpp)
@@ -50,6 +56,7 @@ find_package(ZLIB REQUIRED)
 find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
+find_package(cpr REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
@@ -57,7 +64,7 @@ if (NOT NIX_BUILD)
 	target_link_libraries(tetra-decoder cxxopts::cxxopts)
 endif()
 
-target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull)
+target_link_libraries(tetra-decoder ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull cpr::cpr)
 target_link_libraries(tetra-viterbi viterbi)
 
 install(TARGETS tetra-decoder DESTINATION bin)

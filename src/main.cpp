@@ -1,11 +1,9 @@
+#include "decoder.hpp"
+#include "signal_handler.hpp"
 #include <csignal>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <memory>
-#include <stdio.h>
-
-#include <decoder.hpp>
-#include <signal_handler.hpp>
 
 volatile bool stop = false;
 
@@ -16,9 +14,13 @@ void sigint_handler(int s) {
 }
 
 auto main(int argc, char** argv) -> int {
-    unsigned int receive_port, send_port, debug_level;
-    bool packed, iq_or_bit_stream;
-    std::optional<std::string> input_file, output_file;
+    unsigned int receive_port;
+    bool packed;
+    bool iq_or_bit_stream;
+    std::optional<std::string> input_file;
+    std::optional<std::string> output_file;
+    std::string borzoi_url;
+    std::string borzoi_uuid;
     std::optional<unsigned> uplink_scrambling_code;
     std::optional<std::string> prometheus_address;
     std::optional<std::string> prometheus_name;
@@ -35,10 +37,11 @@ auto main(int argc, char** argv) -> int {
 	options.add_options()
 		("h,help", "Print usage")
 		("r,rx", "<UDP socket> receiving from phy", cxxopts::value<unsigned>()->default_value("42000"))
-		("t,tx", "<UDP socket> sending Json data", cxxopts::value<unsigned>()->default_value("42100"))
+		("t,tx", "<UDP socket> sending Json data", cxxopts::value<unsigned>()->default_value("42100"))		
+		("borzoi-url", "<borzoi-url> the base url of which borzoi is running", cxxopts::value<std::string>(borzoi_url)->default_value("http://localhost:3000"))
+		("borzoi-uuid", "<borzoi-uuid> the UUID of this tetra-decoder sending data to borzoi", cxxopts::value<std::string>(borzoi_uuid)->default_value("00000000-0000-0000-0000-000000000000"))
 		("i,infile", "<file> replay data from binary file instead of UDP", cxxopts::value<std::optional<std::string>>(input_file))
 		("o,outfile", "<file> record data to binary file (can be replayed with -i option)", cxxopts::value<std::optional<std::string>>(output_file))
-		("d", "<level> print debug information", cxxopts::value<unsigned>()->default_value("0"))
 		("P,packed", "pack rx data (1 byte = 8 bits)", cxxopts::value<bool>()->default_value("false"))
 		("iq", "Receive IQ instead of bitstream", cxxopts::value<bool>()->default_value("false"))
 		("uplink", "<scrambling code> enable uplink parsing with predefined scrambilng code", cxxopts::value<std::optional<unsigned>>(uplink_scrambling_code))
@@ -52,13 +55,11 @@ auto main(int argc, char** argv) -> int {
 
         if (result.count("help")) {
             std::cout << options.help() << std::endl;
-            exit(0);
+            return EXIT_SUCCESS;
         }
 
         receive_port = result["rx"].as<unsigned>();
-        send_port = result["tx"].as<unsigned>();
 
-        debug_level = result["d"].as<unsigned>();
         packed = result["packed"].as<bool>();
         iq_or_bit_stream = result["iq"].as<bool>();
 
@@ -71,15 +72,15 @@ auto main(int argc, char** argv) -> int {
         return EXIT_FAILURE;
     }
 
-    auto decoder = std::make_unique<Decoder>(receive_port, send_port, packed, input_file, output_file, iq_or_bit_stream,
-                                             uplink_scrambling_code, prometheus_exporter);
+    auto decoder = std::make_unique<Decoder>(receive_port, borzoi_url, borzoi_uuid, packed, input_file, output_file,
+                                             iq_or_bit_stream, uplink_scrambling_code, prometheus_exporter);
 
     if (input_file.has_value()) {
         std::cout << "Reading from input file " << *input_file << std::endl;
     } else {
         std::cout << "Listening on UDP socket " << receive_port << std::endl;
     }
-    std::cout << "Sending on UDP socket " << send_port << std::endl;
+    std::cout << "Sending to Borzoi on: " << borzoi_url << std::endl;
     if (output_file.has_value()) {
         std::cout << "Writing to output file " << *output_file << std::endl;
     }

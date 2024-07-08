@@ -1,11 +1,10 @@
-#include <functional>
+#include "viter_bi_codec.hpp"
+#include "viterbi/viterbi_decoder_scalar.h"
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <vector>
-
-#include "viter_bi_codec.hpp"
-#include "viterbi/viterbi_decoder_scalar.h"
 
 auto viterbi = std::vector<uint8_t>(
     {1, 0, 2, 2, 0, 2, 2, 2, 1, 0, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2, 1, 2, 2, 2, 0, 0, 2, 2, 1, 2, 2, 2, 1, 0, 2, 2, 1, 2,

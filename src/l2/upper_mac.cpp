@@ -7,26 +7,25 @@
  */
 
 #include "l2/upper_mac.hpp"
-#include "l2/logical_link_control.hpp"
+#include "l2/logical_link_control_parser.hpp"
 #include "l2/lower_mac.hpp"
 #include "l2/upper_mac_fragments.hpp"
-#include "l2/upper_mac_packet.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
-#include <memory>
-#include <optional>
 #include <utility>
-#include <variant>
-#include <vector>
 
 #if defined(__linux__)
 #include <pthread.h>
 #endif
 
 UpperMac::UpperMac(const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& input_queue,
-                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
-                   bool is_downlink)
+                   ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& output_queue,
+                   std::atomic_bool& termination_flag, std::atomic_bool& output_termination_flag,
+                   const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
     : input_queue_(input_queue)
-    , logical_link_control_(prometheus_exporter, std::move(reporter), is_downlink) {
+    , termination_flag_(termination_flag)
+    , output_termination_flag_(output_termination_flag)
+    , output_queue_(output_queue)
+    , logical_link_control_(prometheus_exporter) {
     if (prometheus_exporter) {
         metrics_ = std::make_unique<UpperMacMetrics>(prometheus_exporter);
         fragmentation_metrics_continous_ =
@@ -47,17 +46,24 @@ UpperMac::~UpperMac() { worker_thread_.join(); }
 
 void UpperMac::worker() {
     for (;;) {
-        const auto return_value = input_queue_->get();
+        const auto return_value = input_queue_->get_or_null();
 
-        if (std::holds_alternative<TerminationToken>(return_value)) {
-            return;
+        if (!return_value) {
+            if (termination_flag_.load() && input_queue_->empty()) {
+                break;
+            }
+
+            continue;
         }
 
-        const auto slots = std::get<LowerMac::return_type>(return_value);
+        auto slots = *return_value;
         if (slots) {
             this->process(*slots);
         }
     }
+
+    // forward the termination to the next stage
+    output_termination_flag_.store(true);
 }
 
 auto UpperMac::process(const Slots& slots) -> void {
@@ -93,6 +99,8 @@ auto UpperMac::process(const Slots& slots) -> void {
             for (const auto& slot : concreate_slots) {
                 metrics_->increment_decode_error(slot);
             }
+            // send the broken slot to borzoi
+            output_queue_.push_back(slots);
         }
     }
 }
@@ -137,7 +145,8 @@ auto UpperMac::processPackets(UpperMacPackets&& packets) -> void {
     }
 
     for (const auto& packet : c_plane_packets) {
-        auto data = BitVector(*packet.tm_sdu_);
-        logical_link_control_.process(packet.address_, data);
+        auto llc = logical_link_control_.parse(packet);
+
+        output_queue_.push_back(std::move(llc));
     }
 }

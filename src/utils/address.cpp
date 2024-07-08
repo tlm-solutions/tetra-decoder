@@ -1,6 +1,5 @@
+#include "utils/address.hpp"
 #include <ostream>
-
-#include <utils/address.hpp>
 
 auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream& {
     if (address_type.country_code_) {

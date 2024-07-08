@@ -2,7 +2,6 @@
 #define PROMETHEUS_H
 
 #include <memory>
-
 #include <prometheus/counter.h>
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>

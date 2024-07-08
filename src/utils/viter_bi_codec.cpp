@@ -7,7 +7,7 @@
  *   Tassilo Tanneberger
  */
 
-#include <utils/viter_bi_codec.hpp>
+#include "utils/viter_bi_codec.hpp"
 
 auto ViterbiCodec::Decode(const std::vector<int16_t>& bits) const -> std::vector<uint8_t> {
     auto vitdec = ViterbiDecoder_Core<K, R, uint16_t, int16_t>(branch_table, config);

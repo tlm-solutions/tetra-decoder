@@ -19,8 +19,8 @@
  * limitations under the License.
  *
  */
-#include "viter_bi_codec.hpp"
 
+#include "viter_bi_codec.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iostream>

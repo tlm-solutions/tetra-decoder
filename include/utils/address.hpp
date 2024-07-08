@@ -11,10 +11,9 @@
 #include "utils/bit_vector.hpp"
 #include <bitset>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
-
-#include <nlohmann/json.hpp>
 
 class Address {
   public:
@@ -51,6 +50,39 @@ class Address {
     [[nodiscard]] auto ussi() const noexcept { return ussi_; }
     [[nodiscard]] auto smi() const noexcept { return smi_; }
     [[nodiscard]] auto usage_marker() const noexcept { return usage_marker_; }
+
+    auto merge(const Address& other) {
+        if (other.country_code_) {
+            country_code_ = other.country_code_;
+        }
+        if (other.network_code_) {
+            network_code_ = other.network_code_;
+        }
+        if (other.sna_) {
+            sna_ = other.sna_;
+        }
+        if (other.ssi_) {
+            ssi_ = other.ssi_;
+        }
+        if (other.event_label_) {
+            event_label_ = other.event_label_;
+        }
+        if (other.ussi_) {
+            ussi_ = other.ussi_;
+        }
+        if (other.smi_) {
+            smi_ = other.smi_;
+        }
+        if (other.usage_marker_) {
+            usage_marker_ = other.usage_marker_;
+        }
+    };
+
+    auto merge(const std::optional<Address>& address) {
+        if (address) {
+            merge(*address);
+        }
+    }
 
     friend auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
 

@@ -8,21 +8,14 @@
 
 #pragma once
 
-#include "l3/mobile_link_entity.hpp"
-#include "utils/address.hpp"
-#include "utils/bit_vector.hpp"
-#include "utils/packet_counter_metrics.hpp"
-#include <cstdint>
-#include <iostream>
-#include <memory>
-#include <vector>
+#include "l3/mobile_link_entity_parser.hpp"
 
-class LogicalLinkControl {
+class LogicalLinkControlParser : public PacketParser<UpperMacCPlaneSignallingPacket, LogicalLinkControlPacket> {
   public:
-    LogicalLinkControl() = delete;
-    LogicalLinkControl(const std::shared_ptr<PrometheusExporter>& prometheus_exporter, Reporter&& reporter,
-                       bool is_downlink)
-        : mle_(prometheus_exporter, std::move(reporter), is_downlink) {
+    LogicalLinkControlParser() = delete;
+    explicit LogicalLinkControlParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
+        : PacketParser(prometheus_exporter, "logical_link_control")
+        , mle_(prometheus_exporter) {
         llc_pdu_description_ = {"BL-ADATA without FCS",
                                 "BL-DATA without FCS",
                                 "BL-UDATA without FCS",
@@ -58,47 +51,38 @@ class LogicalLinkControl {
                                                "ReservedLayer2SignallingPdu13",
                                                "ReservedLayer2SignallingPdu14",
                                                "ReservedLayer2SignallingPdu15"};
-        if (prometheus_exporter) {
-            metrics_ = std::make_unique<PacketCounterMetrics>(prometheus_exporter, "logical_link_control");
-        }
     };
-    ~LogicalLinkControl() noexcept = default;
-
-    void process(Address address, BitVector& vec);
-
-    friend auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;
 
   private:
+    [[nodiscard]] auto packet_name(const LogicalLinkControlPacket& packet) const -> std::string override {
+        auto pdu_type = packet.tm_sdu_->look<4>(0);
+
+        if (pdu_type == kSupplementaryLlcPdu) {
+            auto pdu_type = packet.tm_sdu_->look<2>(4);
+            return supplementary_llc_pdu_description_.at(pdu_type);
+        }
+
+        if (pdu_type == kLayer2SignallingPdu) {
+            auto pdu_type = packet.tm_sdu_->look<4>(4);
+            return layer_2_signalling_pdu_description_.at(pdu_type);
+        }
+
+        return llc_pdu_description_.at(pdu_type);
+    };
+
+    auto forward(const LogicalLinkControlPacket& packet) -> std::unique_ptr<LogicalLinkControlPacket> override {
+        if (packet.basic_link_information_ && packet.tl_sdu_.bits_left() > 0) {
+            return mle_.parse(packet);
+        }
+        return std::make_unique<LogicalLinkControlPacket>(packet);
+    };
+
+    MobileLinkEntityParser mle_;
+
     static const auto kSupplementaryLlcPdu = 13;
     static const auto kLayer2SignallingPdu = 14;
 
     std::array<std::string, 16> llc_pdu_description_;
     std::array<std::string, 4> supplementary_llc_pdu_description_;
     std::array<std::string, 16> layer_2_signalling_pdu_description_;
-
-    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
-    void process_bl_adata_without_fcs(Address address, BitVector& vec);
-    // Basic link (acknowledged service in connectionless mode) without Frame Check Sequence
-    void process_bl_data_without_fcs(Address address, BitVector& vec);
-    void process_bl_udata_without_fcs(Address address, BitVector& vec);
-    void process_bl_ack_without_fcs(Address address, BitVector& vec);
-
-    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
-    void process_bl_adata_with_fcs(Address address, BitVector& vec);
-    // Basic link (acknowledged service in connectionless mode) with Frame Check Sequence
-    void process_bl_data_with_fcs(Address address, BitVector& vec);
-    void process_bl_udata_with_fcs(Address address, BitVector& vec);
-    void process_bl_ack_with_fcs(Address address, BitVector& vec);
-
-    void process_supplementary_llc_pdu(Address address, BitVector& vec);
-    void process_layer_2_signalling_pdu(Address address, BitVector& vec);
-
-    static auto compute_fcs(std::vector<uint8_t> const& data) -> uint32_t;
-    static auto check_fcs(BitVector& vec) -> bool;
-
-    MobileLinkEntity mle_;
-
-    std::unique_ptr<PacketCounterMetrics> metrics_;
 };
-
-auto operator<<(std::ostream& stream, const LogicalLinkControl& llc) -> std::ostream&;
