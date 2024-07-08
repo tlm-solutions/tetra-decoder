@@ -54,7 +54,7 @@ class LogicalLinkControlParser : public PacketParser<UpperMacCPlaneSignallingPac
     };
 
   private:
-    auto packet_name(const LogicalLinkControlPacket& packet) -> std::string override {
+    [[nodiscard]] auto packet_name(const LogicalLinkControlPacket& packet) const -> std::string override {
         auto pdu_type = packet.tm_sdu_->look<4>(0);
 
         if (pdu_type == kSupplementaryLlcPdu) {

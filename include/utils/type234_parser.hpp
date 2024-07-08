@@ -91,6 +91,8 @@ template <typename ElementIdentifier> class Type234Parser {
             // Is this a type 4 element?
             if (allowed_type4_elements_.count(element_identifier)) {
                 const auto repeated_elements = data.take<6>();
+                // The length_indicator is the "Total length of the following type 4 Elements in bits (including the
+                // Number of repeated elements)"
                 const auto element_data = data.take_vector(length_indicator - 6);
                 if (elements.count(element_identifier)) {
                     throw std::runtime_error("This element identifier already occured.");

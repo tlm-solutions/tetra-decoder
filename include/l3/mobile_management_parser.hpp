@@ -19,7 +19,7 @@ class MobileManagementParser : public PacketParser<MobileLinkEntityPacket, Mobil
         : PacketParser(prometheus_exporter, "mobile_management"){};
 
   private:
-    auto packet_name(const MobileManagementPacket& packet) -> std::string override {
+    [[nodiscard]] auto packet_name(const MobileManagementPacket& packet) const -> std::string override {
         return to_string(packet.packet_type_);
     }
 

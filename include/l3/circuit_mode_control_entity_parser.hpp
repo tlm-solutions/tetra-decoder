@@ -19,7 +19,7 @@ class CircuitModeControlEntityParser : public PacketParser<MobileLinkEntityPacke
         , sds_(prometheus_exporter){};
 
   private:
-    auto packet_name(const CircuitModeControlEntityPacket& packet) -> std::string override {
+    [[nodiscard]] auto packet_name(const CircuitModeControlEntityPacket& packet) const -> std::string override {
         return to_string(packet.packet_type_);
     };
 

@@ -47,7 +47,7 @@ template <typename Input, typename Output> class PacketParser {
 
   protected:
     /// This function needs to be implemented for each parsing layer. It should return the correct packet name.
-    virtual auto packet_name(const Output&) -> std::string = 0;
+    [[nodiscard]] virtual auto packet_name(const Output&) const -> std::string = 0;
 
     /// This function take the currently parsed packet and should forward it to the next parsing stage or return a
     /// unique pointer to it.

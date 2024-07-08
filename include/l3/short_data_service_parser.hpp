@@ -63,7 +63,7 @@ class ShortDataServiceParser : public PacketParser<CircuitModeControlEntityPacke
     };
 
   private:
-    auto packet_name(const ShortDataServicePacket& packet) -> std::string override {
+    [[nodiscard]] auto packet_name(const ShortDataServicePacket& packet) const -> std::string override {
         return sds_pdu_description_.at(packet.protocol_identifier_);
     }
 

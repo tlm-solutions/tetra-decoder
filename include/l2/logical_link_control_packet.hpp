@@ -62,6 +62,7 @@ auto operator<<(std::ostream& stream, const BasicLinkInformation& bli) -> std::o
 /// The packet that is parsed in the logical link control layer. Currently we only implement basic link.
 struct LogicalLinkControlPacket : public UpperMacCPlaneSignallingPacket {
     std::optional<BasicLinkInformation> basic_link_information_;
+    /// The data that is passed from the Logical Link Control layer to the Mobile Link Entity
     BitVector tl_sdu_;
 
     LogicalLinkControlPacket() = delete;

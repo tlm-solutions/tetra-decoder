@@ -41,7 +41,7 @@ class MobileLinkEntityParser : public PacketParser<LogicalLinkControlPacket, Mob
     };
 
   private:
-    auto packet_name(const MobileLinkEntityPacket& packet) -> std::string override {
+    [[nodiscard]] auto packet_name(const MobileLinkEntityPacket& packet) const -> std::string override {
         if (packet.mle_protocol_ == MobileLinkEntityProtocolDiscriminator::kMleProtocol) {
             auto pdu_type = packet.sdu_.look<3>(0);
 
