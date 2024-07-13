@@ -7,6 +7,7 @@
  */
 
 #include "l3/short_data_service_packet.hpp"
+#include <bitset>
 
 auto operator<<(std::ostream& stream, const ShortLocationReport& slr) -> std::ostream& {
     stream << "  Short Location Report" << std::endl;

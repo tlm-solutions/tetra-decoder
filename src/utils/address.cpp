@@ -1,30 +1,31 @@
 #include "utils/address.hpp"
+#include <bitset>
 #include <ostream>
 
 auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream& {
     if (address_type.country_code_) {
-        stream << "Country Code: " << address_type.country_code_.value().to_ulong() << " ";
+        stream << "Country Code: " << std::bitset<10>(*address_type.country_code_) << " ";
     }
     if (address_type.network_code_) {
-        stream << "Network Code: " << address_type.network_code_.value().to_ulong() << " ";
+        stream << "Network Code: " << std::bitset<14>(*address_type.network_code_) << " ";
     }
     if (address_type.sna_) {
-        stream << "SNA: " << address_type.sna_.value().to_ulong() << " ";
+        stream << "SNA: " << std::bitset<8>(*address_type.sna_) << " ";
     }
     if (address_type.ssi_) {
-        stream << "SSI: " << address_type.ssi_.value().to_ulong() << " ";
+        stream << "SSI: " << std::bitset<24>(*address_type.ssi_) << " ";
     }
     if (address_type.ussi_) {
-        stream << "USSI: " << address_type.ussi_.value().to_ulong() << " ";
+        stream << "USSI: " << std::bitset<24>(*address_type.ussi_) << " ";
     }
     if (address_type.smi_) {
-        stream << "SMI: " << address_type.smi_.value().to_ulong() << " ";
+        stream << "SMI: " << std::bitset<24>(*address_type.smi_) << " ";
     }
     if (address_type.event_label_) {
-        stream << "Event Label: " << address_type.event_label_.value().to_ulong() << " ";
+        stream << "Event Label: " << std::bitset<10>(*address_type.event_label_) << " ";
     }
     if (address_type.usage_marker_) {
-        stream << "Usage Marker: " << address_type.usage_marker_.value().to_ulong() << " ";
+        stream << "Usage Marker: " << std::bitset<6>(*address_type.usage_marker_) << " ";
     }
 
     return stream;

@@ -21,8 +21,8 @@ inline static auto get_time() -> std::string {
 auto BorzoiConverter::to_json(ShortDataServicePacket* packet) -> nlohmann::json {
     auto message = nlohmann::json::object();
     /// TODO: this may throw
-    message["source_ssi"] = packet->sds_data_->address_.ssi()->to_ulong();
-    message["destination_ssi"] = packet->address_.ssi()->to_ulong();
+    message["source_ssi"] = static_cast<unsigned>(packet->sds_data_->address_.ssi().value());
+    message["destination_ssi"] = static_cast<unsigned>(packet->address_.ssi().value());
     message["protocol_identifier"] = static_cast<unsigned>(packet->protocol_identifier_);
     message["telegram_type"] = "SDS";
     message["data"] = nlohmann::json::array();
