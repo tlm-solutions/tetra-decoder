@@ -39,6 +39,7 @@ struct LocationInformationProtocol {
 };
 
 auto operator<<(std::ostream& stream, const LocationInformationProtocol& lip) -> std::ostream&;
+
 struct ShortDataServicePacket : public CircuitModeControlEntityPacket {
     unsigned _BitInt(8) protocol_identifier_;
     std::optional<LocationInformationProtocol> location_information_protocol_;

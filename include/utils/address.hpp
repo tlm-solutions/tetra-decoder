@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "nlohmann_std_optional.hpp"    // IWYU pragma: keep
+#include "nlohmann_unsigned_bitint.hpp" // IWYU pragma: keep
 #include "utils/bit_vector.hpp"
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -85,6 +87,9 @@ class Address {
 
     friend auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
 
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Address, country_code_, network_code_, sna_, ssi_, event_label_, ussi_, smi_,
+                                   usage_marker_)
+
   private:
     std::optional<unsigned _BitInt(10)> country_code_;
     std::optional<unsigned _BitInt(14)> network_code_;
@@ -105,39 +110,5 @@ template <> struct hash<Address> {
     }
 };
 } // namespace std
-
-namespace nlohmann {
-template <> struct adl_serializer<Address> {
-    static void to_json(json& j, Address address_type) {
-        j = json::object();
-        std::cout << address_type << std::endl << std::flush;
-
-        if (address_type.country_code()) {
-            j["country_code"] = static_cast<unsigned>(address_type.country_code().value());
-        }
-        if (address_type.network_code()) {
-            j["network_code"] = static_cast<unsigned>(address_type.network_code().value());
-        }
-        if (address_type.sna()) {
-            j["sna"] = static_cast<unsigned>(address_type.sna().value());
-        }
-        if (address_type.ssi()) {
-            j["ssi"] = static_cast<unsigned>(address_type.ssi().value());
-        }
-        if (address_type.event_label()) {
-            j["event_label"] = static_cast<unsigned>(address_type.event_label().value());
-        }
-        if (address_type.ussi()) {
-            j["ussi"] = static_cast<unsigned>(address_type.ussi().value());
-        }
-        if (address_type.smi()) {
-            j["smi"] = static_cast<unsigned>(address_type.smi().value());
-        }
-        if (address_type.usage_marker()) {
-            j["usage_marker"] = static_cast<unsigned>(address_type.usage_marker().value());
-        }
-    }
-};
-} // namespace nlohmann
 
 auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;

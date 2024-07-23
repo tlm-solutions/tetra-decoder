@@ -48,9 +48,11 @@ struct MobileLinkEntityPacket : public LogicalLinkControlPacket {
     MobileLinkEntityProtocolDiscriminator mle_protocol_;
     BitVector sdu_;
 
-    MobileLinkEntityPacket() = delete;
+    MobileLinkEntityPacket() = default;
 
     explicit MobileLinkEntityPacket(const LogicalLinkControlPacket& packet);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileLinkEntityPacket, mle_protocol_, sdu_)
 };
 
 auto operator<<(std::ostream& stream, const MobileLinkEntityPacket& mle) -> std::ostream&;

@@ -51,10 +51,12 @@ struct BasicLinkInformation {
     std::optional<unsigned _BitInt(1)> n_s_;
     std::optional<bool> fcs_good_;
 
-    BasicLinkInformation() = delete;
+    BasicLinkInformation() = default;
 
     /// construct a BasicLinkInformation from a BitVector
     explicit BasicLinkInformation(BitVector& data);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(BasicLinkInformation, basic_link_type_, n_r_, n_s_, fcs_good_)
 };
 
 auto operator<<(std::ostream& stream, const BasicLinkInformation& bli) -> std::ostream&;
@@ -65,9 +67,11 @@ struct LogicalLinkControlPacket : public UpperMacCPlaneSignallingPacket {
     /// The data that is passed from the Logical Link Control layer to the Mobile Link Entity
     BitVector tl_sdu_;
 
-    LogicalLinkControlPacket() = delete;
+    LogicalLinkControlPacket() = default;
 
     explicit LogicalLinkControlPacket(const UpperMacCPlaneSignallingPacket& packet);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(LogicalLinkControlPacket, basic_link_information_, tl_sdu_)
 };
 
 auto operator<<(std::ostream& stream, const LogicalLinkControlPacket& llc) -> std::ostream&;

@@ -9,9 +9,11 @@
 #pragma once
 
 #include "l3/mobile_link_entity_packet.hpp"
+#include "nlohmann_std_variant.hpp" // IWYU pragma: keep
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
 #include "utils/type234_parser.hpp"
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <variant>
 
@@ -296,13 +298,13 @@ struct SdsData {
     // This map may contain the "External subscriber number" and "DM-MS address"
     Type234Parser<CircuitModeControlEntityType3ElementIdentifiers>::Map optional_elements_;
 
-  private:
     SdsData() = default;
 
-  public:
     static auto from_d_sds_data(BitVector& data) -> SdsData;
 
     static auto from_u_sds_data(BitVector& data) -> SdsData;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(SdsData, area_selection_, address_, data_, optional_elements_)
 };
 
 auto operator<<(std::ostream& stream, const SdsData& sds) -> std::ostream&;
@@ -312,9 +314,11 @@ struct CircuitModeControlEntityPacket : public MobileLinkEntityPacket {
 
     std::optional<SdsData> sds_data_;
 
-    CircuitModeControlEntityPacket() = delete;
+    CircuitModeControlEntityPacket() = default;
 
     explicit CircuitModeControlEntityPacket(const MobileLinkEntityPacket& packet);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(CircuitModeControlEntityPacket, packet_type_, sds_data_)
 };
 
 auto operator<<(std::ostream& stream, const CircuitModeControlEntityPacket& cmce) -> std::ostream&;
