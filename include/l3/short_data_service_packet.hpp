@@ -23,8 +23,11 @@ struct ShortLocationReport {
     unsigned _BitInt(1) type_of_addition_data_;
     unsigned _BitInt(8) additional_data_;
 
-    ShortLocationReport() = delete;
+    ShortLocationReport() = default;
     explicit ShortLocationReport(BitVector& data);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ShortLocationReport, time_elapsed_, longitude_, latitude_, position_error_,
+                                   horizontal_velocity_, direction_of_travel_, type_of_addition_data_, additional_data_)
 };
 
 auto operator<<(std::ostream& stream, const ShortLocationReport& slr) -> std::ostream&;
@@ -33,9 +36,11 @@ struct LocationInformationProtocol {
     unsigned _BitInt(2) pdu_type_;
     std::optional<ShortLocationReport> short_location_report_;
 
-    LocationInformationProtocol() = delete;
+    LocationInformationProtocol() = default;
 
     explicit LocationInformationProtocol(BitVector& data);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(LocationInformationProtocol, pdu_type_, short_location_report_)
 };
 
 auto operator<<(std::ostream& stream, const LocationInformationProtocol& lip) -> std::ostream&;
@@ -46,9 +51,11 @@ struct ShortDataServicePacket : public CircuitModeControlEntityPacket {
 
     static constexpr const std::size_t kLocationInformationProtocolIdentifier = 0b00001010;
 
-    ShortDataServicePacket() = delete;
+    ShortDataServicePacket() = default;
 
     explicit ShortDataServicePacket(const CircuitModeControlEntityPacket& packet);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ShortDataServicePacket, protocol_identifier_, location_information_protocol_)
 };
 
 auto operator<<(std::ostream& stream, const ShortDataServicePacket& sds) -> std::ostream&;
