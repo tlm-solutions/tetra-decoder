@@ -8,10 +8,14 @@
 
 #pragma once
 
+#include "l2/logical_link_control_packet.hpp"
 #include "l2/slot.hpp"
-#include "l3/short_data_service_packet.hpp"
+#include <nlohmann/json_fwd.hpp>
 
 struct BorzoiConverter {
-    static auto to_json(ShortDataServicePacket* packet) -> nlohmann::json;
+    static constexpr const int kPacketApiVersion = 0;
+
     static auto to_json(const Slots& slots) -> nlohmann::json;
+
+    static auto to_json(const std::unique_ptr<LogicalLinkControlPacket>& packet) -> nlohmann::json;
 };

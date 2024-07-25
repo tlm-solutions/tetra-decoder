@@ -41,23 +41,13 @@ BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLi
 BorzoiSender::~BorzoiSender() { worker_thread_.join(); }
 
 void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet) {
-    if (auto* sds = dynamic_cast<ShortDataServicePacket*>(packet.get())) {
-        nlohmann::json json;
-        try {
-            json = BorzoiConverter::to_json(sds);
-            json["station"] = borzoi_uuid_;
-            /// TODO: add json to post request
-        } catch (std::exception& e) {
-            std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
-            return;
-        }
-        cpr::Response resp =
-            cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
+    nlohmann::json json = BorzoiConverter::to_json(packet);
+    cpr::Response resp =
+        cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
-        if (resp.status_code != 200) {
-            std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
-                      << resp.error.message << std::endl;
-        }
+    if (resp.status_code != 200) {
+        std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
+                  << resp.error.message << std::endl;
     }
 }
 

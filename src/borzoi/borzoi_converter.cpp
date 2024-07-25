@@ -7,8 +7,10 @@
  */
 
 #include "borzoi/borzoi_converter.hpp"
-#include "utils/bit_vector.hpp"
-#include <nlohmann/json_fwd.hpp>
+#include "l3/circuit_mode_control_entity_packet.hpp"
+#include "l3/mobile_link_entity_packet.hpp"
+#include "l3/mobile_management_packet.hpp"
+#include "l3/short_data_service_packet.hpp"
 
 inline static auto get_time() -> std::string {
     auto t = std::time(nullptr);
@@ -18,47 +20,39 @@ inline static auto get_time() -> std::string {
     return ss.str();
 }
 
-auto BorzoiConverter::to_json(ShortDataServicePacket* packet) -> nlohmann::json {
-    auto message = nlohmann::json::object();
-    /// TODO: this may throw
-    message["source_ssi"] = static_cast<unsigned>(packet->sds_data_->address_.ssi().value());
-    message["destination_ssi"] = static_cast<unsigned>(packet->address_.ssi().value());
-    message["protocol_identifier"] = static_cast<unsigned>(packet->protocol_identifier_);
-    message["telegram_type"] = "SDS";
-    message["data"] = nlohmann::json::array();
-    auto data = BitVector(packet->sds_data_->data_);
-    while (data.bits_left() >= 8) {
-        unsigned bits = data.take<8>();
-        message["data"].push_back(bits);
-    }
-    message["arbitrary"] = nlohmann::json::object();
-    if (data.bits_left() > 0) {
-        message["arbitrary"]["bits_in_last_byte"] = data.bits_left();
-        message["data"].push_back(data.take_all());
-    } else {
-        message["arbitrary"]["bits_in_last_byte"] = 8;
-    }
-    message["arbitrary"]["optional_fields"] = nlohmann::json::object();
-    for (const auto& [key, value] : packet->sds_data_->optional_elements_) {
-        auto& vec = message["arbitrary"]["optional_fields"][to_string(key)];
-        vec = nlohmann::json::object();
-        vec["repeated_elements"] = value.repeated_elements;
-        vec["unparsed_bits"] = nlohmann::json::array();
-        auto data = BitVector(value.unparsed_bits);
-        while (data.bits_left() >= 8) {
-            unsigned bits = data.take<8>();
-            vec["unparsed_bits"].push_back(bits);
-        }
-        if (data.bits_left() > 0) {
-            vec["bits_in_last_byte"] = data.bits_left();
-            vec["unparsed_bits"].push_back(data.take_all());
-        } else {
-            vec["bits_in_last_byte"] = 8;
-        }
-    }
-    message["time"] = get_time();
+auto BorzoiConverter::to_json(const std::unique_ptr<LogicalLinkControlPacket>& packet) -> nlohmann::json {
+    nlohmann::json data = nlohmann::json::object();
 
-    return message;
+    data["protocol_version"] = BorzoiConverter::kPacketApiVersion;
+    data["time"] = get_time();
+
+    if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(packet.get())) {
+        if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(mle)) {
+            if (auto* sds = dynamic_cast<ShortDataServicePacket*>(mle)) {
+                // Emit ShortDataServicePacket packet to json
+                data["key"] = "ShortDataServicePacket";
+                data["value"] = *sds;
+            } else {
+                // Emit CircuitModeControlEntityPacket packet to json
+                data["key"] = "CircuitModeControlEntityPacket";
+                data["value"] = *cmce;
+            }
+        } else if (auto* mm = dynamic_cast<MobileManagementPacket*>(mle)) {
+            // Emit MobileManagementPacket packet to json
+            data["key"] = "MobileManagementPacket";
+            data["value"] = *mm;
+        } else {
+            // Emit MobileLinkEntityPacket packet to json
+            data["key"] = "MobileLinkEntityPacket";
+            data["value"] = *mle;
+        }
+    } else {
+        // Emit LogicalLinkControlPacket packet to json
+        data["key"] = "LogicalLinkControlPacket";
+        data["value"] = *packet;
+    }
+
+    return data;
 }
 
 auto BorzoiConverter::to_json(const Slots& slots) -> nlohmann::json {
