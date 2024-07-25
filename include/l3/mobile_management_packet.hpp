@@ -283,7 +283,7 @@ auto operator<<(std::ostream& stream, const MobileManagementDownlinkAttachDetach
     -> std::ostream&;
 
 struct MobileManagementDownlinkLocationUpdateAccept {
-    LocationUpdateAcceptType location_update_accept_type_;
+    LocationUpdateAcceptType location_update_accept_type_ = LocationUpdateAcceptType(0);
     Address address_;
     std::optional<unsigned _BitInt(16)> subscriber_class_;
     std::optional<unsigned _BitInt(14)> energy_saving_information_;
@@ -313,7 +313,12 @@ struct MobileManagementPacket : public MobileLinkEntityPacket {
 
     explicit MobileManagementPacket(const MobileLinkEntityPacket& packet);
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileManagementPacket, packet_type_, downlink_location_update_accept_,
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileManagementPacket, burst_type_, logical_channel_, type_, encrypted_, address_,
+                                   fragmentation_, fragmentation_on_stealling_channel_, reservation_requirement_,
+                                   tm_sdu_, encryption_mode_, immediate_napping_permission_flag_,
+                                   basic_slot_granting_element_, position_of_grant_, channel_allocation_element_,
+                                   random_access_flag_, power_control_element_, basic_link_information_, tl_sdu_,
+                                   mle_protocol_, sdu_, packet_type_, downlink_location_update_accept_,
                                    downlink_attach_detach_group_identity_acknowledgement_)
 };
 

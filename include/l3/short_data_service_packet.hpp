@@ -55,7 +55,13 @@ struct ShortDataServicePacket : public CircuitModeControlEntityPacket {
 
     explicit ShortDataServicePacket(const CircuitModeControlEntityPacket& packet);
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ShortDataServicePacket, protocol_identifier_, location_information_protocol_)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ShortDataServicePacket, burst_type_, logical_channel_, type_, encrypted_, address_,
+                                   fragmentation_, fragmentation_on_stealling_channel_, reservation_requirement_,
+                                   tm_sdu_, encryption_mode_, immediate_napping_permission_flag_,
+                                   basic_slot_granting_element_, position_of_grant_, channel_allocation_element_,
+                                   random_access_flag_, power_control_element_, basic_link_information_, tl_sdu_,
+                                   mle_protocol_, sdu_, packet_type_, sds_data_, protocol_identifier_,
+                                   location_information_protocol_)
 };
 
 auto operator<<(std::ostream& stream, const ShortDataServicePacket& sds) -> std::ostream&;
