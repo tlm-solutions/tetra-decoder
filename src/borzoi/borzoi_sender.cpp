@@ -13,6 +13,7 @@
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
+#include "nlohmann_std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
 #include <cpr/payload.h>
@@ -41,7 +42,7 @@ BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLi
 BorzoiSender::~BorzoiSender() { worker_thread_.join(); }
 
 void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet) {
-    nlohmann::json json = BorzoiConverter::to_json(packet);
+    nlohmann::json json = packet;
     cpr::Response resp =
         cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 

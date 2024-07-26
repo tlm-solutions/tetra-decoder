@@ -20,41 +20,6 @@ inline static auto get_time() -> std::string {
     return ss.str();
 }
 
-auto BorzoiConverter::to_json(const std::unique_ptr<LogicalLinkControlPacket>& packet) -> nlohmann::json {
-    nlohmann::json data = nlohmann::json::object();
-
-    data["protocol_version"] = BorzoiConverter::kPacketApiVersion;
-    data["time"] = get_time();
-
-    if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(packet.get())) {
-        if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(mle)) {
-            if (auto* sds = dynamic_cast<ShortDataServicePacket*>(mle)) {
-                // Emit ShortDataServicePacket packet to json
-                data["key"] = "ShortDataServicePacket";
-                data["value"] = *sds;
-            } else {
-                // Emit CircuitModeControlEntityPacket packet to json
-                data["key"] = "CircuitModeControlEntityPacket";
-                data["value"] = *cmce;
-            }
-        } else if (auto* mm = dynamic_cast<MobileManagementPacket*>(mle)) {
-            // Emit MobileManagementPacket packet to json
-            data["key"] = "MobileManagementPacket";
-            data["value"] = *mm;
-        } else {
-            // Emit MobileLinkEntityPacket packet to json
-            data["key"] = "MobileLinkEntityPacket";
-            data["value"] = *mle;
-        }
-    } else {
-        // Emit LogicalLinkControlPacket packet to json
-        data["key"] = "LogicalLinkControlPacket";
-        data["value"] = *packet;
-    }
-
-    return data;
-}
-
 auto BorzoiConverter::to_json(const Slots& slots) -> nlohmann::json {
     auto message = nlohmann::json::object();
 
