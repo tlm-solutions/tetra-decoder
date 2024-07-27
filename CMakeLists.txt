@@ -11,7 +11,6 @@ add_executable(tetra-decoder
                src/bit_stream_decoder.cpp
                src/iq_stream_decoder.cpp
                src/prometheus.cpp
-               src/borzoi/borzoi_converter.cpp
                src/borzoi/borzoi_sender.cpp
                src/l2/access_assignment_channel.cpp
                src/l2/broadcast_synchronization_channel.cpp        

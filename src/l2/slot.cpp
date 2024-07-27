@@ -17,11 +17,11 @@ auto operator<<(std::ostream& stream, const Slot& slot) -> std::ostream& {
     return stream;
 }
 
-Slots::Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot)
+Slots::Slots(BurstType burst_type, SlotType slot_type, Slot&& slot)
     : burst_type_(burst_type)
     , slot_type_(slot_type)
     , slots_({std::move(slot)}) {
-    if (slot_type_ == SlotsType::kTwoSubslots) {
+    if (slot_type_ == SlotType::kTwoSubslots) {
         throw std::runtime_error("Two subslots need to to have two subslots");
     }
 
@@ -38,11 +38,11 @@ Slots::Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot)
 };
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-Slots::Slots(BurstType burst_type, SlotsType slot_type, Slot&& first_slot, Slot&& second_slot)
+Slots::Slots(BurstType burst_type, SlotType slot_type, Slot&& first_slot, Slot&& second_slot)
     : burst_type_(burst_type)
     , slot_type_(slot_type)
     , slots_({std::move(first_slot), std::move(second_slot)}) {
-    if (slot_type_ != SlotsType::kTwoSubslots) {
+    if (slot_type_ != SlotType::kTwoSubslots) {
         throw std::runtime_error("Only two subslots is allowed to have two subslots");
     }
 
@@ -131,7 +131,7 @@ auto Slots::has_crc_error() -> bool {
 auto operator<<(std::ostream& stream, const Slots& slots) -> std::ostream& {
     stream << "Slots:" << std::endl;
     stream << "  [BurstType] " << to_string(slots.burst_type_) << std::endl;
-    stream << "  [SlotsType] " << to_string(slots.slot_type_) << std::endl;
+    stream << "  [SlotType] " << to_string(slots.slot_type_) << std::endl;
     for (const auto& slot : slots.slots_) {
         stream << "  Slot:" << std::endl;
         stream << slot;

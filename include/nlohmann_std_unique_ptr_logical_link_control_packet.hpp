@@ -17,19 +17,10 @@
 
 static constexpr const int kPacketApiVersion = 0;
 
-inline static auto get_time() -> std::string {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-    std::stringstream ss;
-    ss << std::put_time(&tm, "%FT%T%z");
-    return ss.str();
-}
-
 namespace nlohmann {
 template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
     static void to_json(json& j, const std::unique_ptr<LogicalLinkControlPacket>& packet) {
         j["protocol_version"] = kPacketApiVersion;
-        j["time"] = get_time();
 
         if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(packet.get())) {
             if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(mle)) {

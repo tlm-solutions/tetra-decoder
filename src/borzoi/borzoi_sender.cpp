@@ -7,22 +7,35 @@
  */
 
 #include "borzoi/borzoi_sender.hpp"
-#include "borzoi/borzoi_converter.hpp"
 #include "l2/upper_mac_packet.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
+#include "nlohmann_slots.hpp"                                      // IWYU pragma: keep
 #include "nlohmann_std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
 #include <cpr/payload.h>
-#include <exception>
 #include <utility>
 
 #if defined(__linux__)
 #include <pthread.h>
 #endif
+
+inline static auto get_time() -> std::string {
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    std::stringstream ss;
+    ss << std::put_time(&tm, "%FT%T%z");
+    return ss.str();
+}
+
+inline static auto with_time_and_uuid(nlohmann::json& j, const std::string& borzoi_uuid) -> nlohmann::json {
+    j["time"] = get_time();
+    j["station"] = borzoi_uuid;
+    return j;
+}
 
 BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLinkControlPacket>, Slots>>& queue,
                            std::atomic_bool& termination_flag, const std::string& borzoi_url, std::string borzoi_uuid)
@@ -43,8 +56,8 @@ BorzoiSender::~BorzoiSender() { worker_thread_.join(); }
 
 void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet) {
     nlohmann::json json = packet;
-    cpr::Response resp =
-        cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
+    cpr::Response resp = cpr::Post(borzoi_url_sds_, cpr::Body{with_time_and_uuid(json, borzoi_uuid_).dump()},
+                                   cpr::Header{{"Content-Type", "application/json"}});
 
     if (resp.status_code != 200) {
         std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
@@ -53,17 +66,9 @@ void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& 
 }
 
 void BorzoiSender::send_failed_slots(const Slots& slots) {
-    nlohmann::json json;
-    try {
-        json = BorzoiConverter::to_json(slots);
-        json["station"] = borzoi_uuid_;
-        /// TODO: add json to post request
-    } catch (std::exception& e) {
-        std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
-        return;
-    }
-    cpr::Response resp =
-        cpr::Post(borzoi_url_failed_slots_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
+    nlohmann::json json = slots;
+    cpr::Response resp = cpr::Post(borzoi_url_failed_slots_, cpr::Body{with_time_and_uuid(json, borzoi_uuid_).dump()},
+                                   cpr::Header{{"Content-Type", "application/json"}});
 
     if (resp.status_code != 200) {
         std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
