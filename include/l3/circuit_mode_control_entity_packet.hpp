@@ -9,7 +9,7 @@
 #pragma once
 
 #include "l3/mobile_link_entity_packet.hpp"
-#include "nlohmann_std_variant.hpp" // IWYU pragma: keep
+#include "nlohmann/std_variant.hpp" // IWYU pragma: keep
 #include "utils/address.hpp"
 #include "utils/bit_vector.hpp"
 #include "utils/type234_parser.hpp"

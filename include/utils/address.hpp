@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "nlohmann_std_optional.hpp"    // IWYU pragma: keep
-#include "nlohmann_unsigned_bitint.hpp" // IWYU pragma: keep
+#include "nlohmann/std_optional.hpp"    // IWYU pragma: keep
+#include "nlohmann/unsigned_bitint.hpp" // IWYU pragma: keep
 #include "utils/bit_vector.hpp"
 #include <iostream>
 #include <nlohmann/json.hpp>

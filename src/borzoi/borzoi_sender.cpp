@@ -12,8 +12,8 @@
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
-#include "nlohmann_slots.hpp"                                      // IWYU pragma: keep
-#include "nlohmann_std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
+#include "nlohmann/slots.hpp"                                      // IWYU pragma: keep
+#include "nlohmann/std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
 #include <cpr/payload.h>
