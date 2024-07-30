@@ -268,7 +268,7 @@ constexpr auto to_string(GroupIdentityAcceptReject type) -> const char* {
 };
 
 struct MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement {
-    GroupIdentityAcceptReject group_identity_accept_reject_;
+    GroupIdentityAcceptReject group_identity_accept_reject_{};
     Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>::Map optional_elements_;
 
     MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement() = default;

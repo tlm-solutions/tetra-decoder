@@ -113,9 +113,9 @@ struct ConcreateSlot {
 class Slots {
   private:
     /// which burst type ths slots originated from
-    BurstType burst_type_;
+    BurstType burst_type_{};
     /// the number and types of slots
-    SlotType slot_type_;
+    SlotType slot_type_{};
     /// The slots, either one half or full slot or two half slots.
     /// We are doing accesses that would normally not be const but are in this case, because we make assumption about
     /// the content of this vector based on the constructor used to initialize this class.

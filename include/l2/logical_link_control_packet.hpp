@@ -46,7 +46,7 @@ constexpr auto to_string(BasicLinkType type) noexcept -> const char* {
 };
 
 struct BasicLinkInformation {
-    BasicLinkType basic_link_type_;
+    BasicLinkType basic_link_type_{};
     std::optional<unsigned _BitInt(1)> n_r_;
     std::optional<unsigned _BitInt(1)> n_s_;
     std::optional<bool> fcs_good_;

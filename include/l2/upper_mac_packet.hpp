@@ -159,9 +159,9 @@ struct ExtendedServiceBroadcastSection4 {
 auto operator<<(std::ostream& stream, const ExtendedServiceBroadcastSection4& element) -> std::ostream&;
 
 struct ExtendedServiceBroadcast {
-    unsigned _BitInt(8) security_information_;
-    unsigned _BitInt(2) sdstl_addressing_method_;
-    unsigned _BitInt(1) gck_supported_;
+    unsigned _BitInt(8) security_information_{};
+    unsigned _BitInt(2) sdstl_addressing_method_{};
+    unsigned _BitInt(1) gck_supported_{};
 
     std::optional<ExtendedServiceBroadcastSection1> section1_;
     std::optional<ExtendedServiceBroadcastSection2> section2_;
@@ -181,16 +181,16 @@ struct ExtendedServiceBroadcast {
 auto operator<<(std::ostream& stream, const ExtendedServiceBroadcast& element) -> std::ostream&;
 
 struct SystemInfo {
-    unsigned _BitInt(12) main_carrier_;
-    unsigned _BitInt(4) frequency_band_;
-    unsigned _BitInt(2) offset_;
-    unsigned _BitInt(3) duplex_spacing_field_;
-    unsigned _BitInt(1) reverse_operation_;
-    unsigned _BitInt(2) number_secondary_control_channels_main_carrier_;
-    unsigned _BitInt(3) ms_txpwr_max_cell_;
-    unsigned _BitInt(4) rxlev_access_min_;
-    unsigned _BitInt(4) access_parameter_;
-    unsigned _BitInt(4) radio_downlink_timeout_;
+    unsigned _BitInt(12) main_carrier_{};
+    unsigned _BitInt(4) frequency_band_{};
+    unsigned _BitInt(2) offset_{};
+    unsigned _BitInt(3) duplex_spacing_field_{};
+    unsigned _BitInt(1) reverse_operation_{};
+    unsigned _BitInt(2) number_secondary_control_channels_main_carrier_{};
+    unsigned _BitInt(3) ms_txpwr_max_cell_{};
+    unsigned _BitInt(4) rxlev_access_min_{};
+    unsigned _BitInt(4) access_parameter_{};
+    unsigned _BitInt(4) radio_downlink_timeout_{};
     std::optional<unsigned _BitInt(16)> hyper_frame_number_;
     std::optional<unsigned _BitInt(16)> common_cipher_key_identifier_or_static_cipher_key_version_number_;
     std::optional<unsigned _BitInt(20)> even_multi_frame_definition_for_ts_mode_;
@@ -198,19 +198,19 @@ struct SystemInfo {
     std::optional<AccessCodeDefinition> defaults_for_access_code_a_;
     std::optional<ExtendedServiceBroadcast> extended_service_broadcast_;
 
-    unsigned _BitInt(14) location_area_;
-    unsigned _BitInt(16) subscriber_class_;
-    unsigned _BitInt(1) registration_;
-    unsigned _BitInt(1) deregistration_;
-    unsigned _BitInt(1) priority_cell_;
-    unsigned _BitInt(1) minimum_mode_service_;
-    unsigned _BitInt(1) migration_;
-    unsigned _BitInt(1) system_wide_service_;
-    unsigned _BitInt(1) tetra_voice_service_;
-    unsigned _BitInt(1) circuit_mode_data_service_;
-    unsigned _BitInt(1) sndcp_service_;
-    unsigned _BitInt(1) air_interface_encryption_service_;
-    unsigned _BitInt(1) advanced_link_supported_;
+    unsigned _BitInt(14) location_area_{};
+    unsigned _BitInt(16) subscriber_class_{};
+    unsigned _BitInt(1) registration_{};
+    unsigned _BitInt(1) deregistration_{};
+    unsigned _BitInt(1) priority_cell_{};
+    unsigned _BitInt(1) minimum_mode_service_{};
+    unsigned _BitInt(1) migration_{};
+    unsigned _BitInt(1) system_wide_service_{};
+    unsigned _BitInt(1) tetra_voice_service_{};
+    unsigned _BitInt(1) circuit_mode_data_service_{};
+    unsigned _BitInt(1) sndcp_service_{};
+    unsigned _BitInt(1) air_interface_encryption_service_{};
+    unsigned _BitInt(1) advanced_link_supported_{};
 
     SystemInfo() = default;
     /// construct a SystemInfo from a BitVector
@@ -237,9 +237,9 @@ struct SystemInfo {
 auto operator<<(std::ostream& stream, const SystemInfo& element) -> std::ostream&;
 
 struct AccessDefine {
-    unsigned _BitInt(1) common_or_assigned_control_channel_flag_;
-    unsigned _BitInt(2) access_code_;
-    AccessCodeDefinition access_code_definition_;
+    unsigned _BitInt(1) common_or_assigned_control_channel_flag_{};
+    unsigned _BitInt(2) access_code_{};
+    AccessCodeDefinition access_code_definition_{};
     std::optional<unsigned _BitInt(16)> subscriber_class_bitmap_;
     std::optional<unsigned _BitInt(24)> gssi_;
 
@@ -257,9 +257,9 @@ auto operator<<(std::ostream& stream, const AccessDefine& element) -> std::ostre
 
 struct UpperMacBroadcastPacket {
     /// the type of the logical channel on which this packet is sent
-    LogicalChannel logical_channel_;
+    LogicalChannel logical_channel_{};
     /// the type of the mac packet
-    MacPacketType type_;
+    MacPacketType type_{};
 
     std::optional<SystemInfo> sysinfo_;
     std::optional<AccessDefine> access_define_;
@@ -272,6 +272,9 @@ struct UpperMacBroadcastPacket {
 auto operator<<(std::ostream& stream, const UpperMacBroadcastPacket& packet) -> std::ostream&;
 
 /// reconstruct the number of bits from the length indication field
+// NOLINTBEGIN(readability-identifier-naming)
+// NOLINTBEGIN(readability-identifier-length)
+// NOLINTBEGIN(readability-magic-numbers)
 struct LengthIndication {
     // Y1 and Z1 octets, for a PDU sent in a subslot (i.e. MAC-ACCESS or MAC-END-HU).
     // Y2 and Z2 octets, for a PDU sent in a slot (i.e. MAC-DATA, MAC-RESOURCE or MAC-END).
@@ -322,12 +325,15 @@ struct LengthIndication {
         return (18 * Y2 + (length_indication - 18) * Z2);
     };
 };
+// NOLINTEND(readability-magic-numbers)
+// NOLINTEND(readability-identifier-length)
+// NOLINTEND(readability-identifier-naming)
 
 struct ExtendedCarrierNumbering {
-    unsigned _BitInt(4) frequency_band_;
-    unsigned _BitInt(2) offset_;
-    unsigned _BitInt(3) duplex_spacing_;
-    unsigned _BitInt(1) reverse_operation_;
+    unsigned _BitInt(4) frequency_band_{};
+    unsigned _BitInt(2) offset_{};
+    unsigned _BitInt(3) duplex_spacing_{};
+    unsigned _BitInt(1) reverse_operation_{};
 
     ExtendedCarrierNumbering() = default;
     /// construct a ExtendedCarrierNumbering from a BitVector
@@ -342,22 +348,22 @@ struct ExtendedCarrierNumbering {
 auto operator<<(std::ostream& stream, const ExtendedCarrierNumbering& element) -> std::ostream&;
 
 struct AugmentedChannelAllocation {
-    unsigned _BitInt(2) up_downlink_assigned_;
-    unsigned _BitInt(3) bandwidth_;
+    unsigned _BitInt(2) up_downlink_assigned_{};
+    unsigned _BitInt(3) bandwidth_{};
 
-    unsigned _BitInt(3) modulation_mode_;
+    unsigned _BitInt(3) modulation_mode_{};
     std::optional<unsigned _BitInt(3)> maximum_uplink_qam_modulation_level_;
 
-    unsigned _BitInt(3) conforming_channel_status_;
-    unsigned _BitInt(4) bs_link_imbalance_;
-    unsigned _BitInt(5) bs_transmit_power_relative_to_main_carrier_;
+    unsigned _BitInt(3) conforming_channel_status_{};
+    unsigned _BitInt(4) bs_link_imbalance_{};
+    unsigned _BitInt(5) bs_transmit_power_relative_to_main_carrier_{};
 
-    unsigned _BitInt(2) napping_status_;
+    unsigned _BitInt(2) napping_status_{};
     std::optional<unsigned _BitInt(11)> napping_information_;
 
     std::optional<unsigned _BitInt(16)> conditional_element_a_;
     std::optional<unsigned _BitInt(16)> conditional_element_b_;
-    unsigned _BitInt(1) further_augmentation_flag_;
+    unsigned _BitInt(1) further_augmentation_flag_{};
 
     AugmentedChannelAllocation() = default;
     /// construct a AugmentedChannelAllocation from a BitVector
@@ -374,16 +380,16 @@ struct AugmentedChannelAllocation {
 auto operator<<(std::ostream& stream, const AugmentedChannelAllocation& element) -> std::ostream&;
 
 struct ChannelAllocationElement {
-    unsigned _BitInt(2) allocation_type_;
-    unsigned _BitInt(4) timeslot_assigned_;
-    unsigned _BitInt(2) up_downlink_assigned_;
-    unsigned _BitInt(1) clch_permission_;
-    unsigned _BitInt(1) cell_change_flag_;
+    unsigned _BitInt(2) allocation_type_{};
+    unsigned _BitInt(4) timeslot_assigned_{};
+    unsigned _BitInt(2) up_downlink_assigned_{};
+    unsigned _BitInt(1) clch_permission_{};
+    unsigned _BitInt(1) cell_change_flag_{};
 
-    unsigned _BitInt(12) carrier_number_;
+    unsigned _BitInt(12) carrier_number_{};
     std::optional<ExtendedCarrierNumbering> extended_carrier_numbering_;
 
-    unsigned _BitInt(2) monitoring_pattern_;
+    unsigned _BitInt(2) monitoring_pattern_{};
     std::optional<unsigned _BitInt(2)> frame18_monitoring_pattern_;
 
     std::optional<AugmentedChannelAllocation> augmented_channel_allocation_;
@@ -404,11 +410,11 @@ auto operator<<(std::ostream& stream, const ChannelAllocationElement& element) -
 
 struct UpperMacCPlaneSignallingPacket {
     /// the burst type which was used to send this pavket
-    BurstType burst_type_;
+    BurstType burst_type_{};
     /// the type of the logical channel on which this packet is sent
-    LogicalChannel logical_channel_;
+    LogicalChannel logical_channel_{};
     /// the type of the mac packet
-    MacPacketType type_;
+    MacPacketType type_{};
 
     /// Is the content of the packet encrypted
     bool encrypted_ = false;
