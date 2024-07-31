@@ -46,8 +46,9 @@ template <typename... Ts> struct adl_serializer<std::variant<Ts...>> {
                 var = std::variant<Ts...>(typename std::tuple_element<3, std::tuple<Ts...>>::type(variant));
             }
         }
-
-        throw std::runtime_error("Cannot deserialize a std::variant with more than four variants.");
+        if constexpr (sizeof...(Ts) > 4) {
+            throw std::runtime_error("Cannot deserialize a std::variant with more than four variants.");
+        }
     }
 };
 } // namespace nlohmann

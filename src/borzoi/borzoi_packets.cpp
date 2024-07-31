@@ -7,6 +7,7 @@
  */
 
 #include "borzoi/borzoi_packets.hpp"
+#include "utils/ostream_std_unique_ptr_logical_link_control.hpp"
 
 inline static auto get_time() -> std::string {
     auto t = std::time(nullptr);
@@ -28,3 +29,31 @@ BorzoiSendTetraSlots::BorzoiSendTetraSlots(const Slots& slots, std::string borzo
     , slots(slots) {
     time = get_time();
 }
+
+auto operator<<(std::ostream& stream, const BorzoiSendTetraPacket& packet) -> std::ostream& {
+    stream << packet.time << std::endl;
+    stream << packet.station << std::endl;
+    stream << packet.packet << std::endl;
+    return stream;
+};
+
+auto operator<<(std::ostream& stream, const BorzoiReceiveTetraPacket& packet) -> std::ostream& {
+    stream << packet.time << std::endl;
+    stream << packet.station << std::endl;
+    stream << packet.packet << std::endl;
+    return stream;
+};
+
+auto operator<<(std::ostream& stream, const BorzoiSendTetraSlots& packet) -> std::ostream& {
+    stream << packet.time << std::endl;
+    stream << packet.station << std::endl;
+    stream << packet.slots << std::endl;
+    return stream;
+};
+
+auto operator<<(std::ostream& stream, const BorzoiReceiveTetraSlots& packet) -> std::ostream& {
+    stream << packet.time << std::endl;
+    stream << packet.station << std::endl;
+    stream << packet.slots << std::endl;
+    return stream;
+};

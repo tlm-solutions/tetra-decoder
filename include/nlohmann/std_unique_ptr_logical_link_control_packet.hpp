@@ -50,7 +50,7 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
     }
 
     static void from_json(const json& j, std::unique_ptr<LogicalLinkControlPacket>& packet) {
-        auto protocol_version = j["protocol_version"].template get<int>();
+        auto protocol_version = std::stoi(j["protocol_version"].template get<std::string>());
         if (protocol_version != kPacketApiVersion) {
             throw std::runtime_error("Cannot process packets different API version.");
         }
@@ -60,14 +60,14 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
         if (key == "LogicalLinkControlPacket") {
             packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<LogicalLinkControlPacket>());
         } else if (key == "MobileLinkEntityPacket") {
-            packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<MobileLinkEntityPacket>());
+            packet = std::make_unique<MobileLinkEntityPacket>(j["value"].template get<MobileLinkEntityPacket>());
         } else if (key == "MobileManagementPacket") {
-            packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<MobileManagementPacket>());
+            packet = std::make_unique<MobileManagementPacket>(j["value"].template get<MobileManagementPacket>());
         } else if (key == "CircuitModeControlEntityPacket") {
-            packet =
-                std::make_unique<LogicalLinkControlPacket>(j["value"].template get<CircuitModeControlEntityPacket>());
+            packet = std::make_unique<CircuitModeControlEntityPacket>(
+                j["value"].template get<CircuitModeControlEntityPacket>());
         } else if (key == "ShortDataServicePacket") {
-            packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<ShortDataServicePacket>());
+            packet = std::make_unique<ShortDataServicePacket>(j["value"].template get<ShortDataServicePacket>());
         } else {
             throw std::runtime_error("Unknown packet type: " + key);
         }

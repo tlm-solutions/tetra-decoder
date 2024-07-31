@@ -1,0 +1,6 @@
+# Here we create an executable for each experiment and link it to the rest of the software.
+
+add_executable(packet-parser-example
+               src/experiments/packet_parser_example.cpp)
+
+target_link_libraries(packet-parser-example tetra-decoder-library)
