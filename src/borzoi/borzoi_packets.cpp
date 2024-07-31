@@ -7,7 +7,7 @@
  */
 
 #include "borzoi/borzoi_packets.hpp"
-#include "utils/ostream_std_unique_ptr_logical_link_control.hpp"
+#include "utils/ostream_std_unique_ptr_logical_link_control_packet.hpp"
 
 inline static auto get_time() -> std::string {
     auto t = std::time(nullptr);

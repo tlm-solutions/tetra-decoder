@@ -8,9 +8,9 @@
 
 #include "borzoi/borzoi_sender.hpp"
 #include "borzoi/borzoi_packets.hpp"
-#include "nlohmann/borzoi_send_tetra_packet.hpp"                 // IWYU pragma: keep
-#include "nlohmann/borzoi_send_tetra_slots.hpp"                  // IWYU pragma: keep
-#include "utils/ostream_std_unique_ptr_logical_link_control.hpp" // IWYU pragma: keep
+#include "nlohmann/borzoi_send_tetra_packet.hpp"                        // IWYU pragma: keep
+#include "nlohmann/borzoi_send_tetra_slots.hpp"                         // IWYU pragma: keep
+#include "utils/ostream_std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
 #include <cpr/payload.h>
