@@ -1,3 +1,6 @@
 [submodule "lib/ViterbiDecoderCpp"]
 	path = lib/ViterbiDecoderCpp
 	url = https://github.com/FiendChain/ViterbiDecoderCpp.git
+[submodule "lib/rapidcsv"]
+	path = lib/rapidcsv
+	url = https://github.com/d99kris/rapidcsv.git

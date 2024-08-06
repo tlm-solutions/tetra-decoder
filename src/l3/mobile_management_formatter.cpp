@@ -7,6 +7,7 @@
  */
 
 #include "l3/mobile_management_packet.hpp"
+#include <bitset>
 
 auto operator<<(std::ostream& stream, const MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement& packet)
     -> std::ostream& {

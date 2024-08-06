@@ -78,7 +78,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
                                       LowerMacCoding::descramble(bkn2_input, bsc.scrambling_code), 101)));
 
-        slots = Slots(burst_type, SlotsType::kOneSubslot,
+        slots = Slots(burst_type, SlotType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
                           .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                           .data = BitVector(std::vector(bkn2_bits.cbegin(), bkn2_bits.cbegin() + 124)),
@@ -110,7 +110,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         if (aach.downlink_usage == DownlinkUsage::Traffic) {
             // Full slot traffic channel defined type 4 bits (only descrambling)
-            slots = Slots(burst_type, SlotsType::kFullSlot,
+            slots = Slots(burst_type, SlotType::kFullSlot,
                           Slot(LogicalChannelDataAndCrc{
                               .channel = LogicalChannel::kTrafficChannel,
                               .data = BitVector(std::vector(bkn1_descrambled.cbegin(), bkn1_descrambled.cend())),
@@ -119,7 +119,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         } else {
             // control channel
             // ✅done
-            slots = Slots(burst_type, SlotsType::kFullSlot,
+            slots = Slots(burst_type, SlotType::kFullSlot,
                           Slot(LogicalChannelDataAndCrc{
                               .channel = LogicalChannel::kSignallingChannelFull,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 268)),
@@ -162,7 +162,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
             // STCH + TCH
             // STCH + STCH
             slots =
-                Slots(burst_type, SlotsType::kTwoSubslots,
+                Slots(burst_type, SlotType::kTwoSubslots,
                       Slot(LogicalChannelDataAndCrc{
                           .channel = LogicalChannel::kStealingChannel,
                           .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124)),
@@ -181,7 +181,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         } else {
             // SCH/HD + SCH/HD
             // SCH/HD + BNCH
-            slots = Slots(burst_type, SlotsType::kTwoSubslots,
+            slots = Slots(burst_type, SlotType::kTwoSubslots,
                           Slot(LogicalChannelDataAndCrc{
                               .channel = LogicalChannel::kSignallingChannelHalfDownlink,
                               .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124)),
@@ -205,7 +205,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
                                       LowerMacCoding::descramble(cb_input, bsc.scrambling_code), 13)));
 
         // SCH/HU
-        slots = Slots(burst_type, SlotsType::kOneSubslot,
+        slots = Slots(burst_type, SlotType::kOneSubslot,
                       Slot(LogicalChannelDataAndCrc{
                           .channel = LogicalChannel::kSignallingChannelHalfUplink,
                           .data = BitVector(std::vector(cb_bits.cbegin(), cb_bits.cbegin() + 92)),
@@ -225,7 +225,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
         auto bkn1_bits = LowerMacCoding::viter_bi_decode_1614(
             viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(bkn1_descrambled, 103)));
 
-        slots = Slots(burst_type, SlotsType::kFullSlot,
+        slots = Slots(burst_type, SlotType::kFullSlot,
                       Slot({
                           LogicalChannelDataAndCrc{
                               .channel = LogicalChannel::kSignallingChannelFull,
@@ -260,7 +260,7 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
 
         // STCH + TCH
         // STCH + STCH
-        slots = Slots(burst_type, SlotsType::kTwoSubslots,
+        slots = Slots(burst_type, SlotType::kTwoSubslots,
                       Slot(LogicalChannelDataAndCrc{
                           .channel = LogicalChannel::kStealingChannel,
                           .data = BitVector(std::vector(bkn1_bits.cbegin(), bkn1_bits.cbegin() + 124)),

@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <nlohmann/json.hpp>
 #include <ostream>
 #include <vector>
 
@@ -113,6 +114,8 @@ class BitVector {
     };
 
     friend auto operator<<(std::ostream& stream, const BitVector& vec) -> std::ostream&;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(BitVector, data_, len_, read_offset_)
 
   private:
     template <std::size_t N>

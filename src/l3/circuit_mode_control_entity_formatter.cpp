@@ -7,6 +7,7 @@
  */
 
 #include "l3/circuit_mode_control_entity_packet.hpp"
+#include <bitset>
 
 auto operator<<(std::ostream& stream, const SdsData& sds) -> std::ostream& {
     if (sds.area_selection_) {

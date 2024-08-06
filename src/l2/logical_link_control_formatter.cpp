@@ -7,6 +7,7 @@
  */
 
 #include "l2/logical_link_control_packet.hpp"
+#include <bitset>
 
 auto operator<<(std::ostream& stream, const BasicLinkInformation& bli) -> std::ostream& {
     stream << "  Basic Link Information: " << to_string(bli.basic_link_type_);

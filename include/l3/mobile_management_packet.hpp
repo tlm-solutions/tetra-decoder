@@ -9,9 +9,9 @@
 #pragma once
 
 #include "l3/mobile_link_entity_packet.hpp"
+#include "nlohmann/std_variant.hpp" // IWYU pragma: keep
 #include "utils/bit_vector.hpp"
 #include "utils/type234_parser.hpp"
-#include <bitset>
 #include <optional>
 #include <variant>
 
@@ -268,19 +268,22 @@ constexpr auto to_string(GroupIdentityAcceptReject type) -> const char* {
 };
 
 struct MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement {
-    GroupIdentityAcceptReject group_identity_accept_reject_;
+    GroupIdentityAcceptReject group_identity_accept_reject_{};
     Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>::Map optional_elements_;
 
-    MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement() = delete;
+    MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement() = default;
 
     explicit MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement(BitVector&);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement,
+                                   group_identity_accept_reject_, group_identity_accept_reject_)
 };
 
 auto operator<<(std::ostream& stream, const MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement& packet)
     -> std::ostream&;
 
 struct MobileManagementDownlinkLocationUpdateAccept {
-    LocationUpdateAcceptType location_update_accept_type_;
+    LocationUpdateAcceptType location_update_accept_type_ = LocationUpdateAcceptType(0);
     Address address_;
     std::optional<unsigned _BitInt(16)> subscriber_class_;
     std::optional<unsigned _BitInt(14)> energy_saving_information_;
@@ -289,9 +292,13 @@ struct MobileManagementDownlinkLocationUpdateAccept {
 
     Type234Parser<MobileManagementDownlinkType34ElementIdentifiers>::Map optional_elements_;
 
-    MobileManagementDownlinkLocationUpdateAccept() = delete;
+    MobileManagementDownlinkLocationUpdateAccept() = default;
 
     explicit MobileManagementDownlinkLocationUpdateAccept(BitVector&);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileManagementDownlinkLocationUpdateAccept, location_update_accept_type_, address_,
+                                   subscriber_class_, energy_saving_information_, scch_information_,
+                                   distribution_on_18th_frame_, optional_elements_)
 };
 
 auto operator<<(std::ostream& stream, const MobileManagementDownlinkLocationUpdateAccept& packet) -> std::ostream&;
@@ -302,9 +309,17 @@ struct MobileManagementPacket : public MobileLinkEntityPacket {
     std::optional<MobileManagementDownlinkAttachDetachGroupIdentityAcknowledgement>
         downlink_attach_detach_group_identity_acknowledgement_;
 
-    MobileManagementPacket() = delete;
+    MobileManagementPacket() = default;
 
     explicit MobileManagementPacket(const MobileLinkEntityPacket& packet);
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(MobileManagementPacket, burst_type_, logical_channel_, type_, encrypted_, address_,
+                                   fragmentation_, fragmentation_on_stealling_channel_, reservation_requirement_,
+                                   tm_sdu_, encryption_mode_, immediate_napping_permission_flag_,
+                                   basic_slot_granting_element_, position_of_grant_, channel_allocation_element_,
+                                   random_access_flag_, power_control_element_, basic_link_information_, tl_sdu_,
+                                   mle_protocol_, sdu_, packet_type_, downlink_location_update_accept_,
+                                   downlink_attach_detach_group_identity_acknowledgement_)
 };
 
 auto operator<<(std::ostream& stream, const MobileManagementPacket& packet) -> std::ostream&;
