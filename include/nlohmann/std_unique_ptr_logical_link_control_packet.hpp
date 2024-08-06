@@ -17,6 +17,14 @@
 
 static constexpr const int kPacketApiVersion = 0;
 
+enum class PacketType {
+    kLogicalLinkControlPacket,
+    kMobileLinkEntityPacket,
+    kCircuitModeControlEntityPacket,
+    kMobileManagementPacket,
+    kShortDataServicePacket,
+};
+
 namespace nlohmann {
 template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
     static void to_json(json& j, const std::unique_ptr<LogicalLinkControlPacket>& packet) {
@@ -26,25 +34,25 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
             if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(mle)) {
                 if (auto* sds = dynamic_cast<ShortDataServicePacket*>(mle)) {
                     // Emit ShortDataServicePacket packet to json
-                    j["key"] = "ShortDataServicePacket";
+                    j["key"] = PacketType::kShortDataServicePacket;
                     j["value"] = *sds;
                 } else {
                     // Emit CircuitModeControlEntityPacket packet to json
-                    j["key"] = "CircuitModeControlEntityPacket";
+                    j["key"] = PacketType::kCircuitModeControlEntityPacket;
                     j["value"] = *cmce;
                 }
             } else if (auto* mm = dynamic_cast<MobileManagementPacket*>(mle)) {
                 // Emit MobileManagementPacket packet to json
-                j["key"] = "MobileManagementPacket";
+                j["key"] = PacketType::kMobileManagementPacket;
                 j["value"] = *mm;
             } else {
                 // Emit MobileLinkEntityPacket packet to json
-                j["key"] = "MobileLinkEntityPacket";
+                j["key"] = PacketType::kMobileLinkEntityPacket;
                 j["value"] = *mle;
             }
         } else {
             // Emit LogicalLinkControlPacket packet to json
-            j["key"] = "LogicalLinkControlPacket";
+            j["key"] = PacketType::kLogicalLinkControlPacket;
             j["value"] = *packet;
         }
     }
@@ -55,21 +63,20 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
             throw std::runtime_error("Cannot process packets different API version.");
         }
 
-        auto key = j["key"].template get<std::string>();
+        auto key = j["key"].template get<PacketType>();
 
-        if (key == "LogicalLinkControlPacket") {
+        switch (key) {
+        case PacketType::kLogicalLinkControlPacket:
             packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<LogicalLinkControlPacket>());
-        } else if (key == "MobileLinkEntityPacket") {
+        case PacketType::kMobileLinkEntityPacket:
             packet = std::make_unique<MobileLinkEntityPacket>(j["value"].template get<MobileLinkEntityPacket>());
-        } else if (key == "MobileManagementPacket") {
-            packet = std::make_unique<MobileManagementPacket>(j["value"].template get<MobileManagementPacket>());
-        } else if (key == "CircuitModeControlEntityPacket") {
+        case PacketType::kCircuitModeControlEntityPacket:
             packet = std::make_unique<CircuitModeControlEntityPacket>(
                 j["value"].template get<CircuitModeControlEntityPacket>());
-        } else if (key == "ShortDataServicePacket") {
+        case PacketType::kMobileManagementPacket:
+            packet = std::make_unique<MobileManagementPacket>(j["value"].template get<MobileManagementPacket>());
+        case PacketType::kShortDataServicePacket:
             packet = std::make_unique<ShortDataServicePacket>(j["value"].template get<ShortDataServicePacket>());
-        } else {
-            throw std::runtime_error("Unknown packet type: " + key);
         }
     }
 };
