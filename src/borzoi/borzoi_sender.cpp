@@ -85,7 +85,7 @@ void BorzoiSender::worker() {
                          arg->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithFcs)) {
                         return;
                     }
-                    std::cout << arg << std::endl;
+                    // std::cout << arg << std::endl;
                 } else if constexpr (std::is_same_v<T, Slots>) {
                     /// send out the slots which had an error while parsing
                     send_failed_slots(arg);

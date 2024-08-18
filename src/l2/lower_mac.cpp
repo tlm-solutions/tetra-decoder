@@ -287,7 +287,7 @@ auto LowerMac::process(std::vector<uint8_t> frame, BurstType burst_type) -> Lowe
     // Set to true if there was some decoding error in the lower MAC
     bool decode_error = false;
 
-    fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
+    // fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
 
     // Once we received the Synchronization on the downlink, increment the time counter for every received burst.
     // We do not have any time handling for uplink processing.
