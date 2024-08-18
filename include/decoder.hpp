@@ -88,5 +88,6 @@ class Decoder {
     // bit stream -> false
     bool iq_or_bit_stream_;
 
-    static const std::size_t kRX_BUFFER_SIZE = 4096;
+    // 64KB receive buffer.
+    static const std::size_t kRX_BUFFER_SIZE = 64 * 1024;
 };
