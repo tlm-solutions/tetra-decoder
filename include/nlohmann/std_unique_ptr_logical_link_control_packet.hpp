@@ -63,20 +63,25 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
             throw std::runtime_error("Cannot process packets different API version.");
         }
 
-        auto key = j["key"].template get<PacketType>();
+        auto key = PacketType(std::stoi(j["key"].template get<std::string>()));
 
         switch (key) {
         case PacketType::kLogicalLinkControlPacket:
             packet = std::make_unique<LogicalLinkControlPacket>(j["value"].template get<LogicalLinkControlPacket>());
+            break;
         case PacketType::kMobileLinkEntityPacket:
             packet = std::make_unique<MobileLinkEntityPacket>(j["value"].template get<MobileLinkEntityPacket>());
+            break;
         case PacketType::kCircuitModeControlEntityPacket:
             packet = std::make_unique<CircuitModeControlEntityPacket>(
                 j["value"].template get<CircuitModeControlEntityPacket>());
+            break;
         case PacketType::kMobileManagementPacket:
             packet = std::make_unique<MobileManagementPacket>(j["value"].template get<MobileManagementPacket>());
+            break;
         case PacketType::kShortDataServicePacket:
             packet = std::make_unique<ShortDataServicePacket>(j["value"].template get<ShortDataServicePacket>());
+            break;
         }
     }
 };
