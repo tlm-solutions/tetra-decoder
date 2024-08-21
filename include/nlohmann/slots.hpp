@@ -11,6 +11,26 @@
 #include "l2/slot.hpp"
 #include <nlohmann/json.hpp>
 
+static auto stob(const std::string& str) -> bool {
+    bool retval = false;
+
+    // convert integer (0 and 1) to bool
+    std::istringstream is(str);
+    is >> retval;
+
+    // convert boolean string (false and true) to bool
+    if (is.fail()) {
+        is.clear();
+        is >> std::boolalpha >> retval;
+    }
+
+    if (is.fail()) {
+        throw std::invalid_argument("Cannot convert: " + str + " to bool.");
+    }
+
+    return retval;
+};
+
 namespace nlohmann {
 template <> struct adl_serializer<Slots> {
     static void to_json(json& j, const Slots& slots) {
@@ -32,12 +52,13 @@ template <> struct adl_serializer<Slots> {
     }
 
     static void from_json(const json& j, Slots& slots) {
-        auto burst_type = j["burst_type"].template get<BurstType>();
-        auto slot_type = j["slot_type"].template get<SlotType>();
-        auto first_slot_logical_channel = j["first_slot_logical_channel"].template get<LogicalChannel>();
+        auto burst_type = BurstType(std::stoi(j["burst_type"].template get<std::string>()));
+        auto slot_type = SlotType(std::stoi(j["slot_type"].template get<std::string>()));
+        auto first_slot_logical_channel =
+            LogicalChannel(std::stoi(j["first_slot_logical_channel"].template get<std::string>()));
         auto first_slot_data = j["first_slot_data"].template get<BitVector>();
-        auto first_slot_crc_ok = j["first_slot_crc_ok"].template get<bool>();
-        auto second_slot_present = j["second_slot_present"].template get<bool>();
+        auto first_slot_crc_ok = stob(j["first_slot_crc_ok"].template get<std::string>());
+        auto second_slot_present = stob(j["second_slot_present"].template get<std::string>());
 
         auto first_slot = Slot(LogicalChannelDataAndCrc{
             .channel = first_slot_logical_channel,
@@ -46,9 +67,10 @@ template <> struct adl_serializer<Slots> {
         });
 
         if (second_slot_present) {
-            auto second_slot_logical_channel = j["second_slot_logical_channel"].template get<LogicalChannel>();
+            auto second_slot_logical_channel =
+                LogicalChannel(std::stoi(j["second_slot_logical_channel"].template get<std::string>()));
             auto second_slot_data = j["second_slot_data"].template get<BitVector>();
-            auto second_slot_crc_ok = j["second_slot_crc_ok"].template get<bool>();
+            auto second_slot_crc_ok = stob(j["second_slot_crc_ok"].template get<std::string>());
 
             auto second_slot = Slot(LogicalChannelDataAndCrc{
                 .channel = second_slot_logical_channel,

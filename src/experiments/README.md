@@ -13,5 +13,4 @@ To download the selected data as CSV click on: `Query inspector` -> `Data` -> `D
 
 Query: `SELECT *  FROM tetra_failed_slots WHERE $__timeFilter(time) ORDER BY time desc`.
 
-There is no example application provided showing how to convert the csv from grafana to C++ structures.
-However, the principle is the same as in the `packet_parser_example`.
+The application `slots_parser_example` show how to convert this data back into the correct C++ structures.

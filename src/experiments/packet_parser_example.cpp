@@ -20,7 +20,7 @@
 auto main(int argc, char** argv) -> int {
     std::string datafile;
 
-    cxxopts::Options options("parser-example", "Reads a csv file and extracts the contained packets.");
+    cxxopts::Options options("packet-parser-example", "Reads a csv file and extracts the contained packets.");
 
     // clang-format off
 	options.add_options()
