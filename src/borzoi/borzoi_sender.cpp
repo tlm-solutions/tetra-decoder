@@ -7,16 +7,13 @@
  */
 
 #include "borzoi/borzoi_sender.hpp"
-#include "borzoi/borzoi_converter.hpp"
-#include "l2/upper_mac_packet.hpp"
-#include "l3/circuit_mode_control_entity_packet.hpp"
-#include "l3/mobile_link_entity_packet.hpp"
-#include "l3/mobile_management_packet.hpp"
-#include "l3/short_data_service_packet.hpp"
+#include "borzoi/borzoi_packets.hpp"
+#include "nlohmann/borzoi_send_tetra_packet.hpp"                        // IWYU pragma: keep
+#include "nlohmann/borzoi_send_tetra_slots.hpp"                         // IWYU pragma: keep
+#include "utils/ostream_std_unique_ptr_logical_link_control_packet.hpp" // IWYU pragma: keep
 #include <cpr/body.h>
 #include <cpr/cprtypes.h>
 #include <cpr/payload.h>
-#include <exception>
 #include <utility>
 
 #if defined(__linux__)
@@ -41,36 +38,20 @@ BorzoiSender::BorzoiSender(ThreadSafeFifo<std::variant<std::unique_ptr<LogicalLi
 BorzoiSender::~BorzoiSender() { worker_thread_.join(); }
 
 void BorzoiSender::send_packet(const std::unique_ptr<LogicalLinkControlPacket>& packet) {
-    if (auto* sds = dynamic_cast<ShortDataServicePacket*>(packet.get())) {
-        nlohmann::json json;
-        try {
-            json = BorzoiConverter::to_json(sds);
-            json["station"] = borzoi_uuid_;
-            /// TODO: add json to post request
-        } catch (std::exception& e) {
-            std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
-            return;
-        }
-        cpr::Response resp =
-            cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
+    nlohmann::json json = BorzoiSendTetraPacket(packet, borzoi_uuid_);
 
-        if (resp.status_code != 200) {
-            std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
-                      << resp.error.message << std::endl;
-        }
+    cpr::Response resp =
+        cpr::Post(borzoi_url_sds_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
+
+    if (resp.status_code != 200) {
+        std::cout << "Failed to send packet to Borzoi: " << json.dump() << " Error: " << resp.status_code << " "
+                  << resp.error.message << std::endl;
     }
 }
 
 void BorzoiSender::send_failed_slots(const Slots& slots) {
-    nlohmann::json json;
-    try {
-        json = BorzoiConverter::to_json(slots);
-        json["station"] = borzoi_uuid_;
-        /// TODO: add json to post request
-    } catch (std::exception& e) {
-        std::cout << "Failed to convert packet to json. Error: " << e.what() << std::endl;
-        return;
-    }
+    nlohmann::json json = BorzoiSendTetraSlots(slots, borzoi_uuid_);
+
     cpr::Response resp =
         cpr::Post(borzoi_url_failed_slots_, cpr::Body{json.dump()}, cpr::Header{{"Content-Type", "application/json"}});
 
@@ -96,32 +77,15 @@ void BorzoiSender::worker() {
             [this](const auto& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, std::unique_ptr<LogicalLinkControlPacket>>) {
-                    /// process the parsed packet
-                    auto* cplane_signalling = dynamic_cast<UpperMacCPlaneSignallingPacket*>(arg.get());
-                    auto* llc = dynamic_cast<LogicalLinkControlPacket*>(cplane_signalling);
+                    send_packet(arg);
 
                     // Do not log acknowledgements
-                    if (llc->basic_link_information_ &&
-                        (llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithoutFcs ||
-                         llc->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithFcs)) {
+                    if (arg->basic_link_information_ &&
+                        (arg->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithoutFcs ||
+                         arg->basic_link_information_->basic_link_type_ == BasicLinkType::kBlAckWithFcs)) {
                         return;
                     }
-                    std::cout << *cplane_signalling;
-                    std::cout << *llc;
-                    if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(llc)) {
-                        std::cout << *mle;
-                        if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(llc)) {
-                            std::cout << *cmce;
-                            if (auto* sds = dynamic_cast<ShortDataServicePacket*>(llc)) {
-                                std::cout << *sds;
-                            }
-                        }
-                        if (auto* mm = dynamic_cast<MobileManagementPacket*>(llc)) {
-                            std::cout << *mm;
-                        }
-                        std::cout << std::endl;
-                    }
-                    send_packet(arg);
+                    // std::cout << arg << std::endl;
                 } else if constexpr (std::is_same_v<T, Slots>) {
                     /// send out the slots which had an error while parsing
                     send_failed_slots(arg);

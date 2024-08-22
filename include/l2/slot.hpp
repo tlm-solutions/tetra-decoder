@@ -82,15 +82,15 @@ class Slot {
 auto operator<<(std::ostream& stream, const Slot& slot) -> std::ostream&;
 
 /// defines the number and types of slots in a packet
-enum class SlotsType { kOneSubslot, kTwoSubslots, kFullSlot };
+enum class SlotType { kOneSubslot, kTwoSubslots, kFullSlot };
 
-constexpr auto to_string(SlotsType type) noexcept -> const char* {
+constexpr auto to_string(SlotType type) noexcept -> const char* {
     switch (type) {
-    case SlotsType::kOneSubslot:
+    case SlotType::kOneSubslot:
         return "OneSubslot";
-    case SlotsType::kTwoSubslots:
+    case SlotType::kTwoSubslots:
         return "TwoSubslots";
-    case SlotsType::kFullSlot:
+    case SlotType::kFullSlot:
         return "FullSlot";
     }
 };
@@ -113,24 +113,24 @@ struct ConcreateSlot {
 class Slots {
   private:
     /// which burst type ths slots originated from
-    BurstType burst_type_;
+    BurstType burst_type_{};
     /// the number and types of slots
-    SlotsType slot_type_;
+    SlotType slot_type_{};
     /// The slots, either one half or full slot or two half slots.
     /// We are doing accesses that would normally not be const but are in this case, because we make assumption about
     /// the content of this vector based on the constructor used to initialize this class.
     mutable std::vector<Slot> slots_;
 
   public:
-    Slots() = delete;
+    Slots() = default;
 
     Slots(const Slots& other) = default;
 
     /// constructor for one subslot or a full slot
-    Slots(BurstType burst_type, SlotsType slot_type, Slot&& slot);
+    Slots(BurstType burst_type, SlotType slot_type, Slot&& slot);
 
     /// construct for two half slot
-    Slots(BurstType burst_type, SlotsType slot_type, Slot&& first_slot, Slot&& second_slot);
+    Slots(BurstType burst_type, SlotType slot_type, Slot&& first_slot, Slot&& second_slot);
 
     /// get a reference to the concreate slots
     [[nodiscard]] auto get_concreate_slots() const -> std::vector<ConcreateSlot> {
@@ -168,6 +168,9 @@ class Slots {
 
     /// get the type of the underlying burst
     [[nodiscard]] auto get_burst_type() const noexcept -> BurstType { return burst_type_; }
+
+    /// get the type of the underlying slot
+    [[nodiscard]] auto get_slot_type() const noexcept -> SlotType { return slot_type_; }
 
     friend auto operator<<(std::ostream& stream, const Slots& slots) -> std::ostream&;
 };

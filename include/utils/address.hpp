@@ -8,8 +8,9 @@
 
 #pragma once
 
+#include "nlohmann/std_optional.hpp"    // IWYU pragma: keep
+#include "nlohmann/unsigned_bitint.hpp" // IWYU pragma: keep
 #include "utils/bit_vector.hpp"
-#include <bitset>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -33,14 +34,14 @@ class Address {
                ussi_ == address_type.ussi_ && smi_ == address_type.smi_ && usage_marker_ == address_type.usage_marker_;
     }
 
-    void set_country_code(uint64_t country_code) { country_code_ = country_code; }
-    void set_network_code(uint64_t network_code) { network_code_ = network_code; }
-    void set_sna(uint64_t sna) { sna_ = sna; }
-    void set_ssi(uint64_t ssi) { ssi_ = ssi; }
-    void set_event_label(uint64_t event_label) { event_label_ = event_label; }
-    void set_ussi(uint64_t ussi) { ussi_ = ussi; }
-    void set_smi(uint64_t smi) { smi_ = smi; }
-    void set_usage_marker(uint64_t usage_marker) { usage_marker_ = usage_marker; }
+    void set_country_code(unsigned _BitInt(10) country_code) { country_code_ = country_code; }
+    void set_network_code(unsigned _BitInt(14) network_code) { network_code_ = network_code; }
+    void set_sna(unsigned _BitInt(8) sna) { sna_ = sna; }
+    void set_ssi(unsigned _BitInt(24) ssi) { ssi_ = ssi; }
+    void set_event_label(unsigned _BitInt(10) event_label) { event_label_ = event_label; }
+    void set_ussi(unsigned _BitInt(24) ussi) { ussi_ = ussi; }
+    void set_smi(unsigned _BitInt(24) smi) { smi_ = smi; }
+    void set_usage_marker(unsigned _BitInt(6) usage_marker) { usage_marker_ = usage_marker; }
 
     [[nodiscard]] auto country_code() const noexcept { return country_code_; }
     [[nodiscard]] auto network_code() const noexcept { return network_code_; }
@@ -86,15 +87,18 @@ class Address {
 
     friend auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
 
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Address, country_code_, network_code_, sna_, ssi_, event_label_, ussi_, smi_,
+                                   usage_marker_)
+
   private:
-    std::optional<std::bitset<10>> country_code_;
-    std::optional<std::bitset<14>> network_code_;
-    std::optional<std::bitset<8>> sna_;
-    std::optional<std::bitset<24>> ssi_;
-    std::optional<std::bitset<10>> event_label_;
-    std::optional<std::bitset<24>> ussi_;
-    std::optional<std::bitset<24>> smi_;
-    std::optional<std::bitset<6>> usage_marker_;
+    std::optional<unsigned _BitInt(10)> country_code_;
+    std::optional<unsigned _BitInt(14)> network_code_;
+    std::optional<unsigned _BitInt(8)> sna_;
+    std::optional<unsigned _BitInt(24)> ssi_;
+    std::optional<unsigned _BitInt(10)> event_label_;
+    std::optional<unsigned _BitInt(24)> ussi_;
+    std::optional<unsigned _BitInt(24)> smi_;
+    std::optional<unsigned _BitInt(6)> usage_marker_;
 };
 
 namespace std {
@@ -106,39 +110,5 @@ template <> struct hash<Address> {
     }
 };
 } // namespace std
-
-namespace nlohmann {
-template <> struct adl_serializer<Address> {
-    static void to_json(json& j, Address address_type) {
-        j = json::object();
-        std::cout << address_type << std::endl << std::flush;
-
-        if (address_type.country_code()) {
-            j["country_code"] = address_type.country_code().value().to_ulong();
-        }
-        if (address_type.network_code()) {
-            j["network_code"] = address_type.network_code().value().to_ulong();
-        }
-        if (address_type.sna()) {
-            j["sna"] = address_type.sna().value().to_ulong();
-        }
-        if (address_type.ssi()) {
-            j["ssi"] = address_type.ssi().value().to_ulong();
-        }
-        if (address_type.event_label()) {
-            j["event_label"] = address_type.event_label().value().to_ulong();
-        }
-        if (address_type.ussi()) {
-            j["ussi"] = address_type.ussi().value().to_ulong();
-        }
-        if (address_type.smi()) {
-            j["smi"] = address_type.smi().value().to_ulong();
-        }
-        if (address_type.usage_marker()) {
-            j["usage_marker"] = address_type.usage_marker().value().to_ulong();
-        }
-    }
-};
-} // namespace nlohmann
 
 auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
