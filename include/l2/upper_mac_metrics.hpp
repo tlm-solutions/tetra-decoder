@@ -218,8 +218,10 @@ class UpperMacMetrics {
             break;
         case MacPacketType::kMacEndUplink:
             c_plane_signalling_packet_metrics_.increment("MacEndUplink");
+            break;
         case MacPacketType::kMacUBlck:
             c_plane_signalling_packet_metrics_.increment("MacUBlck");
+            break;
         case MacPacketType::kMacUSignal:
             throw std::runtime_error("C-Plane signalling may not be of type MacUSignal");
         }
