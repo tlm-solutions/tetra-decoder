@@ -446,7 +446,9 @@ struct UpperMacCPlaneSignallingPacket {
 
     /// check if this packet is a null pdu
     [[nodiscard]] auto is_null_pdu() const -> bool {
-        return type_ == MacPacketType::kMacResource && address_ == Address{};
+        return (type_ == MacPacketType::kMacResource && address_ == Address{}) ||
+               (type_ == MacPacketType::kMacAccess && !tm_sdu_.has_value()) ||
+               (type_ == MacPacketType::kMacData && !tm_sdu_.has_value());
     };
 
     /// check if this packet is part of a downlink fragment
