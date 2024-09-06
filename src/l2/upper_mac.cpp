@@ -90,6 +90,9 @@ auto UpperMac::process(const Slots& slots) -> void {
         }
     }
 
+    /// This step takes care of adding the correct adresses for some uplink packets.
+    packets.apply_uplink_null_pdu_information();
+
     try {
         processPackets(std::move(packets));
     } catch (std::runtime_error& e) {
