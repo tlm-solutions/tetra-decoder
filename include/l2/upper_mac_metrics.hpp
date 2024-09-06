@@ -214,7 +214,7 @@ class UpperMacMetrics {
             }
             break;
         case MacPacketType::kMacFragmentUplink:
-            c_plane_signalling_packet_metrics_.increment("MacResource");
+            c_plane_signalling_packet_metrics_.increment("MacFragmentUplink");
             break;
         case MacPacketType::kMacEndUplink:
             c_plane_signalling_packet_metrics_.increment("MacEndUplink");
