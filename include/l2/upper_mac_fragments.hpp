@@ -213,6 +213,7 @@ class UpperMacUplinkFragmentation {
     /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
     auto change_state(State new_state,
                       const UpperMacCPlaneSignallingPacket& fragment) -> std::optional<UpperMacCPlaneSignallingPacket> {
+        std::cout << fragment << std::endl;
         const auto& address = fragment.address_;
         auto& state = state_per_address_[address];
         auto& fragments = fragments_per_address_[address];
