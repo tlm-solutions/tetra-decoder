@@ -462,7 +462,8 @@ struct UpperMacCPlaneSignallingPacket {
     [[nodiscard]] auto is_uplink_fragment() const -> bool {
         return (type_ == MacPacketType::kMacData && fragmentation_) ||
                (type_ == MacPacketType::kMacData && fragmentation_on_stealling_channel_) ||
-               (type_ == MacPacketType::kMacFragmentUplink) || (type_ == MacPacketType::kMacEndUplink);
+               (type_ == MacPacketType::kMacFragmentUplink) || (type_ == MacPacketType::kMacEndUplink) ||
+               (type_ == MacPacketType::kMacEndHu);
     };
 
     /// check if this packet is sent on downlink
