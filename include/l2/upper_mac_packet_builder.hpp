@@ -53,6 +53,28 @@ struct UpperMacPackets {
         }
     }
 
+    /// Distribute the information of the uplink c-plane signalling null pdu to all other c-plane signalling packets.
+    /// This operation will associate uplink packets with no address (MacFragmentUplink and MacEndUplink) with the
+    /// address of the uplink null pdu.
+    auto apply_uplink_null_pdu_information() -> void {
+        std::optional<UpperMacCPlaneSignallingPacket> null_pdu;
+
+        for (auto const& packet : c_plane_signalling_packets_) {
+            if (packet.is_null_pdu()) {
+                null_pdu = packet;
+            }
+        }
+
+        if (null_pdu) {
+            for (auto& packet : c_plane_signalling_packets_) {
+                if ((packet.type_ == MacPacketType::kMacFragmentUplink) ||
+                    (packet.type_ == MacPacketType::kMacEndUplink)) {
+                    packet.address_ = null_pdu->address_;
+                }
+            }
+        }
+    }
+
     /// Check if the packet contains data that is of importance for C-Plane or U-Plane
     /// \return true if the UpperMacPackets contain user or control plane data (either signalling or traffic)
     [[nodiscard]] auto has_user_or_control_plane_data() const -> bool {

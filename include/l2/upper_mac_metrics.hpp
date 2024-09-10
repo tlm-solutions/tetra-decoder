@@ -186,6 +186,8 @@ class UpperMacMetrics {
         case MacPacketType::kMacResource:
             if (packet.is_downlink_fragment()) {
                 c_plane_signalling_packet_metrics_.increment("MacResource fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacResource null pdu");
             } else {
                 c_plane_signalling_packet_metrics_.increment("MacResource");
             }
@@ -201,7 +203,13 @@ class UpperMacMetrics {
         case MacPacketType::kMacBroadcast:
             throw std::runtime_error("C-Plane signalling may not be of type MacBroadcast");
         case MacPacketType::kMacAccess:
-            c_plane_signalling_packet_metrics_.increment("MacAccess");
+            if (packet.is_uplink_fragment()) {
+                c_plane_signalling_packet_metrics_.increment("MacAccess fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacAccess null pdu");
+            } else {
+                c_plane_signalling_packet_metrics_.increment("MacAccess");
+            }
             break;
         case MacPacketType::kMacEndHu:
             c_plane_signalling_packet_metrics_.increment("MacEndHu");
@@ -209,17 +217,21 @@ class UpperMacMetrics {
         case MacPacketType::kMacData:
             if (packet.is_uplink_fragment()) {
                 c_plane_signalling_packet_metrics_.increment("MacData fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacData null pdu");
             } else {
                 c_plane_signalling_packet_metrics_.increment("MacData");
             }
             break;
         case MacPacketType::kMacFragmentUplink:
-            c_plane_signalling_packet_metrics_.increment("MacResource");
+            c_plane_signalling_packet_metrics_.increment("MacFragmentUplink");
             break;
         case MacPacketType::kMacEndUplink:
             c_plane_signalling_packet_metrics_.increment("MacEndUplink");
+            break;
         case MacPacketType::kMacUBlck:
             c_plane_signalling_packet_metrics_.increment("MacUBlck");
+            break;
         case MacPacketType::kMacUSignal:
             throw std::runtime_error("C-Plane signalling may not be of type MacUSignal");
         }

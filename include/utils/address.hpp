@@ -85,6 +85,13 @@ class Address {
         }
     }
 
+    // Overload this operator for usage of the Address as a map key
+    auto operator<(const Address& other) const -> bool {
+        return std::tie(country_code_, network_code_, sna_, ssi_, event_label_, ussi_, smi_, usage_marker_) <
+               std::tie(other.country_code_, other.network_code_, other.sna_, other.ssi_, other.event_label_,
+                        other.ussi_, other.smi_, other.usage_marker_);
+    }
+
     friend auto operator<<(std::ostream& stream, const Address& address_type) -> std::ostream&;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(Address, country_code_, network_code_, sna_, ssi_, event_label_, ussi_, smi_,
