@@ -201,7 +201,11 @@ class UpperMacMetrics {
         case MacPacketType::kMacBroadcast:
             throw std::runtime_error("C-Plane signalling may not be of type MacBroadcast");
         case MacPacketType::kMacAccess:
-            c_plane_signalling_packet_metrics_.increment("MacAccess");
+            if (packet.is_uplink_fragment()) {
+                c_plane_signalling_packet_metrics_.increment("MacAccess fragments");
+            } else {
+                c_plane_signalling_packet_metrics_.increment("MacAccess");
+            }
             break;
         case MacPacketType::kMacEndHu:
             c_plane_signalling_packet_metrics_.increment("MacEndHu");
