@@ -130,22 +130,22 @@ class UpperMacPacketBuilder {
     /// \param channel the logical channel on which the packets are sent
     /// \param data the BitVector which holds the packets
     /// \return the parsed c-plane signalling packets
-    [[nodiscard]] static auto parse_c_plane_signalling(BurstType burst_type, LogicalChannel channel,
-                                                       BitVector&& data) -> std::vector<UpperMacCPlaneSignallingPacket>;
+    [[nodiscard]] static auto parse_c_plane_signalling(BurstType burst_type, LogicalChannel channel, BitVector&& data)
+        -> std::vector<UpperMacCPlaneSignallingPacket>;
 
     /// Parse the user plane signalling packet contained in a BitVector
     /// \param channel the logical channel on which the packet is sent
     /// \param data the BitVector which holds the packet
     /// \return the parsed u-plane signalling packet
-    [[nodiscard]] static auto parse_u_plane_signalling(LogicalChannel channel,
-                                                       BitVector&& data) -> UpperMacUPlaneSignallingPacket;
+    [[nodiscard]] static auto parse_u_plane_signalling(LogicalChannel channel, BitVector&& data)
+        -> UpperMacUPlaneSignallingPacket;
 
     /// Parse the user plane traffic packet contained in a BitVector
     /// \param channel the logical channel on which the packet is sent
     /// \param data the BitVector which holds the packet
     /// \return the parsed u-plane traffic packet
-    [[nodiscard]] static auto parse_u_plane_traffic(LogicalChannel channel,
-                                                    BitVector&& data) -> UpperMacUPlaneTrafficPacket;
+    [[nodiscard]] static auto parse_u_plane_traffic(LogicalChannel channel, BitVector&& data)
+        -> UpperMacUPlaneTrafficPacket;
 
   public:
     UpperMacPacketBuilder() = default;

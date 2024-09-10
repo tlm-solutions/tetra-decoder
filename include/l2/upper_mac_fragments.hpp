@@ -75,8 +75,8 @@ class UpperMacDownlinkFragmentation {
     /// \param new_state the new state into which the state machine would be transfered with this fragment
     /// \param fragment the control plane signalling packet that is fragmented
     /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
-    auto change_state(State new_state,
-                      const UpperMacCPlaneSignallingPacket& fragment) -> std::optional<UpperMacCPlaneSignallingPacket> {
+    auto change_state(State new_state, const UpperMacCPlaneSignallingPacket& fragment)
+        -> std::optional<UpperMacCPlaneSignallingPacket> {
         const auto& valid_state_changes = allowed_state_changes_[state_];
 
         // increment the total fragment counters
@@ -152,8 +152,8 @@ class UpperMacDownlinkFragmentation {
     /// Push a fragment for reconstruction.
     /// \param fragment the control plane signalling packet that is fragmented
     /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
-    auto
-    push_fragment(const UpperMacCPlaneSignallingPacket& fragment) -> std::optional<UpperMacCPlaneSignallingPacket> {
+    auto push_fragment(const UpperMacCPlaneSignallingPacket& fragment)
+        -> std::optional<UpperMacCPlaneSignallingPacket> {
         switch (fragment.type_) {
         case MacPacketType::kMacResource:
             assert(fragment.fragmentation_);
@@ -211,8 +211,8 @@ class UpperMacUplinkFragmentation {
     /// \param new_state the new state into which the state machine would be transfered with this fragment
     /// \param fragment the control plane signalling packet that is fragmented
     /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
-    auto change_state(State new_state,
-                      const UpperMacCPlaneSignallingPacket& fragment) -> std::optional<UpperMacCPlaneSignallingPacket> {
+    auto change_state(State new_state, const UpperMacCPlaneSignallingPacket& fragment)
+        -> std::optional<UpperMacCPlaneSignallingPacket> {
         const auto& address = fragment.address_;
         auto& state = state_per_address_[address];
         auto& fragments = fragments_per_address_[address];
@@ -280,8 +280,8 @@ class UpperMacUplinkFragmentation {
     /// Push a fragment for reconstruction.
     /// \param fragment the control plane signalling packet that is fragmented
     /// \return an optional reconstructed control plane signalling packet when reconstuction was successful
-    auto
-    push_fragment(const UpperMacCPlaneSignallingPacket& fragment) -> std::optional<UpperMacCPlaneSignallingPacket> {
+    auto push_fragment(const UpperMacCPlaneSignallingPacket& fragment)
+        -> std::optional<UpperMacCPlaneSignallingPacket> {
         switch (fragment.type_) {
         case MacPacketType::kMacResource:
             throw std::runtime_error("MacResource is not handled by UpperMacUplinkFragmentation");

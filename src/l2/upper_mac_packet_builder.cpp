@@ -107,8 +107,8 @@ auto UpperMacPacketBuilder::parse_broadcast(LogicalChannel channel, BitVector&& 
 }
 
 auto UpperMacPacketBuilder::extract_tm_sdu(BitVector& data, std::size_t preprocessing_bit_count,
-                                           unsigned _BitInt(1) fill_bit_indication,
-                                           std::optional<std::size_t> length) -> BitVector {
+                                           unsigned _BitInt(1) fill_bit_indication, std::optional<std::size_t> length)
+    -> BitVector {
     // 1. calculate the header size of the MAC. this step must be performed before removing fill bits, as this would
     // change the number of bits in the BitVector
     const auto mac_header_length = preprocessing_bit_count - data.bits_left();
@@ -527,8 +527,8 @@ auto UpperMacPacketBuilder::parse_c_plane_signalling(const BurstType burst_type,
     return packets;
 }
 
-auto UpperMacPacketBuilder::parse_u_plane_signalling(const LogicalChannel channel,
-                                                     BitVector&& data) -> UpperMacUPlaneSignallingPacket {
+auto UpperMacPacketBuilder::parse_u_plane_signalling(const LogicalChannel channel, BitVector&& data)
+    -> UpperMacUPlaneSignallingPacket {
     // the only valid packet here is MAC-U-SIGNAL
 
     auto pdu_type = data.take<2>();
@@ -542,7 +542,7 @@ auto UpperMacPacketBuilder::parse_u_plane_signalling(const LogicalChannel channe
         .logical_channel_ = channel, .type_ = MacPacketType::kMacUSignal, .tm_sdu_ = std::move(data)};
 }
 
-auto UpperMacPacketBuilder::parse_u_plane_traffic(const LogicalChannel channel,
-                                                  BitVector&& data) -> UpperMacUPlaneTrafficPacket {
+auto UpperMacPacketBuilder::parse_u_plane_traffic(const LogicalChannel channel, BitVector&& data)
+    -> UpperMacUPlaneTrafficPacket {
     return UpperMacUPlaneTrafficPacket{.logical_channel_ = channel, .data_ = std::move(data)};
 }
