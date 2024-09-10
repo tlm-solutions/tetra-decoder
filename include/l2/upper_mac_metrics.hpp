@@ -186,6 +186,8 @@ class UpperMacMetrics {
         case MacPacketType::kMacResource:
             if (packet.is_downlink_fragment()) {
                 c_plane_signalling_packet_metrics_.increment("MacResource fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacResource null pdu");
             } else {
                 c_plane_signalling_packet_metrics_.increment("MacResource");
             }
@@ -203,6 +205,8 @@ class UpperMacMetrics {
         case MacPacketType::kMacAccess:
             if (packet.is_uplink_fragment()) {
                 c_plane_signalling_packet_metrics_.increment("MacAccess fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacAccess null pdu");
             } else {
                 c_plane_signalling_packet_metrics_.increment("MacAccess");
             }
@@ -213,6 +217,8 @@ class UpperMacMetrics {
         case MacPacketType::kMacData:
             if (packet.is_uplink_fragment()) {
                 c_plane_signalling_packet_metrics_.increment("MacData fragments");
+            } else if (packet.is_null_pdu()) {
+                c_plane_signalling_packet_metrics_.increment("MacData null pdu");
             } else {
                 c_plane_signalling_packet_metrics_.increment("MacData");
             }
