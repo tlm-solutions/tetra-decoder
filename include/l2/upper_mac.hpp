@@ -66,12 +66,14 @@ class UpperMac {
     std::unique_ptr<UpperMacMetrics> metrics_;
 
     /// The prometheus metrics for the fragmentation
-    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_continous_;
-    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_stealing_channel_;
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_downlink_continous_;
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_uplink_continous_;
+    std::shared_ptr<UpperMacFragmentsPrometheusCounters> fragmentation_metrics_downlink_stealing_channel_;
 
     LogicalLinkControlParser logical_link_control_;
 
-    std::unique_ptr<UpperMacFragmentation> fragmentation_;
+    std::unique_ptr<UpperMacDownlinkFragmentation> downlink_fragmentation_;
+    std::unique_ptr<UpperMacUplinkFragmentation> uplink_fragmentation_;
 
     /// The worker thread
     std::thread worker_thread_;
