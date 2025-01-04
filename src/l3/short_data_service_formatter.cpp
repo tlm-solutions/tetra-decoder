@@ -42,7 +42,7 @@ auto operator<<(std::ostream& stream, const ShortDataServicePacket& sds) -> std:
     const auto len = sds.sds_data_->data_.bits_left();
     for (auto i = 8; i + 8 <= len; i += 8) {
         auto bits = sds.sds_data_->data_.look<8>(i);
-        stream << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(bits);
+        stream << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(bits) << std::dec;
     }
     stream << std::endl;
 
