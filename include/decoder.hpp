@@ -46,7 +46,8 @@ class Decoder {
             const std::shared_ptr<PrometheusExporter>& prometheus_exporter);
     ~Decoder();
 
-    void main_loop();
+    /// \returns true if we should abort
+    [[nodiscard]] auto main_loop() -> bool;
 
   private:
     /// This flag is set when the program should termiate. It is pass down to the next stage in the chain when

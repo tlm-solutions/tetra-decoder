@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
-add_library(tetra-decoder-library
+add_library(tetra-decoder-library SHARED
             src/decoder.cpp
             src/bit_stream_decoder.cpp
             src/iq_stream_decoder.cpp
@@ -74,6 +74,7 @@ target_link_libraries(tetra-decoder-library ZLIB::ZLIB fmt::fmt nlohmann_json::n
 target_link_libraries(tetra-decoder tetra-decoder-library)
 target_link_libraries(tetra-viterbi viterbi)
 
+install(TARGETS tetra-decoder-library DESTINATION lib)
 install(TARGETS tetra-decoder DESTINATION bin)
 install(TARGETS tetra-puncturing DESTINATION bin)
 install(TARGETS tetra-viterbi DESTINATION bin)
