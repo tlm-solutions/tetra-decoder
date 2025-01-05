@@ -61,14 +61,16 @@ find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(cpr REQUIRED)
+find_package(Armadillo REQUIRED)
 
+include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 if (NOT NIX_BUILD)
 	target_link_libraries(tetra-decoder-library cxxopts::cxxopts)
 endif()
 
-target_link_libraries(tetra-decoder-library ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull cpr::cpr)
+target_link_libraries(tetra-decoder-library ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull cpr::cpr ${ARMADILLO_LIBRARIES})
 target_link_libraries(tetra-decoder tetra-decoder-library)
 target_link_libraries(tetra-viterbi viterbi)
 
