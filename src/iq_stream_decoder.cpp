@@ -95,17 +95,50 @@ std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector
     return stream;
 }
 
- auto IQStreamDecoder::solve_channel(const std::vector<std::complex<float>>& pilots,
-                          const QueueT& signal_queue, const std::size_t signal_offset)
-    -> arma::cx_fvec {
-    auto arma_pilots = arma::cx_fvec(pilots);
-    auto arma_signal = arma::cx_fvec(pilots.size());
-    for (auto i = 0; i < arma_signal.size(); i++) {
-        arma_signal[i] = signal_queue[signal_offset + i];
+template <std::size_t ChannelSize>
+auto IQStreamDecoder::solve_channel(const std::vector<std::complex<float>>& pilots, const QueueT& signal_queue,
+                                    const std::size_t signal_offset) -> arma::cx_fvec {
+    // Calculate the minimum variance unbiased estimator
+    auto h = arma::cx_fmat(/*n_rows=*/pilots.size(), /*n_cols=*/ChannelSize, arma::fill::zeros);
+
+    for (auto row = 0; row < h.n_rows; row++) {
+        auto index = row;
+        for (auto col = 0; col < h.n_cols; col++) {
+            if (index >= 0) {
+                h.row(row).col(col) = signal_queue[signal_offset + index];
+            }
+            index--;
+        }
     }
-    auto arma_conj_pilots = arma::conj(arma_pilots);
-    arma::cx_fvec h_vec = arma::solve(arma_conj_pilots.t() * arma_pilots, arma_conj_pilots.t() * arma::conj(arma_signal).t());
-    return h_vec;
+
+    // std::cout << h << '\n';
+
+    auto signal = arma::cx_fvec(pilots.size());
+    for (auto i = 0; i < signal.size(); i++) {
+        signal[i] = signal_queue[signal_offset + i];
+    }
+
+    // std::cout << signal << '\n';
+
+    auto h_hermitian = arma::cx_fmat(/*n_rows=*/ChannelSize, /*n_cols=*/pilots.size(), arma::fill::zeros);
+
+    h_hermitian = h.t();
+    h_hermitian = arma::conj(h_hermitian);
+    // std::cout << h_hermitian << '\n';
+
+    auto h_hermitian_h = h_hermitian * h;
+    // std::cout << h_hermitian_h << '\n';
+
+    // auto h_hermitian_h_inv = arma::inv(h_hermitian_h);
+    // std::cout << h_hermitian_h_inv << '\n';
+
+    auto h_hermitian_signal = h_hermitian * signal;
+    // std::cout << h_hermitian_signal << '\n';
+
+    auto c_mvue = arma::solve(h_hermitian_h, h_hermitian_signal);
+    // std::cout << c_mvue << '\n';
+
+    return c_mvue;
 }
 
 void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
@@ -137,7 +170,7 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
         if (detectedX >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential CUB found" << std::endl;
 
-            auto channel = solve_channel(training_seq_x_, symbol_buffer_hard_decision_, 44);
+            auto channel = solve_channel<3>(training_seq_x_, symbol_buffer_hard_decision_, 44);
             std::cout << channel << std::endl;
 
             auto len = 103;
