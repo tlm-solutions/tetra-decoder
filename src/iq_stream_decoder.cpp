@@ -9,6 +9,7 @@
 
 #include "iq_stream_decoder.hpp"
 #include "l2/lower_mac.hpp"
+#include <armadillo>
 #include <memory>
 
 IQStreamDecoder::IQStreamDecoder(
@@ -94,6 +95,19 @@ std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector
     return stream;
 }
 
+static auto solve_channel(const std::vector<std::complex<float>>& pilots,
+                          const FixedQueue<std::complex<float>, 300>& signal_queue, const std::size_t signal_offset)
+    -> arma::cx_fvec {
+    auto arma_pilots = arma::cx_fvec(pilots);
+    auto arma_signal = arma::cx_fvec(pilots.size());
+    for (auto i = 0; i < arma_signal.size(); i++) {
+        arma_signal[i] = signal_queue[signal_offset + i];
+    }
+    auto arma_conj_pilots = arma::conj(arma_pilots);
+    auto h_vec = arma::solve(arma_conj_pilots * arma_pilots, arma_conj_pilots * arma::conj(arma_signal));
+    return h_vec;
+}
+
 void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
     if (is_uplink_) {
         float detectedN;
@@ -122,6 +136,9 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
 
         if (detectedX >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential CUB found" << std::endl;
+
+            auto channel = solve_channel(training_seq_x_, symbol_buffer_hard_decision_, 44);
+            std::cout << channel << std::endl;
 
             auto len = 103;
 

@@ -62,7 +62,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(cpr REQUIRED)
 find_package(Armadillo REQUIRED)
- 
+
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
