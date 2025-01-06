@@ -95,8 +95,8 @@ std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector
     return stream;
 }
 
-static auto solve_channel(const std::vector<std::complex<float>>& pilots,
-                          const FixedQueue<std::complex<float>, 300>& signal_queue, const std::size_t signal_offset)
+ auto IQStreamDecoder::solve_channel(const std::vector<std::complex<float>>& pilots,
+                          const QueueT& signal_queue, const std::size_t signal_offset)
     -> arma::cx_fvec {
     auto arma_pilots = arma::cx_fvec(pilots);
     auto arma_signal = arma::cx_fvec(pilots.size());
@@ -104,7 +104,7 @@ static auto solve_channel(const std::vector<std::complex<float>>& pilots,
         arma_signal[i] = signal_queue[signal_offset + i];
     }
     auto arma_conj_pilots = arma::conj(arma_pilots);
-    auto h_vec = arma::solve(arma_conj_pilots * arma_pilots, arma_conj_pilots * arma::conj(arma_signal));
+    arma::cx_fvec h_vec = arma::solve(arma_conj_pilots.t() * arma_pilots, arma_conj_pilots.t() * arma::conj(arma_signal).t());
     return h_vec;
 }
 

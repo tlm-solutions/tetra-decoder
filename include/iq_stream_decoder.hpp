@@ -41,6 +41,9 @@ class IQStreamDecoder {
     static void abs_convolve_same_length(const QueueT& queueA, std::size_t offsetA, const std::complex<float>* itb,
                                          std::size_t len, float* res);
 
+    static auto solve_channel(const std::vector<std::complex<float>>& pilots,
+                          const QueueT& signal_queue, const std::size_t signal_offset);
+
     std::vector<std::complex<float>> channel_estimation(std::vector<std::complex<float>> const& stream,
                                                         std::vector<std::complex<float>> const& pilots);
 
