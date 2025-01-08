@@ -70,8 +70,8 @@ auto IQStreamDecoder::symbols_to_softstream(iterator_type it) -> std::vector<int
         // symbol 1:
         //  real  > 0 -> 0 -> -1
         //  real <= 0 -> 1 -> 1
-        soft_bits[i * 2] = -1 * it->imag();
-        soft_bits[(i * 2) + 1] = -1 * it->real();
+        soft_bits[i * 2] = -127 * it->imag();
+        soft_bits[(i * 2) + 1] = -127 * it->real();
     }
     return soft_bits;
 }

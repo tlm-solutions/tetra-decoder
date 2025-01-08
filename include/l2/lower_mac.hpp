@@ -31,9 +31,22 @@ class LowerMac {
                       std::optional<uint32_t> scrambling_code = std::nullopt);
     ~LowerMac() = default;
 
+    /// Get the correct viterbi decoder either for hard decision for bit or soft decision for soft bits.
+    /// \targ DataType with bool (bits) the hard decision decoder is returned, with int16_t we have soft bits and return
+    /// the soft decision decoder
+    template <typename DataType> [[nodiscard]] auto getViterbi() const -> const ViterbiCodec& {
+        if constexpr (std::is_same_v<DataType, bool>) {
+            return viter_bi_codec_1614_hard_decision_;
+        }
+        if constexpr (std::is_same_v<DataType, int16_t>) {
+            return viter_bi_codec_1614_soft_decision_;
+        }
+        assert(false && "Compiling descramble with template paramater not bool or int16_t");
+    }
+
     /// handles the decoding of the synchronization bursts and once synchronized passes the data to the decoding of the
     /// channels. keeps track of the current network time
-    /// \targ DataType with bool is selected we have bits, with int16_t we have symbols
+    /// \targ DataType with bool is selected we have bits, with int16_t we have soft bits
     template <typename DataType>
     [[nodiscard]] auto process(std::vector<DataType> frame, BurstType burst_type) -> return_type {
         // Set to true if there was some decoding error in the lower MAC
@@ -61,8 +74,8 @@ class LowerMac {
             };
 
             auto sb_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
-                                          LowerMacCoding::descramble(sb_input, 0x0003), 11)));
+                getViterbi<DataType>(), LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
+                                            LowerMacCoding::descramble(sb_input, 0x0003), 11)));
 
             if (LowerMacCoding::check_crc_16_ccitt<76>(sb_bits)) {
                 current_sync = BroadcastSynchronizationChannel(
@@ -140,8 +153,8 @@ class LowerMac {
             }
 
             auto bkn2_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
-                                          LowerMacCoding::descramble(bkn2_input, bsc.scrambling_code), 101)));
+                getViterbi<DataType>(), LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
+                                            LowerMacCoding::descramble(bkn2_input, bsc.scrambling_code), 101)));
 
             slots = Slots(burst_type, SlotType::kOneSubslot,
                           Slot(LogicalChannelDataAndCrc{
@@ -174,7 +187,7 @@ class LowerMac {
             auto bkn1_descrambled_bits = LowerMacCoding::softbits_to_bits(bkn1_descrambled);
 
             auto bkn1_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_,
+                getViterbi<DataType>(),
                 LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(bkn1_descrambled, 103)));
 
             if (aach.downlink_usage == DownlinkUsage::Traffic) {
@@ -216,8 +229,8 @@ class LowerMac {
             };
 
             auto bkn1_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
-                                          LowerMacCoding::descramble(bkn1_input, bsc.scrambling_code), 101)));
+                getViterbi<DataType>(), LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
+                                            LowerMacCoding::descramble(bkn1_input, bsc.scrambling_code), 101)));
 
             std::array<DataType, 216> bkn2_input{};
             for (auto i = 0; i < 216; i++) {
@@ -227,7 +240,7 @@ class LowerMac {
             auto bkn2_deinterleaved =
                 LowerMacCoding::deinterleave(LowerMacCoding::descramble(bkn2_input, bsc.scrambling_code), 101);
             auto bkn2_deinterleaved_bits = LowerMacCoding::softbits_to_bits(bkn2_deinterleaved);
-            auto bkn2_bits = LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_,
+            auto bkn2_bits = LowerMacCoding::viter_bi_decode_1614(getViterbi<DataType>(),
                                                                   LowerMacCoding::depuncture23(bkn2_deinterleaved));
 
             // Half slot traffic channel defines type 3 bits (deinterleaved)
@@ -274,8 +287,8 @@ class LowerMac {
             };
 
             auto cb_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
-                                          LowerMacCoding::descramble(cb_input, bsc.scrambling_code), 13)));
+                getViterbi<DataType>(), LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
+                                            LowerMacCoding::descramble(cb_input, bsc.scrambling_code), 13)));
 
             // SCH/HU
             slots = Slots(burst_type, SlotType::kOneSubslot,
@@ -297,7 +310,7 @@ class LowerMac {
             auto bkn1_descrambled_bits = LowerMacCoding::softbits_to_bits(bkn1_descrambled);
 
             auto bkn1_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_,
+                getViterbi<DataType>(),
                 LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(bkn1_descrambled, 103)));
 
             slots = Slots(
@@ -321,8 +334,8 @@ class LowerMac {
             }
 
             auto bkn1_bits = LowerMacCoding::viter_bi_decode_1614(
-                viter_bi_codec_1614_, LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
-                                          LowerMacCoding::descramble(bkn1_input, bsc.scrambling_code), 101)));
+                getViterbi<DataType>(), LowerMacCoding::depuncture23(LowerMacCoding::deinterleave(
+                                            LowerMacCoding::descramble(bkn1_input, bsc.scrambling_code), 101)));
 
             std::array<DataType, 216> bkn2_input{};
             for (auto i = 0; i < 216; i++) {
@@ -332,7 +345,7 @@ class LowerMac {
             auto bkn2_deinterleaved =
                 LowerMacCoding::deinterleave(LowerMacCoding::descramble(bkn2_input, bsc.scrambling_code), 101);
             auto bkn2_deinterleaved_bits = LowerMacCoding::softbits_to_bits(bkn2_deinterleaved);
-            auto bkn2_bits = LowerMacCoding::viter_bi_decode_1614(viter_bi_codec_1614_,
+            auto bkn2_bits = LowerMacCoding::viter_bi_decode_1614(getViterbi<DataType>(),
                                                                   LowerMacCoding::depuncture23(bkn2_deinterleaved));
 
             // STCH + TCH
@@ -361,7 +374,8 @@ class LowerMac {
         return *slots;
     }
 
-    const ViterbiCodec viter_bi_codec_1614_;
+    const ViterbiCodecHardDecision viter_bi_codec_1614_hard_decision_;
+    const ViterbiCodecSoftDecision viter_bi_codec_1614_soft_decision_;
 
     std::unique_ptr<LowerMacMetrics> metrics_;
 
