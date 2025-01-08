@@ -60,6 +60,22 @@ auto IQStreamDecoder::symbols_to_bitstream(iterator_type it) -> std::vector<bool
     return bits;
 }
 
+template <std::size_t Len, class iterator_type>
+auto IQStreamDecoder::symbols_to_softstream(iterator_type it) -> std::vector<int16_t> {
+    std::vector<int16_t> soft_bits(Len * 2);
+    for (std::size_t i = 0; i < Len; ++it, ++i) {
+        // symbol 0:
+        //  imag  > 0 -> 0 -> -1
+        //  imag <= 0 -> 1 -> 1
+        // symbol 1:
+        //  real  > 0 -> 0 -> -1
+        //  real <= 0 -> 1 -> 1
+        soft_bits[i * 2] = -1 * it->imag();
+        soft_bits[(i * 2) + 1] = -1 * it->real();
+    }
+    return soft_bits;
+}
+
 void IQStreamDecoder::abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
                                                const std::complex<float>* const itb, const std::size_t len,
                                                float* res) {
@@ -154,30 +170,30 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             auto channel = solve_channel<3>(training_seq_x_, symbol_buffer_hard_decision_, 44);
             std::cout << channel << std::endl;
 
-            auto bits = symbols_to_bitstream<103>(symbol_buffer_.cbegin());
+            auto softbits = symbols_to_softstream<103>(symbol_buffer_.cbegin());
 
             auto lower_mac_process_cub =
-                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::ControlUplinkBurst);
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::ControlUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_cub);
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB_Split found" << std::endl;
 
-            auto bits = symbols_to_bitstream<231>(symbol_buffer_.cbegin());
+            auto softbits = symbols_to_softstream<231>(symbol_buffer_.cbegin());
 
             auto lower_mac_process_nubs =
-                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::NormalUplinkBurstSplit);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nubs);
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB found" << std::endl;
 
-            auto bits = symbols_to_bitstream<231>(symbol_buffer_.cbegin());
+            auto softbits = symbols_to_softstream<231>(symbol_buffer_.cbegin());
 
             auto lower_mac_process_nub =
-                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::NormalUplinkBurst);
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::NormalUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nub);
         }
     } else {
