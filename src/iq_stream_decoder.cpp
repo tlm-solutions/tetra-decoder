@@ -44,39 +44,20 @@ std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> const& sy
     }
 }
 
-template <class iterator_type>
-void IQStreamDecoder::symbols_to_bitstream(iterator_type it, uint8_t* const bits, const std::size_t len) {
-    for (auto i = 0; i < len; ++it, ++i) {
-
-        auto real = it->real();
-        auto imag = it->imag();
-        uint8_t symb0, symb1;
-
-        if (real > 0.0) {
-            if (imag > 0.0) {
-                // I
-                symb0 = 0;
-                symb1 = 0;
-            } else {
-                // IV
-                symb0 = 1;
-                symb1 = 0;
-            }
-        } else {
-            if (imag > 0.0) {
-                // II
-                symb0 = 0;
-                symb1 = 1;
-            } else {
-                // III
-                symb0 = 1;
-                symb1 = 1;
-            }
-        }
-
-        bits[i * 2] = symb0;
-        bits[i * 2 + 1] = symb1;
+template <std::size_t Len, class iterator_type>
+auto IQStreamDecoder::symbols_to_bitstream(iterator_type it) -> std::vector<bool> {
+    std::vector<bool> bits(Len * 2);
+    for (std::size_t i = 0; i < Len; ++it, ++i) {
+        // symbol 0:
+        //  imag  > 0 -> 0
+        //  imag <= 0 -> 1
+        // symbol 1:
+        //  real  > 0 -> 0
+        //  real <= 0 -> 1
+        bits[i * 2] = it->imag() <= 0.0;
+        bits[(i * 2) + 1] = it->real() <= 0.0;
     }
+    return bits;
 }
 
 void IQStreamDecoder::abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
@@ -173,49 +154,38 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
             auto channel = solve_channel<3>(training_seq_x_, symbol_buffer_hard_decision_, 44);
             std::cout << channel << std::endl;
 
-            auto len = 103;
+            auto bits = symbols_to_bitstream<103>(symbol_buffer_.cbegin());
 
-            std::vector<uint8_t> bits(len * 2);
-
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
-
-            auto lower_mac_process_cub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst);
+            auto lower_mac_process_cub =
+                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::ControlUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_cub);
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB_Split found" << std::endl;
 
-            auto len = 231;
-
-            std::vector<uint8_t> bits(len * 2);
-
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
+            auto bits = symbols_to_bitstream<231>(symbol_buffer_.cbegin());
 
             auto lower_mac_process_nubs =
-                std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
+                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nubs);
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB found" << std::endl;
 
-            auto len = 231;
+            auto bits = symbols_to_bitstream<231>(symbol_buffer_.cbegin());
 
-            std::vector<uint8_t> bits(len * 2);
-
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
-
-            auto lower_mac_process_nub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst);
+            auto lower_mac_process_nub =
+                std::bind(&LowerMac::process<bool>, lower_mac_, bits, BurstType::NormalUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nub);
         }
     } else {
         // TODO: this path needs to change!
         std::vector<std::complex<float>> stream = {symbol};
-        std::vector<uint8_t> bits(2);
-        symbols_to_bitstream(stream.cbegin(), bits.data(), 1);
-        for (auto it = bits.begin(); it != bits.end(); ++it) {
-            bit_stream_decoder_->process_bit(*it);
+        auto bits = symbols_to_bitstream<231>(stream.cbegin());
+        for (const auto& bit : bits) {
+            bit_stream_decoder_->process_bit(bit);
         }
     }
 }

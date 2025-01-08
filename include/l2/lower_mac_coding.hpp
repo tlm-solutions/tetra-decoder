@@ -16,6 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+#pragma once
+
 #include "utils/viter_bi_codec.hpp"
 #include <array>
 #include <cstdint>

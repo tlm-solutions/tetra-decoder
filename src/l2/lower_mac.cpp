@@ -37,7 +37,7 @@ LowerMac::LowerMac(const std::shared_ptr<PrometheusExporter>& prometheus_exporte
     }
 }
 
-auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burst_type,
+auto LowerMac::processChannels(const std::vector<bool>& frame, BurstType burst_type,
                                const BroadcastSynchronizationChannel& bsc) -> Slots {
     std::optional<Slots> slots;
 
@@ -281,65 +281,4 @@ auto LowerMac::processChannels(const std::vector<uint8_t>& frame, BurstType burs
     }
 
     return *slots;
-}
-
-auto LowerMac::process(std::vector<uint8_t> frame, BurstType burst_type) -> LowerMac::return_type {
-    // Set to true if there was some decoding error in the lower MAC
-    bool decode_error = false;
-
-    // fmt::print("[Physical Channel] Decoding: {}\n", burst_type);
-
-    // Once we received the Synchronization on the downlink, increment the time counter for every received burst.
-    // We do not have any time handling for uplink processing.
-    if (sync_ && is_downlink_burst(burst_type)) {
-        sync_->time.increment();
-        if (metrics_) {
-            metrics_->set_time(sync_->time);
-        }
-    }
-
-    if (burst_type == BurstType::SynchronizationBurst) {
-        std::optional<BroadcastSynchronizationChannel> current_sync;
-
-        // sb contains BSCH
-        // ✅ done
-        std::array<bool, 120> sb_input{};
-        for (auto i = 0; i < 120; i++) {
-            sb_input[i] = frame[94 + i];
-        };
-
-        auto sb_bits = LowerMacCoding::viter_bi_decode_1614(
-            viter_bi_codec_1614_, LowerMacCoding::depuncture23(
-                                      LowerMacCoding::deinterleave(LowerMacCoding::descramble(sb_input, 0x0003), 11)));
-
-        if (LowerMacCoding::check_crc_16_ccitt<76>(sb_bits)) {
-            current_sync = BroadcastSynchronizationChannel(
-                burst_type, BitVector(std::vector(sb_bits.cbegin(), sb_bits.cbegin() + 60)));
-        } else {
-            decode_error |= true;
-        }
-
-        // Update the mismatching received number of bursts metrics
-        if (current_sync && sync_ && metrics_) {
-            metrics_->set_time(/*current_timestamp=*/current_sync->time, /*expected_timestamp=*/sync_->time);
-        }
-        sync_ = current_sync;
-    }
-
-    std::optional<Slots> slots;
-
-    // We got a sync, continue with further processing of channels
-    if (sync_) {
-        slots = processChannels(frame, burst_type, *sync_);
-
-        // check if we have crc decode errors in the lower mac
-        decode_error |= slots->has_crc_error();
-    }
-
-    // Update the received burst type metrics
-    if (metrics_) {
-        metrics_->increment(burst_type, decode_error);
-    }
-
-    return slots;
 }

@@ -41,7 +41,8 @@ class IQStreamDecoder {
   private:
     static std::complex<float> hard_decision(std::complex<float> const& symbol);
 
-    template <class iterator_type> static void symbols_to_bitstream(iterator_type it, uint8_t* bits, std::size_t len);
+    template <std::size_t Len, class iterator_type>
+    static auto symbols_to_bitstream(iterator_type it) -> std::vector<bool>;
 
     static void abs_convolve_same_length(const QueueT& queueA, std::size_t offsetA, const std::complex<float>* itb,
                                          std::size_t len, float* res);
