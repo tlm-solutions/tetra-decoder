@@ -14,7 +14,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
+void BitStreamDecoder::process_bit(bool symbol) noexcept {
     assert(symbol <= 1);
 
     // insert symbol at buffer end
@@ -88,12 +88,12 @@ void BitStreamDecoder::process_bit(uint8_t symbol) noexcept {
         }
 
         if (score_ssn <= 4) {
-            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
+            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process<bool>, lower_mac_, frame_, burst_type));
 
-            std::vector<uint8_t>(frame_.begin() + 200, frame_.end()).swap(frame_);
+            std::vector<bool>(frame_.begin() + 200, frame_.end()).swap(frame_);
         } else if (minimum_score <= 2) {
             // valid burst found, send it to lower MAC
-            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
+            lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process<bool>, lower_mac_, frame_, burst_type));
 
             frame_.erase(frame_.begin());
             // std::vector<uint8_t>(frame_.begin()+462, frame_.end()).swap(frame_);
@@ -128,16 +128,18 @@ void BitStreamDecoder::process_downlink_frame() noexcept {
 
     if (minimum_score <= 5) {
         // valid burst found, send it to lower MAC
-        lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process, lower_mac_, frame_, burst_type));
+        lower_mac_worker_queue_->queue_work(std::bind(&LowerMac::process<bool>, lower_mac_, frame_, burst_type));
     }
 }
 
-auto BitStreamDecoder::pattern_at_position_score(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern,
+auto BitStreamDecoder::pattern_at_position_score(const std::vector<bool>& data, const std::vector<bool>& pattern,
                                                  std::size_t position) noexcept -> std::size_t {
     std::size_t errors = 0;
 
-    for (auto i = 0ul; i < pattern.size(); i++) {
-        errors += (pattern[i] ^ data[position + i]);
+    for (auto i = 0UL; i < pattern.size(); i++) {
+        if (pattern[i] != data[position + i]) {
+            errors++;
+        }
     }
 
     return errors;

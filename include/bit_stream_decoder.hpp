@@ -53,7 +53,7 @@ class BitStreamDecoder {
      * @return true if frame (burst) found, false otherwise
      *
      */
-    void process_bit(uint8_t symbol) noexcept;
+    void process_bit(bool symbol) noexcept;
 
   private:
     /// The pointer to the worker queue
@@ -67,23 +67,30 @@ class BitStreamDecoder {
 
     const std::size_t kFRAME_LEN = 510;
 
-    std::vector<uint8_t> frame_{};
+    std::vector<bool> frame_;
 
     // 9.4.4.3.2 Normal training sequence
-    const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_1 = {1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1,
-                                                         0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0}; // n1..n22
-    const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_2 = {0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0,
-                                                         0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0};          // p1..p22
-    const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_3_BEGIN = {0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1}; // q11..q22
-    const std::vector<uint8_t> kNORMAL_TRAINING_SEQ_3_END = {1, 0, 1, 1, 0, 1, 1, 1, 0, 0};         // q1..q10
+    const std::vector<bool> kNORMAL_TRAINING_SEQ_1 = {true, true, false, true,  false, false, false, false,
+                                                      true, true, true,  false, true,  false, false, true,
+                                                      true, true, false, true,  false, false}; // n1..n22
+    const std::vector<bool> kNORMAL_TRAINING_SEQ_2 = {false, true, true,  true,  true,  false, true, false,
+                                                      false, true, false, false, false, false, true, true,
+                                                      false, true, true,  true,  true,  false}; // p1..p22
+    const std::vector<bool> kNORMAL_TRAINING_SEQ_3_BEGIN = {false, false, false, true, true,  false,
+                                                            true,  false, true,  true, false, true}; // q11..q22
+    const std::vector<bool> kNORMAL_TRAINING_SEQ_3_END = {true, false, true, true,  false,
+                                                          true, true,  true, false, false}; // q1..q10
 
     // 9.4.4.3.3 Extended training sequence
-    const std::vector<uint8_t> kEXTENDED_TRAINING_SEQ = {1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1,
-                                                         0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1}; // x1..x30
+    const std::vector<bool> kEXTENDED_TRAINING_SEQ = {
+        true,  false, false, true,  true, true, false, true,  false, false, false, false, true,  true, true,
+        false, true,  false, false, true, true, true,  false, true,  false, false, false, false, true, true}; // x1..x30
 
     // 9.4.4.3.4 Synchronisation training sequence
-    const std::vector<uint8_t> kSYNC_TRAINING_SEQ = {1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0,
-                                                     1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1}; // y1..y38
+    const std::vector<bool> kSYNC_TRAINING_SEQ = {true,  true,  false, false, false, false, false, true,  true,  false,
+                                                  false, true,  true,  true,  false, false, true,  true,  true,  false,
+                                                  true,  false, false, true,  true,  true,  false, false, false, false,
+                                                  false, true,  true,  false, false, true,  true,  true}; // y1..y38
 
     /**
      * @brief Reset the synchronizer
@@ -113,6 +120,6 @@ class BitStreamDecoder {
      * vector and pattern)
      *
      */
-    static auto pattern_at_position_score(const std::vector<uint8_t>& data, const std::vector<uint8_t>& pattern,
+    static auto pattern_at_position_score(const std::vector<bool>& data, const std::vector<bool>& pattern,
                                           std::size_t position) noexcept -> std::size_t;
 };

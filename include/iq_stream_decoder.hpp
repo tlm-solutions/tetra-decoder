@@ -13,6 +13,7 @@
 #include "fixed_queue.hpp"
 #include "l2/lower_mac.hpp"
 #include "streaming_ordered_output_thread_pool_executor.hpp"
+#include <armadillo>
 #include <complex>
 #include <memory>
 
@@ -23,6 +24,8 @@
  */
 class IQStreamDecoder {
   public:
+    using QueueT = FixedQueue<std::complex<float>, 300>;
+
     IQStreamDecoder(
         const std::shared_ptr<StreamingOrderedOutputThreadPoolExecutor<LowerMac::return_type>>& lower_mac_worker_queue,
         const std::shared_ptr<LowerMac>& lower_mac, const std::shared_ptr<BitStreamDecoder>& bit_stream_decoder,
@@ -31,12 +34,18 @@ class IQStreamDecoder {
 
     void process_complex(std::complex<float> symbol) noexcept;
 
-  private:
-    using QueueT = FixedQueue<std::complex<float>, 300>;
+    template <std::size_t ChannelSize>
+    static auto solve_channel(const std::vector<std::complex<float>>& pilots, const QueueT& signal_queue,
+                              std::size_t signal_offset) -> arma::cx_fvec;
 
+  private:
     static std::complex<float> hard_decision(std::complex<float> const& symbol);
 
-    template <class iterator_type> static void symbols_to_bitstream(iterator_type it, uint8_t* bits, std::size_t len);
+    template <std::size_t Len, class iterator_type>
+    static auto symbols_to_bitstream(iterator_type it) -> std::vector<bool>;
+
+    template <std::size_t Len, class iterator_type>
+    static auto symbols_to_softstream(iterator_type it) -> std::vector<int16_t>;
 
     static void abs_convolve_same_length(const QueueT& queueA, std::size_t offsetA, const std::complex<float>* itb,
                                          std::size_t len, float* res);
