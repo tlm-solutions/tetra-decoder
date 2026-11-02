@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "application/lio_packet.hpp"
 #include "l2/logical_link_control_packet.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
@@ -23,6 +24,7 @@ enum class PacketType {
     kCircuitModeControlEntityPacket,
     kMobileManagementPacket,
     kShortDataServicePacket,
+    kLioPacket,
 };
 
 namespace nlohmann {
@@ -33,9 +35,14 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
         if (auto* mle = dynamic_cast<MobileLinkEntityPacket*>(packet.get())) {
             if (auto* cmce = dynamic_cast<CircuitModeControlEntityPacket*>(mle)) {
                 if (auto* sds = dynamic_cast<ShortDataServicePacket*>(mle)) {
-                    // Emit ShortDataServicePacket packet to json
-                    j["key"] = PacketType::kShortDataServicePacket;
-                    j["value"] = *sds;
+                    if (auto* lio = dynamic_cast<LioPacket*>(sds)) {
+                        // Emit LioPacket packet to json
+                        j["key"] = PacketType::kLioPacket;
+                        j["value"] = *lio;
+                    } else { // Emit ShortDataServicePacket packet to json
+                        j["key"] = PacketType::kShortDataServicePacket;
+                        j["value"] = *sds;
+                    }
                 } else {
                     // Emit CircuitModeControlEntityPacket packet to json
                     j["key"] = PacketType::kCircuitModeControlEntityPacket;
@@ -81,6 +88,9 @@ template <> struct adl_serializer<std::unique_ptr<LogicalLinkControlPacket>> {
             break;
         case PacketType::kShortDataServicePacket:
             packet = std::make_unique<ShortDataServicePacket>(j["value"].template get<ShortDataServicePacket>());
+            break;
+        case PacketType::kLioPacket:
+            packet = std::make_unique<LioPacket>(j["value"].template get<LioPacket>());
             break;
         }
     }

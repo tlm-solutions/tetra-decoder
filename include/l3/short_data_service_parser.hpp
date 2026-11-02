@@ -8,15 +8,19 @@
 
 #pragma once
 
+#include "application/lio_packet.hpp"
+#include "application/lio_parser.hpp"
 #include "l3/circuit_mode_control_entity_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
 #include "utils/packet_parser.hpp"
+#include <memory>
 
 class ShortDataServiceParser : public PacketParser<CircuitModeControlEntityPacket, ShortDataServicePacket> {
   public:
     ShortDataServiceParser() = delete;
     explicit ShortDataServiceParser(const std::shared_ptr<PrometheusExporter>& prometheus_exporter)
-        : PacketParser(prometheus_exporter, "short_data_service") {
+        : PacketParser(prometheus_exporter, "short_data_service")
+        , lio_(prometheus_exporter) {
         sds_pdu_description_[0] = "Reserved 0";
         sds_pdu_description_[1] = "OTAK (Over The Air re-Keying for end to end encryption)";
         sds_pdu_description_[2] = "Simple Text Messaging";
@@ -68,8 +72,13 @@ class ShortDataServiceParser : public PacketParser<CircuitModeControlEntityPacke
     }
 
     auto forward(const ShortDataServicePacket& packet) -> std::unique_ptr<ShortDataServicePacket> override {
+        if (packet.text_message()) {
+            return lio_.parse(packet);
+        }
         return std::make_unique<ShortDataServicePacket>(packet);
     };
 
     std::array<std::string, 256> sds_pdu_description_;
+
+    LioParser lio_;
 };
