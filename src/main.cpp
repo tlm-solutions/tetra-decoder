@@ -37,7 +37,7 @@ auto main(int argc, char** argv) -> int {
 	options.add_options()
 		("h,help", "Print usage")
 		("r,rx", "<UDP socket> receiving from phy", cxxopts::value<unsigned>()->default_value("42000"))
-		("t,tx", "<UDP socket> sending Json data", cxxopts::value<unsigned>()->default_value("42100"))		
+		("t,tx", "<UDP socket> sending Json data", cxxopts::value<unsigned>()->default_value("42100"))
 		("borzoi-url", "<borzoi-url> the base url of which borzoi is running", cxxopts::value<std::string>(borzoi_url)->default_value("http://localhost:3000"))
 		("borzoi-uuid", "<borzoi-uuid> the UUID of this tetra-decoder sending data to borzoi", cxxopts::value<std::string>(borzoi_uuid)->default_value("00000000-0000-0000-0000-000000000000"))
 		("i,infile", "<file> replay data from binary file instead of UDP", cxxopts::value<std::optional<std::string>>(input_file))
