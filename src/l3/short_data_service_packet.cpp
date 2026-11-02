@@ -69,6 +69,34 @@ LocationInformationProtocol::LocationInformationProtocol(BitVector& data)
     }
 }
 
+SimpleTextMessaging::SimpleTextMessaging(BitVector& data) {
+    auto reserved = data.take<1>();
+    text_coding_scheme_ = data.take<7>();
+    message_ = data;
+}
+
+TextMessaging::TextMessaging(BitVector& data)
+    : time_stamp_used_(data.take<1>())
+    , text_coding_scheme_(data.take<7>()) {
+    if (time_stamp_used_) {
+        time_stamp_ = data.take<24>();
+    }
+    message_ = data;
+}
+
+ShortDataServiceTLTransferPacketInformation::ShortDataServiceTLTransferPacketInformation(BitVector& data)
+    : delivery_report_request_(DeliveryReportRequest(data.take<2>()))
+    , service_selection_and_short_from_report_(data.take<1>())
+    , storage_and_forward_control_(data.take<1>())
+    , message_reference_(data.take<8>()) {}
+
+ShortDataServiceTLPacketInformation::ShortDataServiceTLPacketInformation(BitVector& data)
+    : message_type_(ShortDataServiceTLMessageType(data.take<4>())) {
+    if (message_type_ == ShortDataServiceTLMessageType::kSdsTransfer) {
+        transfer_packet_ = ShortDataServiceTLTransferPacketInformation(data);
+    }
+}
+
 ShortDataServicePacket::ShortDataServicePacket(const CircuitModeControlEntityPacket& packet)
     : CircuitModeControlEntityPacket(packet) {
     assert(sds_data_.has_value());
@@ -76,7 +104,16 @@ ShortDataServicePacket::ShortDataServicePacket(const CircuitModeControlEntityPac
 
     protocol_identifier_ = data.take<8>();
 
-    if (protocol_identifier_ == kLocationInformationProtocolIdentifier) {
+    // process SDS-TL information
+    if (protocol_identifier_ >= 0b10000000) {
+        sds_tl_ = ShortDataServiceTLPacketInformation(data);
+    }
+
+    if (protocol_identifier_ == kSimpleTextMessaging) {
+        simple_text_messaging_ = SimpleTextMessaging(data);
+    } else if (protocol_identifier_ == kLocationInformationProtocolIdentifier) {
         location_information_protocol_ = LocationInformationProtocol(data);
+    } else if (protocol_identifier_ == kTextMessaging) {
+        text_messaging_ = TextMessaging(data);
     }
 }

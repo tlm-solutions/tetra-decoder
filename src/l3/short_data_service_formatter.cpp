@@ -6,6 +6,7 @@
  *   Marenz Schmidl
  */
 
+#include "l3/mobile_link_entity_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
 #include <bitset>
 
@@ -31,6 +32,42 @@ auto operator<<(std::ostream& stream, const LocationInformationProtocol& lip) ->
     return stream;
 }
 
+auto operator<<(std::ostream& stream, const ShortDataServiceTLTransferPacketInformation& packet_info) -> std::ostream& {
+    stream << "  " << to_string(packet_info.delivery_report_request_) << std::endl;
+    stream << "  service_selection_and_short_from_report: "
+           << std::bitset<1>(packet_info.service_selection_and_short_from_report_) << std::endl;
+    stream << "  storage_and_forward_control: " << std::bitset<1>(packet_info.storage_and_forward_control_)
+           << std::endl;
+    stream << "  message_reference: " << std::bitset<8>(packet_info.message_reference_) << std::endl;
+
+    return stream;
+}
+
+auto operator<<(std::ostream& stream, const ShortDataServiceTLPacketInformation& packet_info) -> std::ostream& {
+    stream << "  " << to_string(packet_info.message_type_) << std::endl;
+    if (packet_info.transfer_packet_) {
+        stream << *packet_info.transfer_packet_;
+    }
+
+    return stream;
+}
+
+auto operator<<(std::ostream& stream, const SimpleTextMessaging& msg) -> std::ostream& {
+    stream << "  text coding scheme: " << std::bitset<7>(msg.text_coding_scheme_) << std::endl;
+    stream << "  message: " << msg.message_ << std::endl;
+    return stream;
+}
+
+auto operator<<(std::ostream& stream, const TextMessaging& msg) -> std::ostream& {
+    stream << "  timestamp used: " << std::bitset<1>(msg.time_stamp_used_) << std::endl;
+    stream << "  text coding scheme: " << std::bitset<7>(msg.text_coding_scheme_) << std::endl;
+    if (msg.time_stamp_) {
+        stream << "  text coding scheme: " << std::bitset<24>(*msg.time_stamp_) << std::endl;
+    }
+    stream << "  message: " << msg.message_ << std::endl;
+    return stream;
+}
+
 auto operator<<(std::ostream& stream, const ShortDataServicePacket& sds) -> std::ostream& {
     stream << "SDS " << std::bitset<8>(sds.protocol_identifier_) << std::endl;
     stream << "  L2 Address: " << sds.address_ << " SDS Address: " << sds.sds_data_->address_ << std::endl;
@@ -45,6 +82,17 @@ auto operator<<(std::ostream& stream, const ShortDataServicePacket& sds) -> std:
         stream << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(bits) << std::dec;
     }
     stream << std::endl;
-
+    if (sds.sds_tl_) {
+        stream << *sds.sds_tl_;
+    }
+    if (sds.simple_text_messaging_) {
+        stream << *sds.simple_text_messaging_;
+    }
+    if (sds.location_information_protocol_) {
+        stream << *sds.location_information_protocol_;
+    }
+    if (sds.text_messaging_) {
+        stream << *sds.text_messaging_;
+    }
     return stream;
 }
