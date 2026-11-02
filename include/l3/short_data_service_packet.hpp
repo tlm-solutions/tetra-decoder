@@ -194,6 +194,16 @@ struct ShortDataServicePacket : public CircuitModeControlEntityPacket {
 
     explicit ShortDataServicePacket(const CircuitModeControlEntityPacket& packet);
 
+    [[nodiscard]] auto text_message() const -> std::optional<BitVector> {
+        if (text_messaging_) {
+            return text_messaging_->message_;
+        }
+        if (simple_text_messaging_) {
+            return simple_text_messaging_->message_;
+        }
+        return {};
+    };
+
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(ShortDataServicePacket, burst_type_, logical_channel_, type_, encrypted_, address_,
                                    fragmentation_, fragmentation_on_stealling_channel_, reservation_requirement_,
                                    tm_sdu_, encryption_mode_, immediate_napping_permission_flag_,

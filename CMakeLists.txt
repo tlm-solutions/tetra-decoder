@@ -12,8 +12,10 @@ add_library(tetra-decoder-library
             src/prometheus.cpp
             src/borzoi/borzoi_packets.cpp
             src/borzoi/borzoi_sender.cpp
+            src/application/lio_formatter.cpp
+            src/application/lio_packet.cpp
             src/l2/access_assignment_channel.cpp
-            src/l2/broadcast_synchronization_channel.cpp        
+            src/l2/broadcast_synchronization_channel.cpp
             src/l2/logical_link_control_formatter.cpp
             src/l2/logical_link_control_packet.cpp
             src/l2/lower_mac.cpp
