@@ -9,3 +9,8 @@ add_executable(slots-parser-example
                src/experiments/slots_parser_example.cpp)
 
 target_link_libraries(slots-parser-example tetra-decoder-library)
+
+add_executable(channel-estimation
+               src/experiments/channel_estimation.cpp)
+
+target_link_libraries(channel-estimation tetra-decoder-library)

@@ -8,7 +8,6 @@
  */
 
 #include "decoder.hpp"
-#include "signal_handler.hpp"
 #include <arpa/inet.h>
 #include <cassert>
 #include <complex>
@@ -85,28 +84,25 @@ Decoder::~Decoder() {
     termination_flag_ = true;
 }
 
-void Decoder::main_loop() {
+auto Decoder::main_loop() -> bool {
     std::array<uint8_t, kRX_BUFFER_SIZE> rx_buffer{};
 
     auto bytes_read = read(input_fd_, rx_buffer.data(), sizeof(rx_buffer));
 
     if (errno == EINTR) {
-        stop = true;
-        return;
+        return true;
     }
     if (bytes_read < 0) {
         throw std::runtime_error("Read error.");
     }
     if (bytes_read == 0) {
-        stop = true;
-        return;
+        return true;
     }
 
     if (output_file_fd_.has_value()) {
         if (write(*output_file_fd_, rx_buffer.data(), bytes_read) != bytes_read) {
             throw std::runtime_error("Could not write to output file.");
-            stop = true;
-            return;
+            return true;
         }
     }
 
@@ -131,4 +127,6 @@ void Decoder::main_loop() {
             }
         }
     }
+
+    return false;
 }

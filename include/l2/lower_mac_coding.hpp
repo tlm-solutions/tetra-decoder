@@ -16,13 +16,34 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+#pragma once
+
 #include "utils/viter_bi_codec.hpp"
 #include <array>
 #include <cstdint>
 #include <map>
+#include <type_traits>
 #include <vector>
 
 struct LowerMacCoding {
+
+    /// Convert a type to bits. If we already input bits, we push them straight through, if we input a soft symbol we
+    /// decode it to aa bit first.
+    template <std::size_t Size, typename InputType>
+    static auto softbits_to_bits(const std::array<InputType, Size>& input) noexcept -> std::array<bool, Size> {
+        if constexpr (std::is_same_v<InputType, bool>) {
+            return input;
+        } else if constexpr (std::is_same_v<InputType, int16_t>) {
+            std::array<bool, Size> bits;
+            for (auto i = 0; i < Size; i++) {
+                bits[i] = static_cast<bool>(input[i] > 0);
+            }
+            return bits;
+        } else {
+            assert(false && "Compiling descramble with template paramater not bool or int16_t");
+        }
+    }
 
     /**
      * @brief Fibonacci LFSR descrambling - 8.2.5
@@ -60,7 +81,20 @@ struct LowerMacCoding {
         auto& table = table_by_scrambling_code[scrambling_code];
 
         for (std::size_t i = 0; i < Size; i++) {
-            output[i] = input[i] ^ table[i];
+            if constexpr (std::is_same_v<Type, bool>) {
+                if (table[i]) {
+                    output[i] = !input[i];
+                } else {
+                    output[i] = input[i];
+                }
+            } else if constexpr (std::is_same_v<Type, int16_t>) {
+                output[i] = input[i];
+                if (table[i]) {
+                    output[i] *= -1;
+                }
+            } else {
+                assert(false && "Compiling descramble with template paramater not bool or int16_t");
+            }
         }
 
         return output;
@@ -99,7 +133,11 @@ struct LowerMacCoding {
             uint32_t i = j; // punct->i_func(j);
             uint32_t k =
                 period * ((i - 1) / t) + P[i - t * ((i - 1) / t)]; // punct->period * ((i-1)/t) + P[i - t*((i-1)/t)];
-            res[k - 1] = data[j - 1] ? 1 : -1;
+            if constexpr (std::is_same_v<InType, bool>) {
+                res[k - 1] = data[j - 1] ? 1 : -1;
+            } else {
+                res[k - 1] = data[j - 1];
+            }
         }
 
         return res;

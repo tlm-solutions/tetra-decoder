@@ -1,5 +1,4 @@
 #include "decoder.hpp"
-#include "signal_handler.hpp"
 #include <csignal>
 #include <cstdlib>
 #include <cxxopts.hpp>
@@ -86,7 +85,7 @@ auto main(int argc, char** argv) -> int {
     }
 
     while (!stop) { // NOLINT handled by signal action
-        decoder->main_loop();
+        stop |= decoder->main_loop();
     }
 
     return EXIT_SUCCESS;

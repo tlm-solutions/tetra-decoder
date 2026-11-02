@@ -9,6 +9,7 @@
 
 #include "iq_stream_decoder.hpp"
 #include "l2/lower_mac.hpp"
+#include <armadillo>
 #include <memory>
 
 IQStreamDecoder::IQStreamDecoder(
@@ -43,39 +44,36 @@ std::complex<float> IQStreamDecoder::hard_decision(std::complex<float> const& sy
     }
 }
 
-template <class iterator_type>
-void IQStreamDecoder::symbols_to_bitstream(iterator_type it, uint8_t* const bits, const std::size_t len) {
-    for (auto i = 0; i < len; ++it, ++i) {
-
-        auto real = it->real();
-        auto imag = it->imag();
-        uint8_t symb0, symb1;
-
-        if (real > 0.0) {
-            if (imag > 0.0) {
-                // I
-                symb0 = 0;
-                symb1 = 0;
-            } else {
-                // IV
-                symb0 = 1;
-                symb1 = 0;
-            }
-        } else {
-            if (imag > 0.0) {
-                // II
-                symb0 = 0;
-                symb1 = 1;
-            } else {
-                // III
-                symb0 = 1;
-                symb1 = 1;
-            }
-        }
-
-        bits[i * 2] = symb0;
-        bits[i * 2 + 1] = symb1;
+template <std::size_t Len, class iterator_type>
+auto IQStreamDecoder::symbols_to_bitstream(iterator_type it) -> std::vector<bool> {
+    std::vector<bool> bits(Len * 2);
+    for (std::size_t i = 0; i < Len; ++it, ++i) {
+        // symbol 0:
+        //  imag  > 0 -> 0
+        //  imag <= 0 -> 1
+        // symbol 1:
+        //  real  > 0 -> 0
+        //  real <= 0 -> 1
+        bits[i * 2] = it->imag() <= 0.0;
+        bits[(i * 2) + 1] = it->real() <= 0.0;
     }
+    return bits;
+}
+
+template <std::size_t Len, class iterator_type>
+auto IQStreamDecoder::symbols_to_softstream(iterator_type it) -> std::vector<int16_t> {
+    std::vector<int16_t> soft_bits(Len * 2);
+    for (std::size_t i = 0; i < Len; ++it, ++i) {
+        // symbol 0:
+        //  imag  > 0 -> 0 -> -1
+        //  imag <= 0 -> 1 -> 1
+        // symbol 1:
+        //  real  > 0 -> 0 -> -1
+        //  real <= 0 -> 1 -> 1
+        soft_bits[i * 2] = -127 * it->imag();
+        soft_bits[(i * 2) + 1] = -127 * it->real();
+    }
+    return soft_bits;
 }
 
 void IQStreamDecoder::abs_convolve_same_length(const QueueT& queueA, const std::size_t offsetA,
@@ -92,6 +90,52 @@ std::vector<std::complex<float>> IQStreamDecoder::channel_estimation(std::vector
                                                                      std::vector<std::complex<float>> const& pilots) {
     // TODO: implement channel estimation
     return stream;
+}
+
+template <std::size_t ChannelSize>
+auto IQStreamDecoder::solve_channel(const std::vector<std::complex<float>>& pilots, const QueueT& signal_queue,
+                                    const std::size_t signal_offset) -> arma::cx_fvec {
+    // Calculate the minimum variance unbiased estimator
+    auto h = arma::cx_fmat(/*n_rows=*/pilots.size(), /*n_cols=*/ChannelSize, arma::fill::zeros);
+
+    for (auto row = 0; row < h.n_rows; row++) {
+        auto index = row;
+        for (auto col = 0; col < h.n_cols; col++) {
+            if (index >= 0) {
+                h.row(row).col(col) = signal_queue[signal_offset + index];
+            }
+            index--;
+        }
+    }
+
+    // std::cout << h << '\n';
+
+    auto signal = arma::cx_fvec(pilots.size());
+    for (auto i = 0; i < signal.size(); i++) {
+        signal[i] = signal_queue[signal_offset + i];
+    }
+
+    // std::cout << signal << '\n';
+
+    auto h_hermitian = arma::cx_fmat(/*n_rows=*/ChannelSize, /*n_cols=*/pilots.size(), arma::fill::zeros);
+
+    h_hermitian = h.t();
+    h_hermitian = arma::conj(h_hermitian);
+    // std::cout << h_hermitian << '\n';
+
+    auto h_hermitian_h = h_hermitian * h;
+    // std::cout << h_hermitian_h << '\n';
+
+    // auto h_hermitian_h_inv = arma::inv(h_hermitian_h);
+    // std::cout << h_hermitian_h_inv << '\n';
+
+    auto h_hermitian_signal = h_hermitian * signal;
+    // std::cout << h_hermitian_signal << '\n';
+
+    auto c_mvue = arma::solve(h_hermitian_h, h_hermitian_signal);
+    // std::cout << c_mvue << '\n';
+
+    return c_mvue;
 }
 
 void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
@@ -123,49 +167,41 @@ void IQStreamDecoder::process_complex(std::complex<float> symbol) noexcept {
         if (detectedX >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential CUB found" << std::endl;
 
-            auto len = 103;
+            auto channel = solve_channel<3>(training_seq_x_, symbol_buffer_hard_decision_, 44);
+            std::cout << channel << std::endl;
 
-            std::vector<uint8_t> bits(len * 2);
+            auto softbits = symbols_to_softstream<103>(symbol_buffer_.cbegin());
 
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
-
-            auto lower_mac_process_cub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::ControlUplinkBurst);
+            auto lower_mac_process_cub =
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::ControlUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_cub);
         }
 
         if (detectedP >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB_Split found" << std::endl;
 
-            auto len = 231;
-
-            std::vector<uint8_t> bits(len * 2);
-
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
+            auto softbits = symbols_to_softstream<231>(symbol_buffer_.cbegin());
 
             auto lower_mac_process_nubs =
-                std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurstSplit);
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::NormalUplinkBurstSplit);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nubs);
         }
 
         if (detectedN >= SEQUENCE_DETECTION_THRESHOLD) {
             // std::cout << "Potential NUB found" << std::endl;
 
-            auto len = 231;
+            auto softbits = symbols_to_softstream<231>(symbol_buffer_.cbegin());
 
-            std::vector<uint8_t> bits(len * 2);
-
-            symbols_to_bitstream(symbol_buffer_.cbegin(), bits.data(), len);
-
-            auto lower_mac_process_nub = std::bind(&LowerMac::process, lower_mac_, bits, BurstType::NormalUplinkBurst);
+            auto lower_mac_process_nub =
+                std::bind(&LowerMac::process<int16_t>, lower_mac_, softbits, BurstType::NormalUplinkBurst);
             lower_mac_worker_queue_->queue_work(lower_mac_process_nub);
         }
     } else {
         // TODO: this path needs to change!
         std::vector<std::complex<float>> stream = {symbol};
-        std::vector<uint8_t> bits(2);
-        symbols_to_bitstream(stream.cbegin(), bits.data(), 1);
-        for (auto it = bits.begin(); it != bits.end(); ++it) {
-            bit_stream_decoder_->process_bit(*it);
+        auto bits = symbols_to_bitstream<231>(stream.cbegin());
+        for (const auto& bit : bits) {
+            bit_stream_decoder_->process_bit(bit);
         }
     }
 }

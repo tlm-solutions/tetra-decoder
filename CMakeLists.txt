@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(NIX_BUILD "Is CMake called by a nix build?" OFF)
 
-add_library(tetra-decoder-library
+add_library(tetra-decoder-library SHARED
             src/decoder.cpp
             src/bit_stream_decoder.cpp
             src/iq_stream_decoder.cpp
@@ -61,17 +61,20 @@ find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(cpr REQUIRED)
+find_package(Armadillo REQUIRED)
 
+include_directories(${ARMADILLO_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 if (NOT NIX_BUILD)
 	target_link_libraries(tetra-decoder-library cxxopts::cxxopts)
 endif()
 
-target_link_libraries(tetra-decoder-library ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull cpr::cpr)
+target_link_libraries(tetra-decoder-library ZLIB::ZLIB fmt::fmt nlohmann_json::nlohmann_json viterbi prometheus-cpp::pull cpr::cpr ${ARMADILLO_LIBRARIES})
 target_link_libraries(tetra-decoder tetra-decoder-library)
 target_link_libraries(tetra-viterbi viterbi)
 
+install(TARGETS tetra-decoder-library DESTINATION lib)
 install(TARGETS tetra-decoder DESTINATION bin)
 install(TARGETS tetra-puncturing DESTINATION bin)
 install(TARGETS tetra-viterbi DESTINATION bin)

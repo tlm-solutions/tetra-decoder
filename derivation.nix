@@ -8,6 +8,7 @@
 , prometheus-cpp
 , curlFull
 , libcpr
+, armadillo
 }:
 clangStdenv.mkDerivation {
   name = "tetra-decoder";
@@ -23,6 +24,7 @@ clangStdenv.mkDerivation {
     curlFull
     prometheus-cpp
     libcpr
+    armadillo
   ];
 
   cmakeFlags = [ "-DNIX_BUILD=ON" ];
