@@ -43,7 +43,7 @@ struct LioGpsPacket {
 
     explicit LioGpsPacket(BitVector& data);
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(LioGpsPacket, extended_area_, x_, y_, direction_, dgps_, jam_)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(LioGpsPacket, extended_area_, x_, y_, direction_, dgps_, jam_, unknown0_, remaining_)
 };
 
 auto operator<<(std::ostream& stream, const LioGpsPacket& packet) -> std::ostream&;
