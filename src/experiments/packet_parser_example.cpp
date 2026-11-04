@@ -7,6 +7,7 @@
  */
 
 #include "borzoi/borzoi_packets.hpp"
+#include "l2/logical_link_control_parser.hpp"
 #include "nlohmann/borzoi_receive_tetra_packet.hpp" // IWYU pragma: keep
 #include <cstddef>
 #include <cstdlib>
@@ -69,9 +70,18 @@ auto main(int argc, char** argv) -> int {
             }
         }
 
-        std::cout << json << std::endl;
-        BorzoiReceiveTetraPacket packet = json;
-        std::cout << packet << std::endl;
+        auto read_packet =
+            std::make_unique<LogicalLinkControlPacket>(json["value"].template get<UpperMacCPlaneSignallingPacket>());
+        auto packet = LogicalLinkControlParser(nullptr).parse(*read_packet);
+
+        // reparse the package.
+        if (auto* sds = dynamic_cast<ShortDataServicePacket*>(packet.get())) {
+            // std::cout << json << std::endl;
+            std::cout << *sds;
+            if (auto* lio = dynamic_cast<LioPacket*>(sds)) {
+                std::cout << *lio;
+            }
+        }
     }
 
     return EXIT_SUCCESS;
