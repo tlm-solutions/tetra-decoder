@@ -47,6 +47,7 @@ LioPacket::LioPacket(const ShortDataServicePacket& sds)
         throw std::runtime_error("Either Text message or Simple Text Message must be present for the LIO protocol.");
     }
 
+    header_indication_ = optional_message->take<8>();
     lio_protocol_identifier_ = optional_message->take<8>();
     header_ = LioHeader(*optional_message);
 
@@ -56,4 +57,6 @@ LioPacket::LioPacket(const ShortDataServicePacket& sds)
         }
         gps_ = LioGpsPacket(*optional_message);
     }
+
+    remaining_lio_bits_ = BitVector(*optional_message);
 }

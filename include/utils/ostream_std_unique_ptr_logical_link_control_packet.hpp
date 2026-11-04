@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "application/lio_packet.hpp"
 #include "l3/mobile_link_entity_packet.hpp"
 #include "l3/mobile_management_packet.hpp"
 #include "l3/short_data_service_packet.hpp"
@@ -25,6 +26,9 @@ inline auto operator<<(std::ostream& stream, const std::unique_ptr<LogicalLinkCo
             stream << *cmce;
             if (auto* sds = dynamic_cast<ShortDataServicePacket*>(llc)) {
                 stream << *sds;
+                if (auto* lio = dynamic_cast<LioPacket*>(sds)) {
+                    stream << *lio;
+                }
             }
         }
         if (auto* mm = dynamic_cast<MobileManagementPacket*>(llc)) {
