@@ -53,7 +53,6 @@ struct LioPacket : public ShortDataServicePacket {
     unsigned _BitInt(8) lio_protocol_identifier_{};
     LioHeader header_;
     std::optional<LioGpsPacket> gps_;
-    unsigned _BitInt(8) header_indication_{};
     BitVector remaining_lio_bits_;
 
     static constexpr const std::size_t kLioUplinkGpsUpdate = 0xe3;
@@ -69,7 +68,7 @@ struct LioPacket : public ShortDataServicePacket {
                                    random_access_flag_, power_control_element_, basic_link_information_, tl_sdu_,
                                    mle_protocol_, sdu_, packet_type_, sds_data_, protocol_identifier_,
                                    simple_text_messaging_, location_information_protocol_, text_messaging_, sds_tl_,
-                                   lio_protocol_identifier_, header_, gps_, header_indication_, remaining_lio_bits_)
+                                   lio_protocol_identifier_, header_, gps_, remaining_lio_bits_)
 };
 
 auto operator<<(std::ostream& stream, const LioPacket& packet) -> std::ostream&;

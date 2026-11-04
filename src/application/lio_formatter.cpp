@@ -31,8 +31,6 @@ auto operator<<(std::ostream& stream, const LioGpsPacket& packet) -> std::ostrea
 
 auto operator<<(std::ostream& stream, const LioPacket& packet) -> std::ostream& {
     stream << "LIO" << std::endl;
-    stream << "  header_indication: 0x" << std::hex << static_cast<unsigned>(packet.header_indication_) << std::dec
-           << std::endl;
     stream << "  protocol_identifier: 0x" << std::hex << static_cast<unsigned>(packet.lio_protocol_identifier_)
            << std::dec << std::endl;
     stream << packet.header_;
